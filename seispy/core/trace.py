@@ -6,6 +6,9 @@ from obspy.core import read,\
 from seispy.core.exceptions import ArgumentError, InitializationError
 
 class Trace(ObspyTrace):
+    '''
+    Convenience class to create an obspy.core.trace.Trace-like object.
+    '''
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
             if isinstance(args[0], str) and isfile(args[0]):
@@ -43,7 +46,6 @@ class Trace(ObspyTrace):
                     'starttime' not in kwargs or\
                     'endtime' not in kwargs:
                 raise ArgumentError("__init__() expected 'station', 'channel',"\
-                #raise ValueError("__init__() expected 'station', 'channel',"\
                         " 'starttime' and 'endtime' keyword arguments")
             if not isinstance(kwargs['starttime'], UTCDateTime) and\
                     not isinstance(kwargs['starttime'], float) and\
@@ -62,9 +64,9 @@ class Trace(ObspyTrace):
                 raise TypeError("__init__() keyword argument 'channel' must "\
                         "be of type 'str'")
             if 'database_path' in kwargs:
-                if not isfile(kwargs['database_path']):
-                    raise ValueError("expected database descriptor file "\
-                            "at {:s}".format(kwargs['database_path']))
+                if not isfile("{:s}.wfdisc".format(kwargs['database_path'])):
+                    raise InitializationError("wfdisc does not exist "\
+                            "{:s}.wfdisc".format(kwargs['database_path']))
                 import os
                 import sys
                 try:
@@ -80,22 +82,20 @@ class Trace(ObspyTrace):
                 dbptr = dbopen(kwargs['database_path'], 'r')
             else:
                 raise ArgumentError("__init__() expected either "\
-                #raise TypeError("__init__() expected either "\
                         "'database_path' or 'database_pointer' keyword "\
                         "argument")
-            dbptr = dbptr.lookup(table=wfdisc)
+            dbptr = dbptr.lookup(table='wfdisc')
             if isinstance(kwargs['starttime'], float) or isinstance(kwargs['starttime'], int):
                 kwargs['starttime'] = UTCDateTime(kwargs['starttime'])
             if isinstance(kwargs['endtime'], float) or isinstance(kwargs['endtime'], int):
                 kwargs['endtime'] = UTCDateTime(kwargs['endtime'])
-            dbptr = dbptr.subset("sta =~ /{:s}/ && channel =~ /{:s}/ && "\
-                    "endtime > _{:f}_ && time < _{:f}_".format(kwargs['station'],
+            dbptr = dbptr.subset("sta =~ /{:s}/ && chan =~ /{:s}/ && "\
+                    "endtime > _{:s}_ && time < _{:s}_".format(kwargs['station'],
                                                                kwargs['channel'],
                                                                kwargs['starttime'],
                                                                kwargs['endtime']))
             if dbptr.record_count == 0:
                 raise InitializationError("__init__() found no data for "\
-                #raise ValueError("__init__() found no data for "\
                         "{:s}:{:s} {:s}-{:s}".format(kwargs['station'],
                                                      kwargs['channel'],
                                                      kwargs['starttime'],
@@ -103,8 +103,8 @@ class Trace(ObspyTrace):
             st = Stream()
             for record in dbptr.iter_record():
                 st += read(record.filename()[1],
-                           starttime=starttime,
-                           endtime=endtime)[0]
+                           starttime=kwargs['starttime'],
+                           endtime=kwargs['endtime'])[0]
             st.merge()
             tr = st[0]
             self.stats = tr.stats
