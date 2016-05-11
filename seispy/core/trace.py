@@ -3,12 +3,12 @@ from obspy.core.trace import Trace as ObspyTrace
 from obspy.core import read,\
                        Stream,\
                        UTCDateTime
-#from seispy.exceptions import ArgumentError, InitializationError
+from seispy.core.exceptions import ArgumentError, InitializationError
 
 class Trace(ObspyTrace):
     def __init__(self, *args, **kwargs):
         if len(args) == 1:
-            if isfile(args[0]):
+            if isinstance(args[0], str) and isfile(args[0]):
                 tr = read(args[0])[0]
                 self.stats = tr.stats
                 self.data = tr.data
@@ -42,8 +42,8 @@ class Trace(ObspyTrace):
                     'channel' not in kwargs or\
                     'starttime' not in kwargs or\
                     'endtime' not in kwargs:
-                #raise ArgumentError("__init__() expected 'station', 'channel',"\
-                raise ValueError("__init__() expected 'station', 'channel',"\
+                raise ArgumentError("__init__() expected 'station', 'channel',"\
+                #raise ValueError("__init__() expected 'station', 'channel',"\
                         " 'starttime' and 'endtime' keyword arguments")
             if not isinstance(kwargs['starttime'], UTCDateTime) and\
                     not isinstance(kwargs['starttime'], float) and\
@@ -79,8 +79,8 @@ class Trace(ObspyTrace):
                     isinstance(kwargs['database_pointer'], Dbptr):
                 dbptr = dbopen(kwargs['database_path'], 'r')
             else:
-                #raise ArgumentError("__init__() expected either "\
-                raise TypeError("__init__() expected either "\
+                raise ArgumentError("__init__() expected either "\
+                #raise TypeError("__init__() expected either "\
                         "'database_path' or 'database_pointer' keyword "\
                         "argument")
             dbptr = dbptr.lookup(table=wfdisc)
@@ -94,8 +94,8 @@ class Trace(ObspyTrace):
                                                                kwargs['starttime'],
                                                                kwargs['endtime']))
             if dbptr.record_count == 0:
-                #raise InitializationError("__init__() found no data for "\
-                raise ValueError("__init__() found no data for "\
+                raise InitializationError("__init__() found no data for "\
+                #raise ValueError("__init__() found no data for "\
                         "{:s}:{:s} {:s}-{:s}".format(kwargs['station'],
                                                      kwargs['channel'],
                                                      kwargs['starttime'],

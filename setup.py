@@ -10,8 +10,11 @@ setup(name='seispy',
       packages=['seispy.core',
                 'seispy.util'],
       py_modules=['seispy.core.arrival',
+                  'seispy.core.exceptions',
                   'seispy.core.origin',
+                  'seispy.core.trace',
                   'seispy.util.mtp'],
       scripts=['scripts/tests/test_arrival',
-               'scripts/tests/test_origin']
+               'scripts/tests/test_origin',
+               'scripts/tests/test_trace']
       )
