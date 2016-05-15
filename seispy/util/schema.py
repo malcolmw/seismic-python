@@ -65,11 +65,19 @@ class AttributeParseError:
 
 class Relation(DatabaseElement):
     def __str__(self):
-        s = self.name + "\n"
-        s += "-" * len(self.name)
-        width = max([len(attr) for attr in self.attributes])
+        line_width = 76
+        attr_width = max([len(attr) for attr in self.attributes])
+        s = "=" * (line_width + 4) + "\n"
+        s += "= {:^{width}} =".format(self.name, width=line_width) + "\n"
+        s += "= {:^{width}} =".format("-" * len(self.name), width=line_width) + "\n"
+        line = '|'
         for attr in self.attributes:
-            s += "{:>{width}}\n".format(attr, width=width)
+            if len(line) + attr_width + 1 > line_width:
+                s += "= {:^{width}} =".format(line, width=line_width) + "\n"
+                line = '|'
+            line += "{:^{width}}|".format(attr, width=attr_width)
+        s += "= {:^{width}} =".format(line, width=line_width) + "\n"
+        s += "=" * (line_width + 4) + "\n"
         return s
 
 class Schema:
@@ -88,15 +96,11 @@ class Schema:
 
     def parse_body(self):
         tp = self.token_parser
-        block = tp.get_block()
         while tp.get_block():
             tp.get_field()
-            #print tp.get_key(), tp.get_value()
             if tp.get_key() == 'Attribute':
-                print "self.parse_attribute()"
                 self.parse_attribute()
             elif tp.get_key() == 'Relation':
-                print "self.parse_relation()"
                 self.parse_relation()
             else:
                 raise Exception("Error code 3000: unrecognized specifier "\
@@ -109,13 +113,11 @@ class Schema:
         kwargs['name'] = name
         while tp.get_field():
             key = tp.get_key()
-            if name == 'net':
-                print name, key, tp.get_value()
             if key in _attribute_dtypes:
                 kwargs['dtype'] = key
                 kwargs['width'] = tp.get_value()
             else:
-                kwargs[key] = tp.get_value()
+                kwargs[key] = tp.get_value().strip()
         self.attributes[name] = Attribute(**kwargs)
 
     def parse_relation(self):
@@ -124,6 +126,10 @@ class Schema:
         name = tp.get_value()
         kwargs['name'] = name
         while tp.get_field():
+            if tp.get_key() == 'Fields':
+                kwargs['attributes'] = {}
+                for attr in tp.get_value().split():
+                    kwargs['attributes'][attr] = self.attributes[attr]
             kwargs[tp.get_key()] = tp.get_value()
         self.relations[name] = Relation(**kwargs)
 
