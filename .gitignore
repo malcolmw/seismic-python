@@ -1,1 +1,4 @@
 build
+seispy/*.pyc
+seispy/core/*.pyc
+seispy/util/*.pyc
