@@ -12,13 +12,14 @@ class Database:
         if not isfile(database_path):
             raise InitializationError("{:s} does not "\
                     "exist".format(database_path))
-        self.database_path = database_path
-        self.descriptor_file = open(self.database_path, 'r')
+        self.descriptor_file = open(database_path, 'r')
         while True:
             line = self.descriptor_file.readline()
             if line.split()[0] == 'schema':
                 self.schema = line.split()[1]
                 break
+            elif line.split()[0] == 'dbpath':
+                self._set_dbpath(line.split()[1])
         self.schema = Schema("/Users/mcwhite/src/Seispy/data/"\
                 "{:s}".format(self.schema))
         self.table = None
@@ -30,6 +31,13 @@ class Database:
         for element in ('table', 'field', 'record'):
             s += "{:6}: {:s}\n".format(element, getattr(self, element))
         return s
+
+    def _set_dbpath(self, dbpath):
+        dbp = []
+        for path in dbpath.split(':'):
+            dbp += [path[:path.find('{')] + path[path.find('{') + 1:path.find('}')]]
+        self._dbpath = tuple(dbp)
+
 
     def lookup(self, **kwargs):
         for key in kwargs:
@@ -44,14 +52,11 @@ class Database:
             elif key == 'table':
                 if kwargs[key] not in self.schema.relations:
                     raise Exception("cannot lookup table {:s}".format(kwargs[key]))
-                self.table = kwargs[key]
+                self.table = self.schema.relations[kwargs[key]]
             elif key == 'field':
-                if kwargs[key] not in self.schema.relations[self.table].attributes:
-                    raise Exception("table {:s} has no field "\
-                            "{:s}".format(self.table, kwargs[key]))
-                self.field = kwargs[key]
+                raise Exception("field lookup not implemented")
             elif key == 'record':
-                pass
+                raise Exception("record lookup not implemented")
 
     def get(self, *args):
         pass

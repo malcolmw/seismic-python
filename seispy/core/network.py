@@ -1,8 +1,8 @@
 from seispy.core import *
 
-class Arrival(DbParsable):
+class Network(DbParsable):
     '''
-    A container class for phase data.
+    A container class for network data.
     '''
     def __init__(self, *args, **kwargs):
         self.attributes = ()
@@ -17,16 +17,5 @@ class Arrival(DbParsable):
                 raise ImportError("$ANTELOPE environment variable not set.")
             self._parse_Dbptr(args[0])
         else:
-            self.sta = args[0]
-            self.attributes += ('sta',)
-            self.time = args[1]
-            self.attributes += ('time',)
-            self.iphase = args[2]
-            self.attributes += ('iphase',)
-            for attr in ('chan', 'deltim', 'qual', 'arid', 'tt_calc', 'predarr'):
-                if attr in kwargs:
-                    setattr(self, attr, kwargs[attr])
-                else:
-                    setattr(self, attr, None)
-                self.attributes += (attr,)
-
+            #implement explicit argument specification parsing
+            pass

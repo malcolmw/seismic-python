@@ -3,7 +3,7 @@ A container class for database schema definitions.
 '''
 from inspect import getmembers
 from os.path import isfile
-from seispy.core.exceptions import InitializationError
+import seispy.core
 _lead_tokens = ('(', '{', '"')
 _token_conjugates = {'(': ')',
                      '{': '}',
@@ -32,7 +32,8 @@ def find_token(string, ttype=None):
                 return char, i, _token_conjugates[char]
     return None, None
 
-class DatabaseElement:
+#base class
+class SchemaElement:
     def __init__(self, *args, **kwargs):
         for key in kwargs:
             setattr(self, key, kwargs[key])
@@ -53,7 +54,7 @@ class DatabaseElement:
             s += "\t{}\n".format(getattr(self, key))
         return s
 
-class Attribute(DatabaseElement):
+class Attribute(SchemaElement):
     pass
 
 class AttributeParseError:
@@ -63,7 +64,7 @@ class AttributeParseError:
     def __str__(self):
         return self.message
 
-class Relation(DatabaseElement):
+class Relation(SchemaElement):
     def __str__(self):
         line_width = 76
         attr_width = max([len(attr) for attr in self.attributes])
@@ -153,6 +154,7 @@ class Schema:
             raise Exception("Error code 1003")
         self.timedate = tp.get_value()
 
+
 class TokenParser:
     def __init__(self, *args):
         if isfile(args[0]):
@@ -162,7 +164,7 @@ class TokenParser:
             self.type = str
             self.stream = args[0]
         else:
-            raise InitializationError("unrecognized argument type")
+            raise seispy.core.exceptions.InitializationError("unrecognized argument type")
 
     def get_block(self):
         tokens = []
@@ -172,7 +174,6 @@ class TokenParser:
         self.block = char
         while char != ';' or tokens:
             char = self.next()
-            #print "!{}$".format(char)
             if char == None:
                 self.block = None
                 return None
