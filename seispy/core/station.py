@@ -1,4 +1,4 @@
-from seispy.core import *
+from seispy.core import DbParsable
 
 class Station(DbParsable):
     '''
@@ -7,25 +7,44 @@ class Station(DbParsable):
     def __init__(self, *args, **kwargs):
         self.attributes = ()
         if len(args) == 1:
-            import os
-            import sys
-            try:
-                sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
-                from antelope.datascope import Dbptr,\
-                                               dbVIEW_TABLES
-            except ImportError:
-                #Presumably in the future an alternate parsing method
-                #would be implemented for an object other than a Dbptr.
-                raise ImportError("$ANTELOPE environment variable not set.")
-            if not isinstance(args[0], Dbptr):
-                raise TypeError("__init__() received %s in argument position "\
-                        "1 (requires antelope.datascope.Dbptr)")
+            if not _antelope_defined:
+                raise InitializationError("Antelope environment not initialized")
             dbptr = args[0]
             tables = dbptr.query(dbVIEW_TABLES)
-            if 'site' not in  tables and 'sitechan' not in tables:
-                raise seispy.core.exceptions.InitializationError("Station() "\
-                        "constructor needs 'site' and 'sitechan' tables in view")
-            self._parse_Dbptr(dbptr)
+            if tables != ('site', 'sitechan') and tables != ('sitechan', 'site'):
+                raise InitializationError("seispy.antelope.datascope.Dbptr "\
+                        "object passed to seispy.core.station.Station "\
+                        "constructor must point to 'site' and 'sitechan' "\
+                        "tables only")
+            if dbptr.record < 0 or dbptr.record >= dbptr.record_count:
+                raise InitializationError("seispy.antelope.datascope.Dbptr "\
+                        "object passed to seispy.core.station.Station "\
+                        "constructor must point to valid record")
+            sta, ondate, offdate, lat, lon, elev = dbptr.getv('sta',
+                                                              'ondate',
+                                                              'offdate',
+                                                              'lat',
+                                                              'lon',
+                                                              'elev')
+            dbptr.record = -1
+            chans = ()
+            while True:
+                try:
+                    dbptr.record = dbptr.find("sta =~ /{:s}/ && ondate <= "\
+                            "{:d} && offdate >= {:d}".format(sta,
+                                                             ondate,
+                                                             offdate),
+                                              first=dbptr.record)
+                except DbfindEnd:
+                    break
+                chans += (dbptr.getv('chan')[0])
+            self._parse_kwargs({"sta": sta,
+                                "ondate": ondate,
+                                "offdate": offdate,
+                                "lat": lat,
+                                "lon": lon,
+                                "elev": elev,
+                                "chans": chans})
+
         else:
-            #implement explicit argument specification parsing
-            pass
+            self._parse_kwargs(kwargs)

@@ -1,4 +1,4 @@
-from seispy.core import *
+from seispy.core import DbParsable
 
 class Arrival(DbParsable):
     '''
@@ -7,25 +7,25 @@ class Arrival(DbParsable):
     def __init__(self, *args, **kwargs):
         self.attributes = ()
         if len(args) == 1:
-            import os
-            import sys
-            try:
-                sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
-            except ImportError:
-                #Presumably in the future an alternate parsing method
-                #would be implemented for an object other than a Dbptr.
-                raise ImportError("$ANTELOPE environment variable not set.")
             self._parse_Dbptr(args[0])
         else:
-            self.sta = args[0]
-            self.attributes += ('sta',)
-            self.time = args[1]
-            self.attributes += ('time',)
-            self.iphase = args[2]
-            self.attributes += ('iphase',)
-            for attr in ('chan', 'deltim', 'qual', 'arid', 'tt_calc', 'predarr'):
-                if attr in kwargs:
-                    setattr(self, attr, kwargs[attr])
+            primary_kwargs = ('sta', 'time', 'iphase')
+            for kw in primary_kwargs:
+                if kw not in kwargs:
+                    raise InitializationError("must specify 'sta', 'time', "\
+                            "and 'iphase' for Arrival")
+            valid_kwargs = ('sta',
+                            'time',
+                            'iphase',
+                            'chan',
+                            'deltim',
+                            'qual',
+                            'arid',
+                            'tt_calc',
+                            'predarr')
+            for kw in valid_kwargs:
+                if kw in kwargs:
+                    setattr(self, attr, kwargs[kw])
                 else:
                     setattr(self, attr, None)
                 self.attributes += (attr,)

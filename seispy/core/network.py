@@ -1,4 +1,4 @@
-from seispy.core import *
+from seispy.core import DbParsable
 
 class Network(DbParsable):
     '''

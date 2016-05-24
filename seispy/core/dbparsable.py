@@ -1,4 +1,7 @@
-from seispy.core import *
+from seispy.core import _antelope_defined,\
+                        InitializationError
+from seispy.antelope.datascope import Dbptr,\
+                                      dbTABLE_FIELDS
 
 class DbParsable:
     def __init__(self, *args, **kwargs):
@@ -19,24 +22,24 @@ class DbParsable:
         if not _antelope_defined:
             raise InitializationError("Antelope environment not initialized")
         if not isinstance(dbptr, Dbptr):
+            print type(dbptr), dbptr.__class__
             raise TypeError("expected antelope.datascope.Dbptr instance")
         if dbptr.record < 0 or dbptr.record >= dbptr.record_count:
             raise IndexError("invalid record index in antelope.datascope.Dbptr")
-        #do some class specific error checking
-        if self.__class__ == 'seispy.core.arrival.Arrival':
-            pass
-        if self.__class__ == 'seispy.core.origin.Origin':
-            pass
-        if self.__class__ == 'seispy.core.network.Network':
-            pass
-        if self.__class__ == 'seispy.core.station.Station':
-            if dbptr.query(dbVIEW_TABLES) != ('site', 'sitechan') and\
-                    dbptr.query(dbVIEW_TABLES) != ('sitechan', 'site'):
-                raise InitializationError("view must be comprised of 'site' "\
-                        "and 'sitechan' tables only")
-        if self.__class__ == 'seispy.core.trace.Trace':
-            pass
         for field in dbptr.query(dbTABLE_FIELDS):
-            setattr(self, field, dbptr.getv(field)[0])
-            self.attributes += (field,)
-        self.name = self.sta
+            if field not in self.attributes:
+                setattr(self, field, dbptr.getv(field)[0])
+                self.attributes += (field,)
+
+    def _parse_kwargs(self, kwargs):
+        for kw in primary_kwargs:
+            if kw not in kwargs:
+                raise InitializationError("keywords {} required for "\
+                        "{:s}()".format(primary_kwargs, self.__class__))
+            for kw in valid_kwargs:
+                if kw in kwargs:
+                    setattr(self, attr, kwargs[kw])
+                else:
+                    setattr(self, attr, None)
+                self.attributes += (attr,)
+
