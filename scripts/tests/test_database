@@ -1,0 +1,9 @@
+#!/usr/bin/env python
+#from seispy.core.database import Database
+from seispy.core import Database,\
+                        Origin
+from time import sleep
+
+db = Database('/Users/mcwhite/staging/dbs/anza/2011/anza_2011')
+for origin in db.origins():
+    print origin
