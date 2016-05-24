@@ -1,6 +1,5 @@
 import seispy
 from seispy import _antelope_defined
-__all__ = ["_antelope_defined"]
 
 #import exceptions first
 from seispy.core.exceptions import ArgumentError,\

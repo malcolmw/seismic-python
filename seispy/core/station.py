@@ -37,24 +37,24 @@ class Station(DbParsable):
                 self.channels += [Channel(chan=chan, ondate=ondate, offdate=offdate)]
             _tmp.free()
 
-    def is_station_active(self, *args, **kwargs):
-        if len(args) == 0:
-            raise ArgumentError("at least 1 argument required")
-        time = _verify_time_argument(args[0])
-        if len(args) == 1:
-            if time < self._
-            for blackout in self._blackouts:
-                if time > blackout.start and time < blackout.stop:
-                    return False
-            return True
-        else:
-            start = time
-            stop = _verify_time_argument(args[1])
-            for blackout in self._blackouts:
-                if (start > blackout.start and start < blackout.stop) or\
-                        (stop > blackout.start and stop < blackout.stop):
-                    return False
-            return True
+#    def is_station_active(self, *args, **kwargs):
+#        if len(args) == 0:
+#            raise ArgumentError("at least 1 argument required")
+#        time = _verify_time_argument(args[0])
+#        if len(args) == 1:
+#            if time < self._
+#            for blackout in self._blackouts:
+#                if time > blackout.start and time < blackout.stop:
+#                    return False
+#            return True
+#        else:
+#            start = time
+#            stop = _verify_time_argument(args[1])
+#            for blackout in self._blackouts:
+#                if (start > blackout.start and start < blackout.stop) or\
+#                        (stop > blackout.start and stop < blackout.stop):
+#                    return False
+#            return True
 
 #    def is_channel_active(self, *args, **kwargs):
 #        if len(args) == 1:
