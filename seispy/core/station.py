@@ -1,4 +1,6 @@
-from seispy.core import DbParsable
+from obspy.core import UTCDateTime
+from seispy.core import ArgumentError,\
+                        DbParsable
 
 class Station(DbParsable):
     '''
@@ -6,45 +8,74 @@ class Station(DbParsable):
     '''
     def __init__(self, *args, **kwargs):
         self.attributes = ()
-        if len(args) == 1:
-            if not _antelope_defined:
-                raise InitializationError("Antelope environment not initialized")
-            dbptr = args[0]
-            tables = dbptr.query(dbVIEW_TABLES)
-            if tables != ('site', 'sitechan') and tables != ('sitechan', 'site'):
-                raise InitializationError("seispy.antelope.datascope.Dbptr "\
-                        "object passed to seispy.core.station.Station "\
-                        "constructor must point to 'site' and 'sitechan' "\
-                        "tables only")
-            if dbptr.record < 0 or dbptr.record >= dbptr.record_count:
-                raise InitializationError("seispy.antelope.datascope.Dbptr "\
-                        "object passed to seispy.core.station.Station "\
-                        "constructor must point to valid record")
-            sta, ondate, offdate, lat, lon, elev = dbptr.getv('sta',
-                                                              'ondate',
-                                                              'offdate',
-                                                              'lat',
-                                                              'lon',
-                                                              'elev')
-            dbptr.record = -1
-            chans = ()
-            while True:
-                try:
-                    dbptr.record = dbptr.find("sta =~ /{:s}/ && ondate <= "\
-                            "{:d} && offdate >= {:d}".format(sta,
-                                                             ondate,
-                                                             offdate),
-                                              first=dbptr.record)
-                except DbfindEnd:
-                    break
-                chans += (dbptr.getv('chan')[0])
-            self._parse_kwargs({"sta": sta,
-                                "ondate": ondate,
-                                "offdate": offdate,
-                                "lat": lat,
-                                "lon": lon,
-                                "elev": elev,
-                                "chans": chans})
+        if 'sta' in kwargs and 'database' in kwargs:
+            _db = kwargs['database']
+            _sta = kwargs['sta']
+            _dbptr = _db._dbptr
+            _tbl_site = _dbptr.lookup(table='site')
+            _tbl_site = _tbl_site.subset("sta =~ /{:s}/".format(_sta))
+            _tmp = _tbl_site.sort('offdate')
+            _tmp.record = _tmp.record_count - 1
+            self._offdate = _tmp.getv('offdate')[0]
+            _tmp.free()
+            _tmp = _tbl_site.sort('ondate')
+            _tmp.record = 0
+            self._ondate = _tmp.getv('ondate')[0]
+            self._blackouts = []
+            if _tmp.record_count > 1:
+                for _recno in range(_tmp.record_count - 1):
+                    _tmp.record = _recno
+                    _start = _tmp.getv('offdate')[0]
+                    _tmp.record = _recno + 1
+                    _stop = _tmp.getv('ondate')[0]
+                    self._blackouts += [Blackout(_start, _stop)]
+            _tmp.free()
+            _tmp = _tbl_site.join('sitechan')
+            self.channels = []
+            for _record in _tmp.iter_record():
+                chan, ondate, offdate = _record.getv('chan', 'ondate', 'offdate')
+                self.channels += [Channel(chan=chan, ondate=ondate, offdate=offdate)]
+            _tmp.free()
 
+    def is_station_active(self, *args, **kwargs):
+        if len(args) == 0:
+            raise ArgumentError("at least 1 argument required")
+        time = _verify_time_argument(args[0])
+        if len(args) == 1:
+            if time < self._
+            for blackout in self._blackouts:
+                if time > blackout.start and time < blackout.stop:
+                    return False
+            return True
         else:
-            self._parse_kwargs(kwargs)
+            start = time
+            stop = _verify_time_argument(args[1])
+            for blackout in self._blackouts:
+                if (start > blackout.start and start < blackout.stop) or\
+                        (stop > blackout.start and stop < blackout.stop):
+                    return False
+            return True
+
+#    def is_channel_active(self, *args, **kwargs):
+#        if len(args) == 1:
+#            time = args[0]
+#            if not isinstance(time, UTCDateTime) and\
+#                    not isinstance(time, float) and\
+#                    not isinstance(time, int):
+#                raise TypeError("invalid type for time argument")
+#            if not isinstance(time, UTCDateTime):
+#                time = UTCDateTime(time)
+
+class Blackout:
+    def __init__(self, start, stop):
+        self.start = start
+        self.stop = stop
+
+def _verify_time_argument(time):
+    if not isinstance(time, UTCDateTime) and\
+            not isinstance(time, float) and\
+            not isinstance(time, int):
+        raise TypeError("invalid type for time argument")
+    if not isinstance(time, UTCDateTime):
+        time = UTCDateTime(time)
+    return time
