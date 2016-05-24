@@ -13,6 +13,8 @@ from seispy.core.dbparsable import DbParsable
 from seispy.core.arrival import Arrival
 from seispy.core.database import Database
 from seispy.core.event import Event
+from seispy.core.iterators import EventIterator,\
+                                  OriginIterator
 from seispy.core.network import Network
 from seispy.core.origin import Origin
 from seispy.core.station import Station
