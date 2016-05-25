@@ -1,21 +1,29 @@
-from seispy.core.dbparsable import DbParsable
+from seispy.core.exceptions import InitializationError
+from seispy.core.station import Station
 
-class Network(DbParsable):
+class Network:
     '''
     A container class for network data.
     '''
     def __init__(self, *args, **kwargs):
         self.attributes = ()
-        if len(args) == 1:
-            import os
-            import sys
-            try:
-                sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
-            except ImportError:
-                #Presumably in the future an alternate parsing method
-                #would be implemented for an object other than a Dbptr.
-                raise ImportError("$ANTELOPE environment variable not set.")
-            self._parse_Dbptr(args[0])
+        if 'net' in kwargs and 'database' in kwargs:
+            self.net = kwargs['net']
+            self.attributes += ('net',)
+            db = kwargs['database']
+            dbptr = db._dbptr
+            tbl_snetsta = dbptr.lookup(table='snetsta')
+            tbl_snetsta = tbl_snetsta.subset("snet =~ /{:s}/".format(self.net))
+            self.stations = ()
+            for record in tbl_snetsta.iter_record():
+                sta = record.getv('sta')[0]
+                try:
+                    self.stations += (Station(database=db, sta=sta),)
+                except InitializationError as err:
+                    print err.message
+            self.attributes += ('stations',)
+            tbl_snetsta.free()
         else:
             #implement explicit argument specification parsing
-            pass
+            raise InitializationError("specify 'net' and 'database' keyword "\
+                    "arguments")

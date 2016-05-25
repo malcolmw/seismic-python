@@ -1,9 +1,17 @@
 #!/usr/bin/env python
 #from seispy.core.database import Database
+import site
+import os
+site.addsitedir("%s/lib/python" % os.environ['ANF'])
 from seispy.core import Database,\
                         Origin
-from time import sleep
 
-db = Database('/Users/mcwhite/staging/dbs/anza/2011/anza_2011')
-for origin in db.origins():
-    print origin
+db = Database('/anf/ANZA/work/mcwhite/ANZA_catalog/dbs/pre_hypoDD/2012/anza_2012')
+for subnet in db.vnet.subnets:
+    print subnet.net, "\n=="
+    for station in subnet.stations:
+        print "\t{:s}".format(station.sta)
+        for channel_set in station.get_orthogonal_channels(match="VH.*"):
+            #print "\t\t{:s}".format(channel_set)
+            print "\t\t", channel_set
+

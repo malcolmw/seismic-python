@@ -3,13 +3,15 @@ A container class for database schema definitions.
 '''
 from inspect import getmembers
 from os.path import isfile
-import seispy.core
+from seispy import _datadir
+from seispy.core import InitializationError
+from seispy.util.time import verify_time
 _lead_tokens = ('(', '{', '"')
 _token_conjugates = {'(': ')',
                      '{': '}',
                      '"': '"',
                      "'": "'"}
-_attribute_dtypes = ('String', 'Integer', 'Real')
+_attribute_dtypes = {'String': str, 'Integer': int, 'Real': float, 'YearDay': verify_time}
 
 def find_token(string, ttype=None):
     '''
@@ -82,10 +84,16 @@ class Relation(SchemaElement):
         return s
 
 class Schema:
-    def __init__(self, path):
+    def __init__(self, *args, **kwargs):
         self.attributes = {}
         self.relations = {}
-        self.token_parser = TokenParser(path)
+        if 'path' in kwargs:
+            self.token_parser = TokenParser(kwargs['path'])
+        elif 'schema' in kwargs:
+            self.token_parser = TokenParser(_datadir + kwargs['schema'])
+        else:
+            raise InitializationError("specify either 'path' or 'schema' "\
+                    "keyword argument")
         self.parse_header()
         self.parse_body()
 
@@ -119,6 +127,10 @@ class Schema:
                 kwargs['width'] = tp.get_value()
             else:
                 kwargs[key] = tp.get_value().strip()
+        try:
+            kwargs['Null'] = _attribute_dtypes[kwargs['dtype']](kwargs['Null'].strip('"'))
+        except KeyError:
+            pass
         self.attributes[name] = Attribute(**kwargs)
 
     def parse_relation(self):
@@ -154,7 +166,6 @@ class Schema:
             raise Exception("Error code 1003")
         self.timedate = tp.get_value()
 
-
 class TokenParser:
     def __init__(self, *args):
         if isfile(args[0]):
@@ -164,7 +175,7 @@ class TokenParser:
             self.type = str
             self.stream = args[0]
         else:
-            raise seispy.core.exceptions.InitializationError("unrecognized argument type")
+            raise InitializationError("unrecognized argument type")
 
     def get_block(self):
         tokens = []
