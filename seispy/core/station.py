@@ -1,6 +1,6 @@
 from obspy.core import UTCDateTime
-from seispy.core import ArgumentError,\
-                        DbParsable
+from seispy.core.exceptions import ArgumentError
+from seispy.core.dbparsable import DbParsable
 
 class Station(DbParsable):
     '''

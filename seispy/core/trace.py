@@ -3,7 +3,8 @@ from obspy.core.trace import Trace as ObspyTrace
 from obspy.core import read,\
                        Stream,\
                        UTCDateTime
-from seispy.core.exceptions import ArgumentError, InitializationError
+from seispy.core.exceptions import ArgumentError,\
+                                   InitializationError
 
 class Trace(ObspyTrace):
     '''

@@ -1,5 +1,5 @@
-from seispy.core import _antelope_defined,\
-                        InitializationError
+from seispy import _antelope_defined
+from seispy.core.exceptions import InitializationError
 from seispy.antelope.datascope import Dbptr,\
                                       dbTABLE_FIELDS
 

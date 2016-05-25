@@ -1,4 +1,4 @@
-from seispy.core import OriginIterator
+from seispy.core.iterators import OriginIterator
 from seispy.antelope.datascope import dbopen
 
 class Database:

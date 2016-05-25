@@ -1,5 +1,5 @@
-from seispy.core import DbParsable,\
-                        Origin
+from seispy.core.dbparsable import DbParsable
+from seispy.core.origin import Origin
 
 class Event(DbParsable):
     def __init__(self, *args, **kwargs):

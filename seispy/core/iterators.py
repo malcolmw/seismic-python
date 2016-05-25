@@ -1,5 +1,5 @@
-from seispy.core import Event,\
-                        Origin
+from seispy.core.event import Event
+from seispy.core.origin import Origin
 from seispy.antelope.datascope import dbTABLE_IS_VIEW
 class EventIterator:
     def __init__(self, database):
