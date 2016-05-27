@@ -3,6 +3,7 @@
 import site
 import os
 site.addsitedir("%s/lib/python" % os.environ['ANF'])
+from obspy.core import UTCDateTime
 from seispy.core import Database,\
                         Origin
 
@@ -11,7 +12,19 @@ for subnet in db.vnet.subnets:
     print subnet.net, "\n=="
     for station in subnet.stations:
         print "\t{:s}".format(station.sta)
+        #for channel in station.get_channels(match="VH.*"):
+        #    print "\t\t", channel
         for channel_set in station.get_orthogonal_channels(match="VH.*"):
-            #print "\t\t{:s}".format(channel_set)
-            print "\t\t", channel_set
+            print "\t\t",\
+                    channel_set,\
+                    "\n\t\t2013001:",\
+                    channel_set.is_active(time=UTCDateTime(year=2013, julday=001)),\
+                    "\n\t\t2013030 - 2013300:",\
+                    channel_set.is_active(start=UTCDateTime(year=2013, julday=030),
+                                          stop=UTCDateTime(year=2013, julday=300)),\
+                    "\n\t\t1981001:",\
+                    channel_set.is_active(time=UTCDateTime(year=1981, julday=001)),\
+                    "\n\t\t2014265-2020001:",\
+                    channel_set.is_active(start=UTCDateTime(year=2014, julday=265),\
+                                          stop=UTCDateTime(year=2020, julday=001))
 
