@@ -1,9 +1,45 @@
 from seispy.core.dbparsable import DbParsable
 
 class Arrival(DbParsable):
-    '''
-    A container class for phase data.
-    '''
+    """
+    The Arrival class is a container class for phase arrival data and
+    can be initialized one of two ways.
+
+
+    1. Specifying a series of keyword arguments initializing individual
+       fields. If initializating via keyword arguments primary keys *sta*,
+       *time*, and *iphase* must be specified.
+
+    **OR**
+
+    2. Passing in a seispy.antelope.datascope.Dbptr object that points to
+       a record in an *arrival* table.
+
+    The second method of initialization is intended primarily for
+    internal use within the seispy package.
+
+    :argument seispy.antelope.datascope.Dbptr args: Database pointer\
+    to record in *arrival* table
+    :keyword str sta: Station code
+    :keyword float time: Arrival time
+    :keyword str iphase: Interpreted phase
+    :keyword str chan: Channel code
+    :keyword float deltim: Arrival timing error
+    :keyword float qual: Pick quality ('i'=impulsive, 'e'=emergent,\
+    'w'=weak)
+
+    .. code-block:: python
+
+       >>> from seispy.core import Arrival
+       >>> arrival = Arrival(sta='MCAW',
+                             time=597645900.000,
+                             iphase="P",
+                             chan="HHZ",
+                             deltim=0.2)
+
+    .. versionadded:: 0.0alpha
+    .. codeauthor:: Malcolm White mcwhite@ucsd.edu
+    """
     def __init__(self, *args, **kwargs):
         self.attributes = ()
         if len(args) == 1:

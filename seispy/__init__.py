@@ -1,3 +1,7 @@
+"""
+This is top-level documenation. It is coming from seispy/__init__.py doc
+string.
+"""
 import os
 import sys
 __all__ = []

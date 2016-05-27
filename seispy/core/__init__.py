@@ -1,3 +1,7 @@
+"""
+This is module level documenation for seispy.core and is coming from
+seispy/core/__init__.py
+"""
 import seispy
 from seispy import _antelope_defined
 

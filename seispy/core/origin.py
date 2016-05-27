@@ -1,8 +1,19 @@
+"""
+.. This is module level doc string documentation.
+"""
 from seispy.core.arrival import Arrival
 from seispy.core.dbparsable import DbParsable
+print "IMPORTING ORIGIN"
 
 class Origin(DbParsable):
+    """
+    .. This is class level doc string documentation for class Origin.
+    """
     def __init__(self, *args, **kwargs):
+        """
+        .. This is function level doc string documentation for function
+        Origin.__init__()
+        """
         self.attributes = ()
         if len(args) == 1:
             self._parse_Dbptr(args[0])

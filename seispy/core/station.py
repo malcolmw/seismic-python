@@ -1,3 +1,4 @@
+from seispy.core.blackout import Blackout
 from seispy.core.channel import Channel,\
                                 ChannelSet
 from seispy.core.exceptions import ArgumentError,\
@@ -47,6 +48,7 @@ class Station(DbParsable):
                 chan, ondate, offdate = record.getv('chan',
                                                     'sitechan.ondate',
                                                     'sitechan.offdate')
+                #REVIEW THIS
                 if offdate == -1:
                     offdate = db._schema.attributes['offdate'].Null
                 self.channels += [Channel(chan=chan, ondate=ondate, offdate=offdate)]
@@ -79,7 +81,9 @@ class Station(DbParsable):
                 expr = re.compile("{:s}[^Z]{:s}".format(channel.chan[:2], channel.chan[3:]))
                 _channels = (channel,)
                 for _channel in channels:
-                    if re.match(expr, _channel.chan):
+                    if re.match(expr, _channel.chan) and\
+                            _channel.is_active(start=channel.ondate,
+                                               stop=channel.offdate):
                         _channels += (_channel,)
                 if len(_channels) == 1:
                     continue
@@ -89,7 +93,20 @@ class Station(DbParsable):
                 else:
                     channel_set = ChannelSet(chans=squash_channel_set(_channels))
                     orthogonal_channels += (channel_set,)
-        return orthogonal_channels
+        _orthogonal_channels = []
+        if len(orthogonal_channels) > 1:
+            for i in range(len(orthogonal_channels)):
+                flag = False
+                for j in range(len(_orthogonal_channels)):
+                    if orthogonal_channels[i].id == _orthogonal_channels[j].id:
+                        _orthogonal_channels[j] += orthogonal_channels[i]
+                        flag = True
+                        break
+                if flag:
+                    continue
+                else:
+                    _orthogonal_channels += [orthogonal_channels[i]]
+        return tuple(_orthogonal_channels)
 
 
 #    def is_station_active(self, *args, **kwargs):
@@ -121,10 +138,6 @@ class Station(DbParsable):
 #            if not isinstance(time, UTCDateTime):
 #                time = UTCDateTime(time)
 
-class Blackout:
-    def __init__(self, start, stop):
-        self.start = start
-        self.stop = stop
 
 def order_orthogonal_channels(channels):
     if channels[1].chan[2] == 'E' and channels[2].chan[2] == 'N':

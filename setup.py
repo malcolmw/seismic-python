@@ -1,7 +1,7 @@
 from distutils.core import setup
 
 setup(name='seispy',
-      version='1.0',
+      version='0.0',
       description='Seismic data analysis tool',
       author='Malcolm White',
       author_email='white.m88@gmail.com',
@@ -19,6 +19,7 @@ setup(name='seispy',
                   'seispy.antelope.Pkt',
                   'seispy.antelope.stock',
                   'seispy.core.arrival',
+                  'seispy.core.blackout',
                   'seispy.core.channel',
                   'seispy.core.database',
                   'seispy.core.dbparsable',
