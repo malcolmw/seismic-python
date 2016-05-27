@@ -1,4 +1,5 @@
 from seispy.core.dbparsable import DbParsable
+from seispy.core.exceptions import InitializationError
 
 class Arrival(DbParsable):
     """
@@ -7,13 +8,13 @@ class Arrival(DbParsable):
 
 
     1. Specifying a series of keyword arguments initializing individual
-       fields. If initializating via keyword arguments primary keys *sta*,
-       *time*, and *iphase* must be specified.
+       fields. If initializating via keyword arguments primary keys
+       *sta*, *time*, and *iphase* must be specified.
 
     **OR**
 
-    2. Passing in a seispy.antelope.datascope.Dbptr object that points to
-       a record in an *arrival* table.
+    2. Passing in a seispy.antelope.datascope.Dbptr object that points
+       to a record in an *arrival* table.
 
     The second method of initialization is intended primarily for
     internal use within the seispy package.
@@ -27,6 +28,10 @@ class Arrival(DbParsable):
     :keyword float deltim: Arrival timing error
     :keyword float qual: Pick quality ('i'=impulsive, 'e'=emergent,\
     'w'=weak)
+    :raise InitializationError: if initialization method\
+    2. is used and primary keys (*sta*, *time*, and *iphase*) are not\
+    specified.
+    :raise TypeError: sometimes
 
     .. code-block:: python
 

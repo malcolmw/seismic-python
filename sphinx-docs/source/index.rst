@@ -1,14 +1,14 @@
-.. SeisPy documentation master file, created by
+.. SeismicPython documentation master file, created by
    sphinx-quickstart on Thu May 26 22:11:15 2016.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to SeisPy's documentation!
-==================================
+Welcome to SeismicPython's documentation!
+=========================================
 
-The SeisPy package is intended to facilitate use of complementary functionality
-found in Python packages such as `ObsPy <https://www.obspy.org/>`_ and the
-Antelope Python API (distributed by `BRTT Inc. <http://www.brtt.com>`_).
+The SeismicPython package is intended to facilitate use of complementary
+functionality found in Python packages such as `ObsPy <https://www.obspy.org/>`_
+and the Antelope Python API (distributed by `BRTT Inc. <http://www.brtt.com>`_).
 
 Contents:
 
