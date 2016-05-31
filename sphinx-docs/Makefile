@@ -6,6 +6,7 @@ SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
 PAPER         =
 BUILDDIR      = build
+GH_PAGES_SOURCES = source Makefile
 
 # Internal variables.
 PAPEROPT_a4     = -D latex_paper_size=a4
@@ -40,6 +41,17 @@ help:
 
 clean:
 	-rm -rf $(BUILDDIR)/*
+
+gh-pages:
+	git checkout gh-pages
+	for obj in `ls ..`; do if [ $$obj != sphinx-docs ] && [ $$obj != .nojekyll ]; then echo "rm -rf ../$$obj"; rm -rf ../$$obj; fi; done
+	git checkout master $(GH_PAGES_SOURCES)
+	git reset HEAD
+	make html
+	mv -fv build/html/* ..
+	git add -A
+	git add ..
+	git commit -m "Generated gh-pages for `git log master -1 --pretty=short --abbrev-commit`" && git push origin gh-pages ; git checkout master
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(BUILDDIR)/html
