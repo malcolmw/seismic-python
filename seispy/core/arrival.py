@@ -57,13 +57,30 @@ class Arrival(DbParsable):
                             "and 'iphase' for Arrival")
             valid_kwargs = ('sta',
                             'time',
-                            'iphase',
-                            'chan',
-                            'deltim',
-                            'qual',
                             'arid',
-                            'tt_calc',
-                            'predarr')
+                            'jdate',
+                            'stassid',
+                            'chanid',
+                            'chan',
+                            'iphase',
+                            'stype',
+                            'deltim',
+                            'azimuth',
+                            'delaz',
+                            'slow',
+                            'delslo',
+                            'ema',
+                            'rect',
+                            'amp',
+                            'per',
+                            'logat',
+                            'clip',
+                            'fm',
+                            'snr',
+                            'qual',
+                            'auth',
+                            'commid',
+                            'lddate')
             for kw in valid_kwargs:
                 if kw in kwargs:
                     setattr(self, attr, kwargs[kw])
