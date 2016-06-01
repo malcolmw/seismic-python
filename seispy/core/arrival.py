@@ -42,6 +42,7 @@ class Arrival(DbParsable):
                              chan="HHZ",
                              deltim=0.2)
 
+    ---------------------
     *qual* - Pick quality
     ---------------------
 
