@@ -28,13 +28,10 @@ class Arrival(DbParsable):
     :keyword float deltim: Arrival timing error
     :keyword float qual: Pick quality ('i'=impulsive, 'e'=emergent,\
     'w'=weak)
-    :raise InitializationError: if initialization method\
-    2. is used and primary keys (*sta*, *time*, and *iphase*) are not\
-    specified.
-    :raise TypeError: sometimes
-
+    :raise InitializationError: if initialization method 2 is used and
+    primary keys (*sta*, *time*, and *iphase*) are not specified.
+    |
     :qual - Pick Quality:
-
     +------------+-----+
     |Pick Quality|Label|
     +============+=====+
