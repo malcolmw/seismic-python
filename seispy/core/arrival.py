@@ -42,6 +42,19 @@ class Arrival(DbParsable):
                              chan="HHZ",
                              deltim=0.2)
 
+    *qual* - Pick quality
+    ---------------------
+
+    +------------+-----+
+    |Pick Quality|Label|
+    +============+=====+
+    |impulsive   |'i'  |
+    +------------+-----+
+    |emergent    |'e'  |
+    +------------+-----+
+    |weak        |'w'  |
+    +------------+-----+
+
     .. versionadded:: 0.0alpha
     .. codeauthor:: Malcolm White mcwhite@ucsd.edu
     """
