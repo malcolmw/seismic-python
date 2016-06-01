@@ -33,15 +33,6 @@ class Arrival(DbParsable):
     specified.
     :raise TypeError: sometimes
 
-    .. code-block:: python
-
-       >>> from seispy.core import Arrival
-       >>> arrival = Arrival(sta='MCAW',
-                             time=597645900.000,
-                             iphase="P",
-                             chan="HHZ",
-                             deltim=0.2)
-
     ---------------------
     *qual* - Pick quality
     ---------------------
@@ -55,6 +46,16 @@ class Arrival(DbParsable):
     +------------+-----+
     |weak        |'w'  |
     +------------+-----+
+
+    .. code-block:: python
+
+       >>> from seispy.core import Arrival
+       >>> arrival = Arrival(sta='MCAW',
+                             time=597645900.000,
+                             iphase="P",
+                             chan="HHZ",
+                             deltim=0.2)
+
 
     .. versionadded:: 0.0alpha
     .. codeauthor:: Malcolm White mcwhite@ucsd.edu
