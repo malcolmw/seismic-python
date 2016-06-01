@@ -33,9 +33,7 @@ class Arrival(DbParsable):
     specified.
     :raise TypeError: sometimes
 
-    ---------------------
-    *qual* - Pick quality
-    ---------------------
+    :qual - Pick Quality:
 
     +------------+-----+
     |Pick Quality|Label|
