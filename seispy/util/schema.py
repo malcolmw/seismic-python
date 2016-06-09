@@ -2,37 +2,24 @@
 A container class for database schema definitions.
 '''
 from inspect import getmembers
-from os.path import isfile
+from math import floor
+from os import mkdir
+from os.path import isfile, isdir
+from shutil import rmtree
+
 from seispy import _datadir
-from seispy.core import InitializationError
+from seispy.core.exceptions import InitializationError
 from seispy.util.time import verify_time
 _lead_tokens = ('(', '{', '"')
 _token_conjugates = {'(': ')',
                      '{': '}',
                      '"': '"',
                      "'": "'"}
-_attribute_dtypes = {'String': str, 'Integer': int, 'Real': float, 'YearDay': verify_time}
-
-def find_token(string, ttype=None):
-    '''
-    Return the position and conjugate of the first instance of a token.
-
-    Specifying keyword 'ttype' will restrict search to tokens equal to
-    the value of ttype.
-    '''
-    if ttype and ttype not in _token_conjugates:
-        raise ValueError("invalid ttype")
-    if ttype and not isinstance(ttype, str):
-        raise TypeError("keyword argument 'ttype' must be type str")
-    for i in range(len(string)):
-        char = string[i]
-        if ttype:
-            if char == ttype:
-                return char, i, _token_conjugates[ttype]
-        else:
-            if char in _token_conjugates:
-                return char, i, _token_conjugates[char]
-    return None, None
+_attribute_dtypes = {'String': str,
+                     'Integer': int,
+                     'Real': float,
+                     'Time': float,
+                     'YearDay': verify_time}
 
 #base class
 class SchemaElement:
@@ -57,7 +44,23 @@ class SchemaElement:
         return s
 
 class Attribute(SchemaElement):
-    pass
+    def sphinx_documentation_block(self, schema="NOSCHEMA", ref_sufx="_attributes"):
+        block = ".. _%s-%s%s:\n\n" % (schema, self.name, ref_sufx)
+        title = "**%s** -- %s" % (self.name, self.description)
+        block += title + "\n"
+        block += "-" * len(title) + "\n\n"
+        if hasattr(self, 'detail'):
+            block += self.detail + "\n\n"
+        block += "* **Field width:** %s\n" % self.width
+        block += "* **Format:** %s\n" % self.format
+        if hasattr(self, 'null'):
+            block += "* **Null:** %s\n" % self.null
+        if hasattr(self, 'units'):
+            block += "* **Units:** %s\n" % self.units
+        if hasattr(self, 'range'):
+            block += "* **Range:** %s\n" % self.range
+        return block
+
 
 class AttributeParseError:
     def __init__(self, message):
@@ -83,6 +86,36 @@ class Relation(SchemaElement):
         s += "=" * (line_width + 4) + "\n"
         return s
 
+    def sphinx_documentation_block(self,
+                                   schema="NOSCHEMA",
+                                   ref_sufx="_relations",
+                                   attr_ref_sufx="_attributes"):
+        block = ".. _%s-%s%s:\n\n" % (schema, self.name, ref_sufx)
+        title = "**%s** -- %s" % (self.name, self.description)
+        block += title + "\n"
+        block += "-" * len(title) + "\n\n"
+        block += self.detail + "\n\n"
+        block += "Fields\n^^^^^^\n\n"
+        block += draw_table(self.fields,
+                            schema=schema) + "\n"
+        block += "Primary Keys\n^^^^^^^^^^^^\n\n"
+        block += draw_table(self.primary_keys,
+                            schema=schema) + "\n"
+        if hasattr(self, 'alternate_keys'):
+            block += "Alternate Keys\n^^^^^^^^^^^^^^\n\n"
+            block += draw_table(self.alternate_keys,
+                                schema=schema) + "\n"
+        if hasattr(self, 'foreign_keys'):
+            block += "Foreign Keys\n^^^^^^^^^^^^\n\n"
+            block += draw_table(self.foreign_keys,
+                                schema=schema) + "\n"
+        if hasattr(self, 'defines'):
+            block += "Defines\n^^^^^^^\n\n"
+            block += draw_table(self.defines,
+                                schema=schema) + "\n"
+        return block
+
+
 class Schema:
     def __init__(self, *args, **kwargs):
         self.attributes = {}
@@ -96,6 +129,10 @@ class Schema:
                     "keyword argument")
         self.parse_header()
         self.parse_body()
+        self.attributes = sorted([self.attributes[a] for a in self.attributes],
+                                 key=sort_key)
+        self.relations = sorted([self.relations[r] for r in self.relations],
+                                 key=sort_key)
 
     def __str__(self):
         s = ''
@@ -123,14 +160,10 @@ class Schema:
         while tp.get_field():
             key = tp.get_key()
             if key in _attribute_dtypes:
-                kwargs['dtype'] = key
+                kwargs['dtype'] = key.lower()
                 kwargs['width'] = tp.get_value()
             else:
-                kwargs[key] = tp.get_value().strip()
-        try:
-            kwargs['Null'] = _attribute_dtypes[kwargs['dtype']](kwargs['Null'].strip('"'))
-        except KeyError:
-            pass
+                kwargs[key.lower()] = ' '.join(tp.get_value().strip('"').split())
         self.attributes[name] = Attribute(**kwargs)
 
     def parse_relation(self):
@@ -139,11 +172,33 @@ class Schema:
         name = tp.get_value()
         kwargs['name'] = name
         while tp.get_field():
-            if tp.get_key() == 'Fields':
-                kwargs['attributes'] = {}
+            key = tp.get_key()
+            if key == 'Fields' or\
+                    key == 'Primary' or\
+                    key == 'Alternate' or\
+                    key == 'Foreign' or\
+                    key == 'Defines':
+                if key == 'Fields':
+                    key = 'fields'
+                elif key == 'Primary':
+                    key = 'primary_keys'
+                elif key == 'Alternate':
+                    key = 'alternate_keys'
+                elif key == 'Foreign':
+                    key = 'foreign_keys'
+                elif key == 'Defines':
+                    key = 'defines'
+                kwargs[key] = []
                 for attr in tp.get_value().split():
-                    kwargs['attributes'][attr] = self.attributes[attr]
-            kwargs[tp.get_key()] = tp.get_value()
+                    if '::' in attr:
+                        attr1, attr2 = attr.split('::')
+                        kwargs[key] += [(self.attributes[attr1],
+                                         self.attributes[attr2])]
+                    else:
+                        kwargs[key] += [self.attributes[attr]]
+                kwargs[key] = sorted(kwargs[key], key=sort_key)
+            else:
+                kwargs[tp.get_key().lower()] = ' '.join(tp.get_value().strip('"').split())
         self.relations[name] = Relation(**kwargs)
 
     def parse_header(self):
@@ -152,19 +207,155 @@ class Schema:
         tp.get_field()
         if tp.get_key() != 'Schema':
             raise Exception("Error code 1000")
-        self.schema = tp.get_value()
+        self.schema = tp.get_value().strip('"')
         field = tp.get_field()
         if tp.get_key() != 'Description':
             raise Exception("Error code 1001")
-        self.description= tp.get_value()
+        self.description= tp.get_value().strip('"')
         tp.get_field()
         if tp.get_key() != 'Detail':
             raise Exception("Error code 1002")
-        self.detail = tp.get_value()
+        self.detail = tp.get_value().strip('"')
         tp.get_field()
         if tp.get_key() != 'Timedate':
             raise Exception("Error code 1003")
         self.timedate = tp.get_value()
+
+    def write_sphinx_docs(self, output_dir):
+        if not isdir(output_dir):
+            mkdir(output_dir)
+        subdir = "%s/%s" % (output_dir, self.schema)
+        if isdir(subdir):
+            rmtree(subdir)
+        mkdir(subdir)
+        mkdir("%s/attributes" % subdir)
+        mkdir("%s/relations" % subdir)
+        attr_indices, rel_indices = [], []
+        for attr in self.attributes:
+            if attr.name[0].upper() not in attr_indices:
+                attr_indices += [attr.name[0].upper()]
+        for rel in self.relations:
+            if rel.name[0].upper() not in rel_indices:
+                rel_indices += [rel.name[0].upper()]
+        self.write_schema_index(subdir,
+                                attr_indices=attr_indices,
+                                rel_indices=rel_indices)
+        self.write_schema_element_index(subdir,
+                                        elements='attributes',
+                                        indices=attr_indices)
+        self.write_schema_element_index(subdir,
+                                        elements='relations',
+                                        indices=rel_indices)
+        for char in attr_indices:
+            self.write_schema_element_index(subdir,
+                                            key=char,
+                                            elements='attributes')
+        for char in rel_indices:
+            self.write_schema_element_index(subdir,
+                                            key=char,
+                                            elements='relations')
+        attr_indices = self.write_schema_elements(subdir, elements='attributes')
+        rel_indices = self.write_schema_elements(subdir, elements='relations')
+
+    def write_schema_index(self, subdir, attr_indices=None, rel_indices=None):
+        fout = open("%s/%s_index.rst" % (subdir, self.schema), 'w')
+        fout.write(".. _%s_schema_index:\n\n" % self.schema)
+        title = "**%s** -- %s" % (self.schema, self.description)
+        fout.write("%s\n" % title + "=" * len(title) + "\n\n")
+        fout.write(".. toctree::\n")
+        fout.write("   :hidden:\n\n")
+        fout.write("   attributes/attributes_index_all\n")
+        fout.write("   relations/relations_index_all\n\n")
+        fout.write("Attributes\n----------\n\n")
+        index = ""
+        for char in attr_indices:
+            index += ":ref:`%s <%s_attributes_index_%s>` | " %\
+                    (char, self.schema, char)
+        index += ":ref:`all <%s_attributes_index_all>`" % self.schema
+        fout.write("%s\n\n" % index)
+        fout.write("Relations\n---------\n\n")
+        index = ""
+        for char in rel_indices:
+            index += ":ref:`%s <%s_relations_index_%s>` | " %\
+                    (char, self.schema, char)
+        index += ":ref:`all <%s_relations_index_all>`" % self.schema
+        fout.write("%s\n\n" % index)
+        fout.write("Detail\n------\n\n")
+        fout.write("%s\n" % self.detail)
+        fout.close()
+
+    def write_schema_element_index(self,
+                                   subdir,
+                                   key='all',
+                                   elements=None,
+                                   indices=None):
+        if key == 'all':
+            objs = getattr(self, elements)
+        else:
+            objs = [obj for obj in getattr(self, elements) if\
+                    obj.name[0].upper() == key]
+        if len(objs) == 0:
+            return
+        fout = open("%s/%s/%s_index_%s.rst" % (subdir, elements, elements, key), 'w')
+        fout.write(".. _%s_%s_index_%s:\n\n" % (self.schema, elements, key))
+        title = "%s%s Index -- **%s**" % (elements[0].upper(), elements[1:], key)
+        fout.write("%s\n" % title + "=" * len(title) + "\n\n")
+        #fout.write(draw_table(objs,
+        #                      schema=self.schema,
+        #                      ref_sufx="_%s" % elements))
+        fout.write(draw_table(objs, schema=self.schema) + "\n")
+        fout.write(".. toctree::\n")
+        fout.write("   :hidden:\n\n")
+        if key == 'all':
+            for char in indices:
+                fout.write("   %s_index_%s\n" % (elements, char))
+        else:
+            for obj in objs:
+                fout.write("   %s\n" % obj.name)
+        fout.close()
+
+    def write_schema_elements(self, subdir, elements=None):
+        for obj in getattr(self, elements):
+            fout = open("%s/%s/%s.rst" % (subdir, elements, obj.name), 'w')
+            fout.write(obj.sphinx_documentation_block(schema=self.schema,
+                                                      ref_sufx="_%s" % elements))
+
+
+    def write_sphinx_docs_dep(self, output_dir):
+        if not isdir(output_dir):
+            mkdir(output_dir)
+        subdir = "%s/%s" % (output_dir, self.schema)
+        if isdir(subdir):
+            rmdir(subdir)
+        mkdir(subdir)
+        outfile = open("%s/%s.rst" % (output_dir, self.schema), 'w')
+        outfile.write(".. _top-%s:\n\n" % self.schema)
+        header = "**%s** -- %s" % (self.schema, self.description.strip('"'))
+        outfile.write(header + "\n")
+        outfile.write("=" * len(header) + "\n")
+        outfile.write(self.detail + "\n\n")
+        outfile.write(".. _Attributes-%s:\n\n" % self.schema)
+        outfile.write(draw_table(self.attributes,
+                                 header="Attributes",
+                                 schema=self.schema,
+                                 ref_sufx='A') + "\n\n")
+        outfile.write(".. _Relations-%s:\n\n" % self.schema)
+        outfile.write(draw_table(self.relations,
+                                 header="Relations",
+                                 schema=self.schema,
+                                 ref_sufx='R') + "\n\n")
+        outfile.write("Attributes\n==========\n")
+        for attr in self.attributes:
+            outfile.write(attr.sphinx_documentation_block(schema=self.schema))
+            outfile.write("\n:ref:`[top] <top-%s>` :ref:`[Attributes] "\
+                    "<Attributes-%s>` :ref:`[Relations] <Relations-%s>`\n\n" %\
+                    (self.schema, self.schema, self.schema))
+        outfile.write("Relations\n=========\n")
+        for relation in self.relations:
+            outfile.write(relation.sphinx_documentation_block(schema=self.schema))
+            outfile.write("\n:ref:`[top] <top-%s>` :ref:`[Attributes] "\
+                    "<Attributes-%s>` :ref:`[Relations] <Relations-%s>`\n\n" %\
+                    (self.schema, self.schema, self.schema))
 
 class TokenParser:
     def __init__(self, *args):
@@ -245,3 +436,125 @@ class TokenParser:
                 c = self.stream[0]
                 self.stream = self.stream[1:]
                 return c
+
+def draw_table(iterator,
+               header=None,
+               schema="NULLSCHEMA",
+               ncol=6):
+    if len(iterator) < ncol:
+        ncol = len(iterator)
+    cell_entries = {}
+    for element in iterator:
+        if isinstance(element, tuple):
+            key = "%s::%s" % (element[0].name, element[1].name)
+            #entry = ":doc:`%s </source/schemas/%s/attributes/%s.rst>`::"\
+            #        ":doc:`%s </source/schemas/%s/attributes/%s.rst>`" %\
+            #        (element[0].name,
+            #         schema,
+            #         element[0].name,
+            #         element[1].name,
+            #         schema,
+            #         element[1].name)
+            entry = ":ref:`%s <%s-%s_attributes>`::"\
+                    ":ref:`%s <%s-%s_attributes>`" %\
+                    (element[0].name,
+                     schema,
+                     element[0].name,
+                     element[1].name,
+                     schema,
+                     element[1].name)
+        else:
+            if isinstance(element, Attribute):
+                suffix = "_attributes"
+            elif isinstance(element, Relation):
+                suffix = "_relations"
+            key = element.name
+            #entry = ":doc:`%s </source/schemas/%s/%s/%s.rst>`" %\
+            #        (element.name, schema, subdir, element.name)
+            entry = ":ref:`%s <%s-%s%s>`" %\
+                    (element.name, schema, element.name, suffix)
+        cell_entries[key] = entry
+    colwidth = max([len(cell_entries[key]) for key in cell_entries])
+    tblwidth = ncol * (colwidth + 1) + 1
+    if header:
+        s = "+" + "-" * (tblwidth - 2) + "+\n"
+        s += "|%s" % header + " " * (tblwidth - len("|%s" % header) - 1) + "|\n"
+        s += ("+" + "=" * colwidth) * ncol + "+\n"
+    else:
+        s = ("+" + "-" * colwidth) * ncol + "+\n"
+    counter = 1
+    for key in sorted(cell_entries):
+        entry = cell_entries[key]
+        s += "|%s" % entry + " " * (colwidth - len(entry))
+        if counter % ncol == 0:
+            s += "|\n"
+            if counter != len(cell_entries):
+                s += ("+" + "-" * colwidth) * ncol + "+" + "\n"
+        counter += 1
+    if len(cell_entries) % ncol != 0:
+        for i in range(ncol - (len(cell_entries) % ncol)):
+            s += "|" + " " * colwidth
+        s += "|\n"
+    s += ("+" + "-" * colwidth) * ncol + "+\n"
+    return s
+
+def draw_table_dep(iterator,
+               header=None,
+               schema="NULLSCHEMA",
+               ref_sufx="X",
+               ncol=6):
+    if len(iterator) < ncol:
+        ncol = len(iterator)
+    colwidth = max([len(element.name) + 8 + len(schema) + len(ref_sufx)\
+            if not isinstance(element, tuple)\
+            else (len(element[0].name) +\
+                  len(element[1].name) +\
+                  18 +\
+                  2 * (len(schema) + len(ref_sufx))
+                 )\
+            for element in iterator])
+    tblwidth = ncol * (colwidth + 1) + 1
+    if header:
+        s = "+" + "-" * (tblwidth - 2) + "+\n"
+        s += "|%s" % header + " " * (tblwidth - len("|%s" % header) - 1) + "|\n"
+        s += ("+" + "=" * colwidth) * ncol + "+\n"
+    else:
+        s = ("+" + "-" * colwidth) * ncol + "+\n"
+    counter = 1
+    for element in iterator:
+        if not isinstance(element, tuple):
+            name = element.name
+            s += "|:doc:`%s-%s%s`" % (schema, name, ref_sufx) +\
+                    " " * (colwidth - (len(name) +\
+                                       8 +\
+                                       len(schema) +\
+                                       len(ref_sufx)
+                                      )
+                          )
+        else:
+            name1, name2 = element[0].name, element[1].name
+            s += "|:doc:`%s-%s%s`:::doc:`%s-%s%s`"\
+                    % (schema, name1, ref_sufx, schema, name2, ref_sufx)
+            s += " " * (colwidth - (len(name1) +\
+                                    len(name2) +\
+                                    18 +\
+                                    2 * (len(schema) + len(ref_sufx))
+                                    )
+                       )
+        if counter % ncol == 0:
+            s += "|\n"
+            if counter != len(iterator):
+                s += ("+" + "-" * colwidth) * ncol + "+" + "\n"
+        counter += 1
+    if len(iterator) % ncol != 0:
+        for i in range(ncol - (len(iterator) % ncol)):
+            s += "|" + " " * colwidth
+        s += "|\n"
+    s += ("+" + "-" * colwidth) * ncol + "+\n"
+    return s
+
+def sort_key(obj):
+    if isinstance(obj, SchemaElement):
+        return obj.name
+    elif isinstance(obj, tuple):
+        return obj[0].name
