@@ -1,0 +1,195 @@
+Schema autodrm
+	Description ( "AutoDRM log files" )
+	Detail {
+		This keeps logs of the messages sent and received by
+		autodrm.
+	}
+	Timedate timestamp
+	;
+
+Attribute bundle
+	Dbptr ( 32 )
+	Description ( "database pointer to bundled/grouped data" ) 
+	Format ( "%ld %ld %ld %ld" ) 
+	Detail {
+	    A bundle is a special database pointer which refers to
+	    either an entire table or view, or to a contiguous subset
+	    of some table or view.  In the former case, both the
+	    record number and the field number should be dbALL.  In
+	    the latter case, the record number and the field number
+	    specify a range of records in the table.  
+	}
+	;
+
+
+Attribute bundletype
+	Integer ( 20 )
+	Format ("%20ld" ) 
+	Description ( "type of bundle" ) 
+	Detail { 
+	    The bundle type is an arbitrary integer which specifies
+	    the kind of the bundle.  
+	}
+	;
+
+Attribute disposal
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time request is fulfilled (email is posted)" )
+	;
+
+Attribute email
+	String (60)
+	Format ( "%-60s" )
+	Null ( "-" )
+	Range ( "email =~ /.*@.*/" )
+	Description ( "requestor email address" )
+	;
+
+Attribute in_kbytes
+	Real (10)
+	Format ( "%10.1f" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "# kbytes in request bodies" )
+	;
+
+Attribute msg_id
+	String (20)
+	Format ( "%-20s" )
+	Null ( "-" )
+	Description ( "id code unique to sender" )
+	;
+
+Attribute msg_type
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "msg_type =~ /r|d|s|p/" )
+	Description ( "autoDRM request type from msg_type line" )
+	Detail {
+		r request
+		d data
+		s subscription
+		p problem
+	}
+	;
+
+Attribute name
+	String (50)
+	Format ( "%-50s" )
+	Null ( "-" )
+	Range ( "0-9" )
+	Description ( "long name for a requestor (from mail envelope)" )
+	;
+
+Attribute organization
+	String (50)
+	Format ( "%-50s" )
+	Null ( "-" )
+	Description ( "Organization Name" )
+	;
+
+Attribute out_kbytes
+	Real (10)
+	Format ( "%10.1f" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "# kbytes in replies" )
+	;
+
+Attribute phone
+	String (15)
+	Format ( "%-15s" )
+	Null ( "-" )
+	Description ( "phone number" )
+	;
+
+Attribute problems
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "# requests with any error" )
+	;
+
+Attribute receipt
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "arrival time of request" )
+	;
+
+Attribute requests
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "# requests" )
+	;
+
+Attribute result
+	String (1)
+	Format ( "%-1.1s" )
+	Null ( "-" )
+	Range ( "result =~/s|e|r|d/" )
+	Description ( "result code" )
+	Detail {
+		s	success
+		e	error
+		r	rejected
+		d	incoming data
+	}
+	;
+
+Attribute rsp_id
+	String (25)
+	Format ( "%-25s" )
+	Null ( "-" )
+	Description ( "id code unique to autodrm response" )
+	;
+
+Attribute source_code
+	String (20)
+	Format ( "%-20s" )
+	Null ( "-" )
+	Description ( "source code for an AutoDRM request" )
+	;
+
+Attribute timestamp
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of last modification" )
+	;
+
+Attribute version
+	String (8)
+	Format ( "%-8s" )
+	Null ( "-" )
+	Description ( "AutoDRM version identifier from Begin line of request" )
+	;
+
+Relation log
+	Fields (  email msg_id msg_type receipt version source_code in_kbytes result rsp_id out_kbytes disposal timestamp )
+	Primary ( email msg_id receipt )
+	Alternate ( rsp_id ) 
+	Description ( "log file from AutoDRM" )
+	Detail {
+		This defines the minimum operations logs required by 
+		the IDC Formats and Protocols for Messages.
+	}
+	;
+
+Relation requestors
+	Fields ( email source_code name phone organization in_kbytes out_kbytes requests problems timestamp )
+	Primary (  email )
+	Description ( "additional information about requestors" )
+	Detail {
+		Some additional information and overall statistics 
+		about requestors
+	}
+	;
+

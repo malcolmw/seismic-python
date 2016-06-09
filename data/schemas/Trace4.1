@@ -1,0 +1,1870 @@
+Schema Trace4.1
+	Description ( "Trace Manipulation and Processing Database" )
+	Detail {
+		This database provides the parameter
+		information needed during standard processing of 
+		seismic waveform data.
+		
+		It is largely derived from the CSS 3.1 database, 
+		with additions which address specific trace manipulation
+		issues, and the representation of traces in memory.  
+		The information contained in the central
+		trace relation represents a join of many tables, 
+		in particular wfdisc, site, sitechan, sensor and instrument.
+
+		This is an update to the Trace4.0 schema to bew compatible
+		with the various larger strings in css3.1
+	}
+	;
+
+Attribute algorithm
+	String (15)
+	Format ( "%-15s" )
+	Null ( "-" )
+	Description ( "location algorithm used" )
+	Detail {
+		This is a brief textual
+		description of the algorithm used for computing a seismic
+		origin.
+	}
+	;
+
+Attribute amp
+	Real (10)
+	Format ( "%10.1f" )
+	Null ( "-1.0" )
+	Range ( "amp > 0.0" )
+	Units ( "Nanometers" )
+	Description ( "amplitude, instrument corrected, nm" )
+	Detail {
+		This is the zero-to-peak amplitude of
+		the earth's displacement for a seismic phase. Amp is
+		assumed to be corrected for the response of the
+		instrument.
+	}
+	;
+
+Attribute arid
+	Integer ( 12 )
+	Format ( "%12ld" ) 
+	Null  ( "-1"  ) 
+	Range ( "arid > 0" ) 
+	Description ( "arrival id" ) 
+	Detail {
+	    Each arrival is assigned a unique positive integer
+	    identifying it with a unique sta, chan and time.  This
+	    number is used in the assoc relation along with the origin
+	    identifier to link arrival and origin.  
+	}
+	; 
+
+Attribute arrivals
+	Dbptr (32)
+	Format ( "%ld %ld %ld %ld" )
+	Description ( "database pointer to bundled/grouped arrivals" )
+	Detail {
+		Abundle is a special database pointer which refers to
+		either an entire table or view, or to a contiguous subset
+		of some table or view.  In the former case, both the record
+		number and the field number should be dbALL.  In the latter
+		case, the record number and the field number specify a
+		range of records in the table.  
+	}
+	;
+
+Attribute auth
+	String (30)
+	Format ( "%-30s" )
+	Null ( "-" )
+	Description ( "source/originator" )
+	Detail {
+		This records the originator of an arrival (in
+		arrival relation) or origin (in origin relation).
+		Possibilities include externally supplied arrivals
+		identified according to their original source, such as WMO,
+		NEIS, CAN(adian), UK(array), etc. This may also be an
+		identifier of an application generating the attribute, such
+		as an automated interpretation or signal processing
+		program.
+	}
+	;
+
+Attribute azdef
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "azdef =~ /d|n/ " )
+	Description ( "azimuth = defining, non-defining" )
+	Detail {
+		This is a one character flag that
+		indicates whether or not the azimuth of a phase was used to
+		determine the event's origin. It is defining (azdef=d)
+		if used to help locate the event or non-defining (azdef=n) 
+		if it is not used.
+	}
+	;
+
+Attribute azimuth
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "azimuth >= 0.0 && azimuth < 360.0" )
+	Units ( "Degrees" )
+	Description ( "observed azimuth" )
+	Detail {
+		This is the estimated station-to-event
+		azimuth measured clockwise from north. Azimuth is estimated
+		from f-k or polarization analysis. In stassoc, the value
+		may be an analyst estimate.
+	}
+	;
+
+Attribute belief
+	Real (4)
+	Format ( "%4.2f" )
+	Null ( "9.99" )
+	Range ( "belief >= 0.0 && belief <= 1.0" )
+	Description ( "phase confidence" )
+	Detail {
+		This is a
+		qualitative estimate of the confidence that a seismic phase
+		is correctly identified.
+	}
+	;
+
+Attribute bundle
+	Dbptr (32)
+	Format ( "%ld %ld %ld %ld" )
+	Description ( "database pointer to bundled/grouped data" )
+	Detail {
+		Abundle is a special database pointer which refers to
+		either an entire table or view, or to a contiguous subset
+		of some table or view.  In the former case, both the record
+		number and the field number should be dbALL.  In the latter
+		case, the record number and the field number specify a
+		range of records in the table.  
+	}
+	;
+
+Attribute bundletype
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "type of bundle" )
+	Detail {
+		The bundle type is an arbitrary integer which specifies
+		the kind of the bundle.  A few standard types are defined:
+		0 -- waveform segment (single trace)
+		1 -- time-ordered waveform segments for single channel
+		2 -- waveforms grouped by component
+		3 -- waveforms grouped by station
+		4 -- waveforms grouped by array
+		5 -- waveforms grouped by network
+	}
+	;
+
+Attribute calib
+	Real (16)
+	Format ( "%16.6f" )
+	Null ( "0.000000" )
+	Range ( "calib > 0.0" )
+	Units ( "Nanometers/digital count" )
+	Description ( "nominal calibration" )
+	Detail {
+		This is the conversion factor that
+		maps digital data to displacement, velocity, or acceleration,
+		depending on the value of segtype or rsptype. The factor holds
+		true at the oscillation period specified by the attribute
+		calper. A positive value means ground motion (velocity, acceleration)
+		increasing in the
+		component direction (up, north, east) is indicated by
+		increasing counts. A negative value means the opposite.
+		Calib generally reflects the best calibration information
+		available at the time of recording, but refinement may be
+		given in sensor reflecting a subsequent recalibration of
+		the instrument. See calratio.
+	}
+	;
+
+Attribute calper
+	Real (16)
+	Format ( "%16.6f" )
+	Null ( "-1.000000" )
+	Range ( "calper >= 0.0" )
+	Units ( "Seconds" )
+	Description ( "nominal calibration period" )
+	Detail {
+		This gives the period for which calib,
+		ncalib and calratio are valid.
+	}
+	;
+
+Attribute chan
+	String (15)
+	Format ( "%-15s" )
+	Null ( "-" )
+	Description ( "channel" )
+	Detail {
+		This is a fifteen-character code,
+		which, taken together with sta, jdate and time, uniquely
+		identifies the source of the seismic data, including the
+		geographic location, spatial orientation, sensor and
+		subsequent data processing.
+	}
+	;
+
+Attribute comment
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "comment" )
+	Detail {
+		pointer to arbitrary comment.
+	}
+	;
+
+Attribute conf
+	Real (5)
+	Format ( "%5.3f" )
+	Null ( "0.000" )
+	Range ( "conf > 0.0 && conf <= 1.0" )
+	Description ( "confidence" )
+	Detail {
+		This attribute denotes the confidence
+		attached to the event attributes smajax, sminax, sdepth
+		and stime.
+	}
+	;
+
+Attribute data
+	Integer (22)
+	Format ( "%22ld" )
+	Null ( "0" )
+	Description ( "memory address of data" )
+	Detail {
+		This is the actual memory address of data.  Trfree
+	    will attempt to free this memory if data is non-zero.
+	}
+	;
+
+Attribute datatype
+	String ( 2 )
+	Format ( "%-2s" ) 
+	Null  ( "-"  ) 
+	Range ( "datatype =~ /t4|s4|s2/" )
+	Description ( "numeric storage" ) 
+	Detail {
+	    This attribute specifies the format of a data series in
+	    the file system.  Datatypes t4, s4 and s2 are the allowed
+	    values.  Datatype s4 denotes a 4-byte integer and t4
+	    denotes a 32-bit real number in Sun format.  Machine
+	    dependent formats are supported for common hardwares to
+	    allow data transfer in native machine binary formats. 
+	    Note that the CSS standard defines many other formats,
+	    which are not supported by the Antelope software.  
+	}
+	; 
+
+Attribute dbptr
+	Dbptr (32)
+	Format ( "%ld %ld %ld %ld" )
+	Null ("-102 -102 -102 -102" ) 
+	Description ( "original database pointer" )
+	Detail {
+		Often, actual waveform data will have arisen
+		from a single row in an input database table.  This
+		database pointer references that row.  The information
+		in the tables which this pointer references may not 
+		apply to the current trace, however.
+	}
+	;
+
+Attribute deast
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "0.0000" )
+	Range ( "deast >= -20000.0 && deast <= 20000.0" )
+	Units ( "Kilometers" )
+	Description ( "offset from array reference (km)" )
+	Detail {
+		This attribute gives the 'easting' or
+		relative position of an array element, east of the location
+		of the array center specified by the value of refsta. See
+		dnorth.
+	}
+	;
+
+Attribute delaz
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "delaz > 0.0" )
+	Units ( "Degrees" )
+	Description ( "delta azimuth" )
+	Detail {
+		Delta azimuth. This attribute gives the standard deviation
+		of the azimuth of a signal.
+	}
+	;
+
+Attribute delslo
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "delslo > 0.0" )
+	Units ( "Seconds (of time)/degree" )
+	Description ( "delta slowness" )
+	Detail {
+		This attribute gives the standard
+		deviation of the slowness of a signal.
+	}
+	;
+
+Attribute delta
+	Real (8)
+	Format ( "%8.3f" )
+	Null ( "-1.000" )
+	Range ( "delta >= 0.0" )
+	Units ( "Degrees" )
+	Description ( "station to event distance" )
+	Detail {
+		This attribute is the arc length of the path the seismic
+		phase follows from source to receiver. The location of the
+		origin is specified in the origin record referenced by the
+		attribute orid. The attribute arid points to the record in
+		the arrival relation that identifies the receiver. The
+		value of the attribute can exceed 180 degrees, it can even
+		exceed 360 degrees. The geographic distance between source
+		and receiver is delta mod(180).
+	}
+	;
+
+Attribute deltim
+	Real (6)
+	Format ( "%6.3f" )
+	Null ( "-1.000" )
+	Range ( "deltim > 0.0" )
+	Units ( "Seconds" )
+	Description ( "delta time" )
+	Detail {
+		This attribute gives the standard deviation of
+		a detection time.
+	}
+	;
+
+Attribute depdp
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-999.0000" )
+	Range ( "depdp >= 0.0 && depdp < 1000.0" )
+	Units ( "Kilometers" )
+	Description ( "estimated depth from depth phases" )
+	Detail {
+		This is a measure of
+		event depth estimated from a depth phase or an average of
+		several depth phases. Depth is measured positive in a
+		downwards direction starting from the earth's surface. See
+		ndp.
+	}
+	;
+
+Attribute depth
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-999.0000" )
+	Range ( "depth >= 0.0 && depth < 1000.0" )
+	Units ( "Kilometers" )
+	Description ( "estimated depth" )
+	Detail {
+		This attribute gives the depth of the event
+		origin. In stassoc this may be an analyst estimate.
+	}
+	;
+
+Attribute dnorth
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "0.0000" )
+	Range ( "dnorth >= -20000.0 && dnorth <= 20000.0" )
+	Units ( "Kilometers" )
+	Description ( "offset from array reference (km)" )
+	Detail {
+		This attribute gives the 'northing' or
+		relative position of array element north of the array
+		center specified by the value of refsta. See deast.
+	}
+	;
+
+Attribute dof
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "degrees of freedom after adaptive weighting" )
+	Detail {
+		pointer to array of degrees of freedom
+	}
+	;
+
+Attribute dtype
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "dtype =~ /f|d|r|g/" )
+	Description ( "depth method used" )
+	Detail {
+		This single-character flag
+		indicates the method by which the depth was determined or
+		constrained during the location process. The recommended
+		values are f (free), d (from depth phases), r (restrained
+		by location program) or g (restrained by geophysicist). In
+		cases r or g, either the auth field should indicate the
+		agency or person responsible for this action, or the commid
+		field should point to an explanation in the remark
+		relation.
+	}
+	;
+
+Attribute edepth
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "0.0000" )
+	Range ( "edepth >= 0.0" )
+	Units ( "Kilometers" )
+	Description ( "emplacement depth" )
+	Detail {
+		This attribute gives the depth at which
+		the instrument is positioned, relative to the value of elev
+		in the site relation.
+	}
+	;
+
+Attribute eigenspectra
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "eigenspectra" )
+	Detail {
+		pointer to the array of fft coefficients for all tapers, ie
+		the nth coefficient for taper j is 
+		*(eigenspectra + j * nfft + n),  c
+		or
+		eigenspectra(n,j)    FORTRAN
+	}
+	;
+
+Attribute elev
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-999.0000" )
+	Range ( "elev >= -10.0 && elev <= 10.0" )
+	Units ( "Kilometers" )
+	Description ( "elevation" )
+	Detail {
+		This attribute is the elevation of a seismic
+		station relative to mean sea level.
+	}
+	;
+
+Attribute ema
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "ema >= 0.0 && ema <= 90.0" )
+	Units ( "Degrees" )
+	Description ( "emergence angle" )
+	Detail {
+		This attribute is the emergence angle of
+		an arrival, as observed at a three-component station or
+		array. The value increases from the vertical direction
+		towards the horizontal.
+	}
+	;
+
+Attribute endtime
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "9999999999.99900" )
+	Range ( "endtime == time+(nsamp-1)/samprate" )
+	Units ( "Epochal seconds" )
+	Description ( "last valid time for data" )
+	Detail {
+		In wfdisc, this attribute
+		is the time of the last sample in the waveform file.
+		Endtime is equivalent to time+(nsamp-1)/samprate. In
+		sensor, this is the last time the data in the record are
+		valid.
+	}
+	;
+
+Attribute esaz
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Range ( "esac >= 0.0 && esaz <= 360.0" )
+	Units ( "Degrees" )
+	Description ( "event to station azimuth" )
+	Detail {
+		This attribute is the calculated
+		event-to-station azimuth, measured in degrees clockwise
+		from North.
+	}
+	;
+
+Attribute etype
+	String (7)
+	Format ( "%-7s" )
+	Null ( "-" )
+	Range ( "etype =~ /qb|eq|me|ex|o|l|r|t/" )
+	Description ( "event type" )
+	Detail {
+		This attribute is used to identify the type of
+		seismic event, when known. For etypes l, r, t the value in
+		origin will be the value determined by the station closest
+		to the event.
+	}
+	;
+
+Attribute evid
+	Integer (12)
+	Format ( "%12ld" )
+	Null ( "-1" )
+	Range ( "evid > 0" )
+	Description ( "event id" )
+	Detail {
+		Each event is assigned a unique positive
+		integer which identifies it in a database. It is possible
+		for several records in the origin relation to have the same
+		evid. This indicates there are several opinions about the
+		location of the event.
+	}
+	;
+
+Attribute evname
+	String (50)
+	Format ( "%-50s" )
+	Null ( "-" )
+	Description ( "event name" )
+	Detail {
+		This is the common name of the event
+		identified by evid.
+	}
+	;
+
+Attribute exponentials
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "fft complex exponentials" )
+	Detail {
+		pointer to the array of complex fft exponentials, created by cffti
+		exponentials(nfft,2)    FORTRAN
+		plus some extra work space
+	}
+	;
+
+Attribute filter
+	String (15)
+	Format ( "%-15s" )
+	Null ( "-" )
+	Description ( "filter routine" )
+	Detail {
+		This records the name of a filter routine.
+	}
+	;
+
+Attribute filterargs
+	String (128)
+	Format ( "%-128s" )
+	Null ( "-" )
+	Description ( "filter routine arguments" )
+	Detail {
+		This records the arguments of a filter routine processing step.
+	}
+	;
+
+Attribute fm
+	String (2)
+	Format ( "%-2s" )
+	Null ( "-" )
+	Range ( "fm =~ /[cd.][ur.]/" )
+	Description ( "first motion" )
+	Detail {
+		This is a two-character indication of first
+		motion. The first character describes first motion seen on
+		short-period channels and the second holds for long-period
+		instruments. Compression (dilation) on a short-period
+		sensor is denoted by c(d) and compression (dilation) on a
+		long-period sensor is denoted by u(r). Empty character
+		positions will be indicated by dots (e.g., '.r').
+	}
+	;
+
+Attribute fstat
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "ftest statistics" )
+	Detail {
+		pointer to vector of ftest values -- has length nyquist
+	}
+	;
+
+Attribute grn
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "-1" )
+	Range ( "grn > 0" )
+	Description ( "geographic region number" )
+	Detail {
+		This is a geographic region
+		number, as defined by Flinn, Engdahl and Hill (Bull. Seism.
+		Soc. Amer. vol 64, pp. 771-992, 1974). See grname.
+	}
+	;
+
+Attribute hang
+	Real (6)
+	Format ( "%6.1f" )
+	Null ( "0.0" )
+	Range ( "hang >= 0.0 && hang <= 360.0" )
+	Units ( "Degrees" )
+	Description ( "horizontal angle" )
+	Detail {
+		This attribute
+		specifies the orientation of the seismometer in the
+		horizontal plane, measured clockwise from North. For a
+		North-South orientation with the seismometer pointing
+		toward the north, hang=0.; for East-West orientation with
+		the seismometer pointing toward the west, hang=270. See
+		vang.
+	}
+	;
+
+Attribute instype
+	String ( 6 )
+	Format ( "%-6s" ) 
+	Null  ( "-"  ) 
+	Description ( "instrument code" ) 
+	Detail {
+	    This character string is used to indicate the instrument
+	    type.  Some examples are: SRO, ASRO, DWWSSN, LRSM, and
+	    S-750.  
+	}
+	; 
+
+Attribute iphase
+	String (8)
+	Format ( "%-8s" )
+	Null ( "-" )
+	Description ( "reported phase" )
+	Detail {
+		This eight-character field holds the name initially given
+		to a seismic phase.  Standard seismological labels for the
+		types of signals (or phases) are used (e.g., P, PKP, PcP,
+		pP).  Both upper and lower case letters are available and
+		should be used when appropriate, for example, pP or PcP. 
+		See phase.
+	}
+	;
+
+Attribute jackknife
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "jack knife error estimate" )
+	Detail {
+		pointer to the jack knife error estimate
+	}
+	;
+
+Attribute keyname
+	String (15)
+	Format ( "%-15s" )
+	Null ( "NONULL" )
+	Range ( "keyname =~ /arid|chanid|commid|evid|inid/" )
+	Description ( "id name (arid, orid, etc.)" )
+	Detail {
+		This attribute contains the actual name
+		of a key whose last assigned numeric value is saved in
+		keyvalue.
+	}
+	;
+
+Attribute keyvalue
+	Integer (12)
+	Format ( "%12ld" )
+	Null ( "0" )
+	Range ( "keyvalue > 0" )
+	Description ( "last value used for that id" )
+	Detail {
+		This attribute maintains the
+		last assigned value (a positive integer) of the counter for
+		the specified keyname. The number keyvalue is the last
+		counter value used for the attribute keyname. Key values
+		are maintained in the database to ensure uniqueness.
+	}
+	;
+
+Attribute lat
+	Real (12)
+	Format ( "%12.7f" )
+	Null ( "-999.0000" )
+	Range ( "lat >= -90.0 && lat <= 90.0" )
+	Units ( "Degrees" )
+	Description ( "estimated latitude" )
+	Detail {
+		This attribute is the geographic latitude.
+		Locations north of the equator have positive latitudes.
+	}
+	;
+
+Attribute ldof
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "degrees of freedom after adaptive weighting for line spectra" )
+	Detail {
+		pointer to array of degrees of freedom for line spectra
+	}
+	;
+
+Attribute lines
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "list of nlines spectral lines" )
+	Detail {
+		pointer to the vector of integers representing line spectra
+		each integer is an index into the list of fourier components
+	}
+	;
+
+Attribute ljackknife
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "jack knife error estimate for line spectra" )
+	Detail {
+		pointer to the jack knife error estimate for line spectra
+	}
+	;
+
+Attribute logat
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Units ( "Log (Nanometers/seconds)" )
+	Description ( "log(amp/per)" )
+	Detail {
+		This measurement (logarithm of amplitude/period) of
+		signal size is often reported instead of the amplitude and
+		period separately. This attribute is only filled if the
+		separate measurements are not available.
+	}
+	;
+
+Attribute lon
+	Real (12)
+	Format ( "%12.7f" )
+	Null ( "-999.0000" )
+	Range ( "lon >= -180.0 && lon <= 180.0" )
+	Units ( "Degrees" )
+	Description ( "estimated longitude" )
+	Detail {
+		This attribute is the geographic longitude in
+		degrees. Longitudes are measured positive east of the
+		Greenwich meridian.
+	}
+	;
+
+Attribute lower
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "lower confidence estimate" )
+	Detail {
+		pointer to the vector of lower confidence levels, ie
+		the level for frequency j is
+		upper[j],  c
+		or
+		upper(j),  FORTRAN
+	}
+	;
+
+Attribute lspectra
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "line spectral power estimate" )
+	Detail {
+		pointer to the vector of line spectral power estimates, ie
+		the estimate for frequency j is
+		spectra[j],  c
+		or
+		spectra(j),  FORTRAN
+	}
+	;
+
+Attribute lweights
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "adaptive weights for line spectra" )
+	Detail {
+		pointer to the array of adapative weights for all line tapers, ie
+		the nth weight for taper j is 
+		*(weight + j * nfft + n),  c
+		or
+		weight(n,j)    FORTRAN
+	}
+	;
+
+Attribute m0
+	Real (12)
+	Format ( "%17.7f" )
+	Description ( "arbitrary measurement 0" )
+	Detail {
+		This may be used by different filters to keep some 
+		measurement for this trace.
+	}
+	;
+
+Attribute m1
+	Real (12)
+	Format ( "%17.7f" )
+	Description ( "arbitrary measurement 1" )
+	Detail {
+		This may be used by different filters to keep some 
+		measurement for this trace.
+	}
+	;
+
+Attribute magnitude
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "0.00" )
+	Description ( "magnitude" )
+	Detail {
+		This gives the magnitude value of the type
+		indicated in attribute magtype. It is derived in a variety
+		of ways, which are not necessarily linked directly to an
+		arrival. See imb, iml, ims, magtype, mb, ml and ms.
+	}
+	;
+
+Attribute magtype
+	String (6)
+	Format ( "%-6s" )
+	Null ( "NONULL" )
+	Description ( "magnitude type (ml, ms, mb, etc.)" )
+	Detail {
+		This character string is used to specify
+		whether the magnitude value represents mb (body wave
+		magnitude), ms (surface wave magnitude), ml (local
+		magnitude) or other appropriate magnitude measure. See imb,
+		iml, ims, magnitude, mb, ml, ms.
+	}
+	;
+
+Attribute mb
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Description ( "body wave magnitude" )
+	Detail {
+		This is the body wave magnitude of an
+		event. Associated with this attribute is the identifier
+		mbid which points to magid in the netmag relation. The
+		information in that record summarizes the method of
+		analysis and data used. See imb, iml, ims, magnitude,
+		magtype, ml and ms.
+	}
+	;
+
+Attribute ml
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Description ( "local magnitude" )
+	Detail {
+		This is the local magnitude of an event.
+		Associated with this attribute is the identifier mlid,
+		which points to magid in the netmag relation. The
+		information in that record summarizes the method of
+		analysis and the data used. See imb, iml, ims, magnitude,
+		magtype, mb and ms.
+	}
+	;
+
+Attribute ms
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Description ( "surface wave magnitude" )
+	Detail {
+		This is the surface wave magnitude
+		for an event. Associated with this attribute is the
+		identifier msid, which points to magid in the netmag
+		relation. The information in that record summarizes the
+		method of analysis and the data used. See imb, iml, ims,
+		magnitude, magtype, mb and ml.
+	}
+	;
+
+Attribute mt0
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999999.99900" )
+	Units ( "Seconds" )
+	Description ( "arbitrary time measurement 0" )
+	Detail {
+		This may be used by different filters to keep some time
+		measurement for this trace
+	}
+	;
+
+Attribute mt1
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999999.99900" )
+	Units ( "Seconds" )
+	Description ( "arbitrary time measurement 1" )
+	Detail {
+		This may be used by different filters to keep some time
+		measurement for this trace
+	}
+	;
+
+Attribute nass
+	Integer (4)
+	Format ( "%4ld" )
+	Null ( "-1" )
+	Range ( "nass > 0" )
+	Description ( "number of associated phases" )
+	Detail {
+		This attribute gives the
+		number of arrivals associated with the origin.
+	}
+	;
+
+Attribute ndef
+	Integer (4)
+	Format ( "%4ld" )
+	Null ( "-1" )
+	Range ( "ndef >0 && ndef <= nass" )
+	Description ( "number of locating phases" )
+	Detail {
+		This attribute is the
+		number of arrivals used to locate an event. See timedef.
+	}
+	;
+
+Attribute ndp
+	Integer (4)
+	Format ( "%4ld" )
+	Null ( "-1" )
+	Range ( "ndp >= 0" )
+	Description ( "number of depth phases" )
+	Detail {
+		This attribute gives the number of
+		depth phases used in calculating depth and/or depdp. See
+		depdp.
+	}
+	;
+
+Attribute net
+	String (8)
+	Format ( "%-8s" )
+	Null ( "-" )
+	Description ( "unique network identifier" )
+	Detail {
+		This character string is the
+		name of a seismic network. One example is WWSSN.
+	}
+	;
+
+Attribute nfft
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Range ( "nfft > 0" )
+	Description ( "number of points to use in the fft" )
+	Detail {
+		This is the size of array on which the fft is
+		calculated.  This is typically around 2*nsamp+1
+		(the second half of the array is zero filled), 
+		in order to increase the resolution in the frequency
+		domain.
+	}
+	;
+
+Attribute nlines
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Range ( "nlines > 0" )
+	Description ( "number of spectral lines found and removed from spectra" )
+	Detail {
+		This is the number of spectral lines found.
+	}
+	;
+
+Attribute nsamp
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Range ( "nsamp > 0" )
+	Description ( "number of samples" )
+	Detail {
+		This quantity is the number of samples
+		in a waveform segment.
+	}
+	;
+
+Attribute nsta
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "-1" )
+	Range ( "nsta > 0" )
+	Description ( "number of stations used" )
+	Detail {
+		This quantity is the number of
+		stations used to compute the magnitude of the event.
+	}
+	;
+
+Attribute ntapers
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Range ( "ntapers > 0" )
+	Description ( "number of multi-window tapers" )
+	Detail {
+		This is the number of prolate-spheroidal tapers
+		to use in the multi-spectral analysis.
+	}
+	;
+
+Attribute nyquist
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Range ( "nyquist > 0" )
+	Description ( "number of points in output spectra" )
+	Detail {
+		This is the size of the output spectra array.
+	}
+	;
+
+Attribute orid
+	Integer (12)
+	Format ( "%12ld" )
+	Null ( "0" )
+	Range ( "orid > 0" )
+	Description ( "origin id" )
+	Detail {
+		Each origin is assigned a unique
+		positive integer which identifies it in a data base. The
+		orid is used to identify one of the many hypotheses of the
+		actual location of the event.
+	}
+	;
+
+Attribute per
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "per > 0.0" )
+	Units ( "Seconds" )
+	Description ( "period" )
+	Detail {
+		This attribute is the period of the signal
+		described by the arrival record.
+	}
+	;
+
+Attribute phase
+	String (8)
+	Format ( "%-8s" )
+	Null ( "-" )
+	Description ( "associated phase" )
+	Detail {
+		This field holds the identity of a
+		seismic phase which has been associated to an event.
+		Standard seismological labels for phases are used (e.g., P,
+		PKP, PcP, pP, etc.). Both upper and lower case letters are
+		available and should be used when appropriate, for example,
+		pP or PcP. See iphase.
+	}
+	;
+
+Attribute predaz
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "predaz >= 0.0 && predaz < 360.0" )
+	Units ( "Degrees" )
+	Description ( "predicted azimuth" )
+	Detail {
+		This is the predicted station-to-event
+		azimuth measured clockwise from north. Azimuth is predicted
+		from the results of a location algorithm.
+	}
+	;
+
+Attribute predtime
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999999.99900" )
+	Units ( "Seconds" )
+	Description ( "epoch time of predicted arrival" )
+	;
+
+Attribute prefor
+	Integer (12)
+	Format ( "%12ld" )
+	Null ( "-1" )
+	Range ( "prefor > 0" )
+	Description ( "preferred origin" )
+	Detail {
+		This attribute holds the origin
+		identifier, orid, that points to the preferred origin for
+		a seismic event.
+	}
+	;
+
+Attribute processid
+	Integer (12)
+	Format ( "%12ld" )
+	Null ( "-1" )
+	Range ( "processid > 0" )
+	Description ( "process id" )
+	Detail {
+		As a trace bundle is passed through various filters, 
+		a history of the processing is kept in the history table.
+		Each trace bundle has a unique processid.
+	}
+	;
+
+Attribute procflag
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "0" )
+	Description ( "processing flag" )
+	Detail {
+		Bits in this flag indicate various essential processing steps:
+		    grouping,
+		    mapping,
+		    conversion to float,
+		    removal of bad data points,
+		    interpolation, 
+		    etcetera.
+	}
+	;
+
+Attribute pstat
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "ftest probabilities" )
+	Detail {
+		pointer to vector of ftest probabilities -- has length nyquist
+	}
+	;
+
+Attribute qual
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "qual =~ /i|e|w/" )
+	Description ( "signal onset quality" )
+	Detail {
+		This single-character flag is used to
+		denote the sharpness of the onset of a seismic phase. This
+		relates to the timing accuracy as follows: i (impulsive) -
+		accurate to +/ 0.2 seconds e (emergent) - accuracy between
+		+/ (0.2 to 1.0 seconds) w (weak) - timing uncertain to > 1
+		second.
+	}
+	;
+
+Attribute rect
+	Real (7)
+	Format ( "%7.3f" )
+	Null ( "-1.000" )
+	Range ( "rect >= 0.0 && rect <= 1.0" )
+	Description ( "rectilinearity" )
+	Detail {
+		This attribute is a measure of signal
+		rectilinearity. The value is obtained from polarization
+		analysis of 3-component data.
+	}
+	;
+
+Attribute refsta
+	String (14)
+	Format ( "%-14s" )
+	Null ( "-" )
+	Description ( "reference station for array members" )
+	Detail {
+		This string specifies the reference
+		station with respect to which array members are located.
+		See deast, dnorth.
+	}
+	;
+
+Attribute response
+	Integer (20)
+	Format ( "%20ld" )
+	Null ( "0" )
+	Description ( "response information" )
+	Detail {
+		pointer to response structure
+	}
+	;
+
+Attribute samprate
+	Real (11)
+	Format ( "%11.7f" )
+	Null ( "0.0000000" )
+	Range ( "samprate > 0.0" )
+	Units ( "1/seconds" )
+	Description ( "sampling rate in samples/sec" )
+	Detail {
+		This attribute is the sample rate in
+		samples/second. In the instrument relation this is
+		specifically the nominal sample rate, not accounting for
+		clock drift. In wfdisc, the value may vary slightly from
+		the nominal to reflect clock drift.
+	}
+	;
+
+Attribute sdepth
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-1.0000" )
+	Range ( "sdepth > 0.0" )
+	Units ( "Kilometers" )
+	Description ( "depth error " )
+	Detail {
+		This is the maximum error of a depth estimate
+		for a level of confidence given by conf. See smajax,
+		sminax, stx.
+	}
+	;
+
+Attribute sdobs
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-1.0000" )
+	Range ( "sdobs > 0.0" )
+	Description ( "standard error of observation" )
+	Detail {
+		This attribute is
+		derived from the discrepancies in the arrival times of the
+		phases used to locate an event. It is defined as the square
+		root of the sum of the squares of the time residuals,
+		divided by the number of degrees of freedom. The latter is
+		the number of defining observations (ndef in origin)
+		minus the dimension of the system solved (4 if depth is
+		allowed to be a free variable, 3 if depth is constrained).
+	}
+	;
+
+Attribute seaz
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-999.00" )
+	Range ( "seaz >= 0.0 && seaz < 360.0" )
+	Units ( "Degrees" )
+	Description ( "station to event azimuth" )
+	Detail {
+		This attribute is calculated
+		from the station and event locations. It is measured
+		clockwise from North.
+	}
+	;
+
+Attribute segtype
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "segtype =~ /A|V|D/" )
+	Description ( "indexing method" )
+	Detail {
+		Originally, this attribute indicated if a waveform were 
+		o(original), v(virtual), s(segmented) or d(duplicate).
+		However, in Antelope datasets, it indicates the "natural"
+		units of the detector -- 'A' (acceleration), 'V' (velocity),
+		or 'D' (displacement).
+	}
+	;
+
+Attribute sequence
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "-1" )
+	Range ( "sequence > 0" )
+	Description ( "sequence number" )
+	Detail {
+		As a trace bundle is passed through various filters, 
+		a history of the processing is kept in the history table.
+		Each trace bundle has a unique processid, and this is
+		the sequence number.
+	}
+	;
+
+Attribute slodef
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "slodef =~ /d|n/" )
+	Description ( "slowness = defining, non-defining" )
+	Detail {
+		This one-character flag indicates
+		whether or not the slowness of a phase is d (defining), or
+		n (non-defining) for the origin associated with 
+		this arrival. See azdef and timedef.
+	}
+	;
+
+Attribute slow
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "slow >= 0.0" )
+	Units ( "Seconds/degree" )
+	Description ( "observed slowness (s/deg)" )
+	Detail {
+		This is the observed slowness of a wave
+		as it sweeps across an array.
+	}
+	;
+
+Attribute smajax
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-1.0000" )
+	Range ( "smajax > 0.0" )
+	Units ( "Kilometers" )
+	Description ( "semi-major axis of error" )
+	Detail {
+		This is the length of the semi-major axis of the location
+		error ellipse. It is found by projecting the covariance
+		matrix onto the horizontal plane. The level of confidence
+		is specified by conf. See sdepth, sminax and stx.
+	}
+	;
+
+Attribute sminax
+	Real (9)
+	Format ( "%9.4f" )
+	Null ( "-1.0000" )
+	Range ( "sminax > 0.0" )
+	Units ( "Kilometers" )
+	Description ( "semi-minor axis of error" )
+	Detail {
+		This is the length of
+		the semi-minor axis of the location error ellipse. It is
+		found by projecting the covariance matrix onto the
+		horizontal plane. The level of confidence is specified by
+		conf. See sdepth, smajax and stx.
+	}
+	;
+
+Attribute snr
+	Real (10)
+	Format ( "%10.2f" )
+	Null ( "-1.00" )
+	Range ( "snr > 0.0" )
+	Description ( "signal to noise ratio" )
+	Detail {
+		This is an estimate of the size of
+		the signal relative to that of the noise immediately
+		preceding it.
+	}
+	;
+
+Attribute spectra
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "spectral power estimate" )
+	Detail {
+		pointer to the vector of spectral power estimates, ie
+		the estimate for frequency j is
+		spectra[j],  c
+		or
+		spectra(j),  FORTRAN
+	}
+	;
+
+Attribute srn
+	Integer (8)
+	Format ( "%8ld" )
+	Null ( "-1" )
+	Range ( "srn > 0" )
+	Description ( "seismic region number" )
+	Detail {
+		This is a seismic region number, as given
+		by Flinn, Engdahl and Hill (Bull. Seism. Soc. Amer. vol 64,
+		pp 791-992, 1974). See grn, grname and srname.
+	}
+	;
+
+Attribute sta
+	String (14)
+	Format ( "%-14s" )
+	Null ( "-" )
+	Description ( "station" )
+	Detail {
+		This is the common code-name of a seismic
+		observatory. Generally only three or four characters are
+		used.
+	}
+	;
+
+Attribute stability
+	Real (20)
+	Format ( "%20.12le" )
+	Null ( "-1.000000000000e+00" )
+	Range ( "stability >= 0.0" )
+	Description ( "calculated stability of spectral estimate" )
+	Detail {
+		Estimated stability of spectral estimate
+	}
+	;
+
+Attribute stime
+	Real (8)
+	Format ( "%8.2f" )
+	Null ( "-1.00" )
+	Range ( "stime >= 0.0" )
+	Units ( "Seconds" )
+	Description ( "origin time error" )
+	Detail {
+		This attribute denotes the time
+		uncertainty that accompanies the location. The level of
+		confidence is specified by conf. See smajax, sminax, and
+		sdepth.
+	}
+	;
+
+Attribute strike
+	Real (6)
+	Format ( "%6.2f" )
+	Null ( "-1.00" )
+	Range ( "strike >= 0.0 && strike < 360.0" )
+	Units ( "Degrees" )
+	Description ( "strike of the semi-major axis" )
+	Detail {
+		This attribute is
+		the strike of the semi-major axis of the location error
+		ellipse, measured in degrees clockwise from North. See
+		smajax.
+	}
+	;
+
+Attribute stt
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Range ( "stt > 0.0" )
+	Units ( "seconds squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. 
+		The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute stx
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Range ( "stx > 0.0" )
+	Units ( "kilometer-second" )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute sty
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Range ( "sty > 0.0" )
+	Units ( "kilometer-second" )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute stz
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometer-second" )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute sxx
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute sxy
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute sxz
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute syy
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute syz
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute szz
+	Real (15)
+	Format ( "%15.4f" )
+	Null ( "-1.0000" )
+	Units ( "kilometers squared," )
+	Description ( "covariance matrix element" )
+	Detail {
+		This is an element of the covariance matrix for the location
+		identified by orid. The covariance matrix is symmetric
+		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
+		refer to latitude, longitude, depth and origin time,
+		respectively. These attributes (together with sdobs, ndef
+		and dtype ) provide all the information necessary to
+		construct the K-dimensional (K=2,3,4) confidence ellipse or
+		ellipsoids at any confidence limit desired.
+	}
+	;
+
+Attribute tbw
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "tbw > 1.0" )
+	Description ( "time bandwidth product" )
+	Detail {
+		This is an input parameter for the multispectral analysis.
+	}
+	;
+
+Attribute time
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999999.99900" )
+	Units ( "Seconds" )
+	Description ( "epoch time of first sample in file" )
+	Detail {
+		Epochal time given as seconds and fractions of
+		a second since hour 0 January 1, 1970, and stored in a
+		double precision floating number. Refers to the relation
+		data object with which it is found. E.g., in arrival -
+		arrival time; in origin - origin time; in wfdisc, - start
+		time of data. Where date of historical events is known,
+		time is set to the start time of that date; where the date
+		of contemporary arrival measurements is known but no time
+		is given, then the time attribute is set to the NA value.
+		The double-precision floating point number allows 15
+		decimal digits. At 1 millisecond accuracy this is a range
+		of 3 years. Where time is unknown, or prior to Feb. 10,
+		1653, set to the NA value.
+	}
+	;
+
+Attribute timedef
+	String (1)
+	Format ( "%-1s" )
+	Null ( "-" )
+	Range ( "timedef =~ /d|n/" )
+	Description ( "time = defining, non-defining" )
+	Detail {
+		This one character flag indicates
+		whether the time of a phase is d (defining), or n
+		(non-defining) for this arrival. See azdef and slodef.
+	}
+	;
+
+Attribute traces
+	Dbptr (32)
+	Format ( "%ld %ld %ld %ld" )
+	Description ( "database pointer to bundled/grouped traces" )
+	Detail {
+		Abundle is a special database pointer which refers to
+		either an entire table or view, or to a contiguous subset
+		of some table or view.  In the former case, both the record
+		number and the field number should be dbALL.  In the latter
+		case, the record number and the field number specify a
+		range of records in the table.  
+	}
+	;
+
+Attribute uncertainty
+	Real (7)
+	Format ( "%7.2f" )
+	Null ( "-1.00" )
+	Range ( "uncertainty > 0.0" )
+	Description ( "magnitude uncertainty" )
+	Detail {
+		This is the standard deviation of
+		the accompanying magnitude measurement.
+	}
+	;
+
+Attribute upper
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "upper confidence estimate" )
+	Detail {
+		pointer to the vector of upper confidence levels, ie
+		the level for frequency j is
+		upper[j],  c
+		or
+		upper(j),  FORTRAN
+	}
+	;
+
+Attribute vang
+	Real (6)
+	Format ( "%6.1f" )
+	Null ( "0.0" )
+	Range ( "vang >= 0.0 && vang <= 90.0" )
+	Units ( "Degrees" )
+	Description ( "vertical angle" )
+	Detail {
+		This attribute
+		measures the angle between the sensitive axis of a
+		seismometer and the outward-pointing vertical direction.
+		For a vertically oriented seismometer, vang = 0. For a
+		horizontally oriented seismometer, vang =90. See hang.
+	}
+	;
+
+Attribute variance
+	Real (20)
+	Format ( "%20.12le" )
+	Null ( "-1.000000000000e+00" )
+	Range ( "variance >= 0.0" )
+	Description ( "calculated variance of trace data" )
+	Detail {
+		Variance of input data, ie sum of squares of data values, 
+		divided by number of samples.
+	}
+	;
+
+Attribute vmodel
+	String (30)
+	Format ( "%-30s" )
+	Null ( "-" )
+	Description ( "velocity model" )
+	Detail {
+		This character string identifies the
+		velocity model of the earth used to compute the travel
+		times of seismic phases. These are required for event
+		location (if phase is defining) or for computing
+		travel-time residuals.
+	}
+	;
+
+Attribute weights
+	Integer (20)
+	Format ( "%20ld" )
+	Description ( "adaptive weights" )
+	Detail {
+		pointer to the array of adapative weights for all tapers, ie
+		the nth weight for taper j is 
+		    *(weight + j * nfft + n),  c
+		or
+		    weight(n,j)    FORTRAN
+	}
+	;
+
+Attribute wgt
+	Real (6)
+	Format ( "%6.3f" )
+	Null ( "-1.000" )
+	Range ( "wgt >= 0.0 && wgt < 1.0" )
+	Description ( "location weight" )
+	Detail {
+		This attribute gives the final weight
+		assigned to the allied arrival by the location program. It
+		is used primarily for location programs that adaptively
+		weight data by their residuals.
+	}
+	;
+
+Relation arrival
+	Fields (  bundle bundletype sta chan time predtime predaz arid dbptr iphase phase deltim azimuth delaz slow delslo ema rect amp per logat fm snr qual evid orid belief delta seaz esaz timedef azdef slodef wgt vmodel magtype magnitude uncertainty auth comment )
+	Primary (  sta time )
+	Transient
+	Description ( "Summary information on a seismic arrival" )
+	Detail {
+		Information characterizing a 'seismic phase' observed at a particular
+		station is saved here. Many of the attributes conform to
+		seismological convention and are listed in earthquake
+		catalogs.
+	}
+	;
+
+Relation event
+	Fields (  bundletype bundle evid evname prefor orid lat lon depth time grn srn nass ndef ndp nsta etype depdp dtype mb ms ml algorithm auth sxx syy szz stt sxy sxz syz stx sty stz sdobs smajax sminax strike sdepth stime conf arrivals traces comment )
+	Primary (  evid )
+	Transient
+	Description ( "Event identification" )
+	Detail {
+		The purpose of this relation
+		is to allow the connection of multiple origins to one event.
+		Prefor points to the preferred origin.
+	}
+	;
+
+Relation history
+	Fields (  processid sequence filter filterargs )
+	Primary (  processid sequence )
+	Transient
+	Description ( "Processing history for trace bundle" )
+	Detail {
+		This is intended to provide a history of the 
+		processing sequence for a trace/trace bundle.
+	}
+	;
+
+Relation lastid
+	Fields (  keyname keyvalue )
+	Primary (  keyname )
+	Transient
+	Description ( "Counter values (Last value used for keys)" )
+	Detail {
+		This relation
+		is a reference table from which programs may retrieve the
+		last sequential value of one of the numeric keys. Unique
+		keys are required before inserting a record in numerous
+		tables. The table has exactly one row for each keyname. In
+		the core schema there are just 9 distinct identifier keys:
+		arid, chanid, commid, evid, inid, magid, orid, stassid,
+		wfid. This table will also support application-specific
+		keys as needed. Users are encouraged to use the
+		dbgetcounter library routine to obtain a counter value.
+	}
+	;
+
+Relation mwspec
+	Fields (  dbptr net sta chan time endtime evid nsamp samprate calib calper response segtype data nfft ntapers tbw nyquist variance eigenspectra exponentials fstat pstat spectra weights dof jackknife nlines lines lspectra lweights ldof ljackknife stability upper lower bundletype bundle comment )
+	Primary (  net sta chan time endtime )
+	Transient
+	Description ( "Multi-window spectral estimate processing table" )
+	Detail {
+		This relation provides a set of parameters and pointers to 
+		various intermediate and final arrays produced during 
+		a multiwindow spectral analysis.
+	}
+	;
+
+Relation trace
+	Fields (  evid arid net sta chan time endtime processid nsamp samprate instype calib calper response datatype segtype procflag data lat lon elev refsta dnorth deast edepth hang vang comment m0 m1 mt0 mt1 bundletype dbptr )
+	Primary (  net sta chan time::endtime )
+	Transient
+	Description ( "Waveform file header and descriptive information" )
+	Detail {
+		This relation provides a pointer (or index) to waveforms
+		stored in memory in floating point format, convenient for
+		various forms of processing.
+	}
+	;
+

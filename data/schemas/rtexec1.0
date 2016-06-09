@@ -1,0 +1,188 @@
+Schema rtexec1.0
+	Description ( "rtexec stats" )
+	;
+
+Attribute down
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of shutdown" )
+	Detail {
+		When rtexec -k was run.
+	}
+	;
+
+Attribute up
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of startup" )
+	Detail {
+		When rtexec was started.
+	}
+	;
+
+Attribute execution
+	String (100)
+	Format ( "%-100s" )
+	Null ( "-" )
+	Description ( "execution line" )
+	;
+
+Attribute first_start
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of first start" )
+	;
+
+Attribute last_end
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of last completion" )
+	;
+
+Attribute last_start
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of last start" )
+	;
+
+Attribute name
+	String (50)
+	Format ( "%-50s" )
+	Null ( "-" )
+	Description ( "descriptive name used in Run and Processes in parameter file" )
+	;
+
+Attribute incidentfile
+	String (100)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "name of incident file if one was generated" )
+	;
+
+Attribute pid
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Description ( "pid of process or parent" )
+	;
+
+Attribute start
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of start" )
+	;
+
+Attribute failure
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of start" )
+	;
+
+Attribute signal
+	Integer (3)
+	Format ("%3d") 
+	Null ("-1" ) 
+	Description ( "signal causing task failure" ) 
+	; 
+
+Attribute corefile
+	Integer (1)
+	Format ("%2d") 
+	Null ("0" ) 
+	Description ( "indicates if core file was generated" ) 
+	; 
+
+Attribute result
+	Integer (4)
+	Format ( "%4d" )
+	Null ( "9999" )
+	Description ( "result from last execution" )
+	;
+
+Attribute starts
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Description ( "starts since last rtexec restart" )
+	;
+
+Attribute totstarts
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Description ( "total starts since database start" )
+	;
+
+Attribute who
+	String (16)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "who ran the shutdown" )
+	Detail {
+		This may be useful later.
+	}
+	;
+
+Attribute why
+	String (128)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "why was system stopped?" )
+	Detail {
+		This provides some additional information which may be
+		useful later.
+	}
+	;
+
+Relation history
+	Fields (  name start pid execution )
+	Primary (  name start pid )
+	;
+
+Relation process
+	Fields (  name pid first_start totstarts starts last_start execution )
+	Primary (  name )
+	Description ( "list of processes" )
+	;
+
+Relation cron
+	Fields (  name pid last_start last_end result execution )
+	Primary (  name )
+	Description ( "list of cron jobs" )
+	;
+
+Relation cron_history
+	Fields (  name start pid execution )
+	Primary (  name start pid )
+	;
+
+Relation timespan 
+	Fields (pid up down who why)
+	Description ("records system startups and shutdowns" )  
+	;
+
+Relation shutdown
+	Fields ( down who why )
+	Primary ( down )
+	Description ( "records system shutdowns, along with a reason" )
+	;
+
+Relation incidents
+	Fields (  name start failure pid execution signal corefile incidentfile )
+	Primary ( name start )
+	Description ( "records task failures resulting from signals like SIGBUS" ) 
+	;

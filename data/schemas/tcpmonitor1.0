@@ -1,0 +1,162 @@
+Schema tcpmonitor1.0
+	Description ( "keeps tcp link statistics" )
+	Timedate timedate
+	;
+
+Attribute bpp
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "bytes" )
+	Description ( "bytes per packet" )
+	;
+
+Attribute burst
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "packets" )
+	Description ( "packets per burst" )
+	;
+
+Attribute c2s
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-89999999999" )
+	Units ( "kbaud" )
+	Description ( "estimated bandwidth client to server" )
+	;
+
+Attribute duration
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-89999999999" )
+	Units ( "seconds" )
+	Description ( "length of time link was down" )
+	Detail {
+		This is measured as the time from the first (read or write)
+		timeout to the time when the a new socket connection 
+		is opened.
+	}
+	;
+
+Attribute maxrtt
+	Real (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "measured round trip time" )
+	;
+
+Attribute nping
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Description ( "number of pings between bursts" )
+	;
+
+Attribute ping_interval
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "seconds" )
+	Description ( "delay between pings" )
+	;
+
+Attribute recvclient
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "bytes" )
+	Description ( "size of client receive buffer" )
+	;
+
+Attribute recvserver
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "bytes" )
+	Description ( "size of server receive buffer" )
+	;
+
+Attribute retries
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Description ( "number of retries before success" )
+	;
+
+Attribute rtt
+	Real (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "measured round trip time" )
+	;
+
+Attribute s2c
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-89999999999" )
+	Units ( "kbaud" )
+	Description ( "estimated bandwidth server to client" )
+	;
+
+Attribute sendclient
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "bytes" )
+	Description ( "size of client receive buffer" )
+	;
+
+Attribute sendserver
+	Integer (10)
+	Format ( "%10d" )
+	Null ( "-1" )
+	Units ( "bytes" )
+	Description ( "size of server send buffer" )
+	;
+
+Attribute server
+	String (50)
+	Format ( "%-50s" )
+	Null ( "-" )
+	Units ( "packets" )
+	Description ( "remote server" )
+	;
+
+Attribute time
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "time of initial recognition" )
+	;
+
+Attribute timedate
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "last modification time" )
+	;
+
+Relation tcpsetup
+	Fields (  server bpp burst nping ping_interval sendclient sendserver recvclient recvserver timedate )
+	Primary (  server timedate )
+	Description ( "shows tcpmonitor setup" )
+	;
+
+Relation tcpstats
+	Fields (  server timedate c2s s2c rtt maxrtt )
+	Primary (  server timedate )
+	Description ( "shows tcpmonitor measurements" )
+	;
+
+Relation timeouts
+	Fields (  server time retries duration timedate )
+	Primary (  server time )
+	Description ( "record outages large enough to require reopening connections" )
+	;
+

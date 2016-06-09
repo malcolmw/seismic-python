@@ -1,0 +1,331 @@
+Schema Status2.0
+	Description ( "Antelope Real Time System Status Database" )
+	Detail {
+		This database is aimed toward the monitoring and maintenance
+		of an Antelope real time system (or collection of systems)
+		on a particular computer (or collection of computers).
+	}
+	;
+
+Attribute avg15m
+	Real (5)
+	Format ( "%5.2f" )
+	Null ( "-8999" )
+	Description ( "15 minute load average" )
+	;
+
+Attribute avg1m
+	Real (5)
+	Format ( "%5.2f" )
+	Null ( "-8999" )
+	Description ( "1 minute load average" )
+	;
+
+Attribute avg5m
+	Real (5)
+	Format ( "%5.2f" )
+	Null ( "-8999" )
+	Description ( "5 minute load average" )
+	;
+
+Attribute command
+	String (160)
+	Format ( "%-160s" )
+	Null ( "-" )
+	Description ( "command line (first 160 characters)" )
+	;
+
+Attribute cpu
+	Integer (10)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Description ( "cpu for which statistics apply" )
+	;
+
+Attribute dfile
+	String (32)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "file base name" )
+	;
+
+Attribute dir
+	String (64)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "directory" )
+	;
+
+Attribute directory
+	String (32)
+	Format ( "%-32.32s" )
+	Null ( "-" )
+	Description ( "directory on which filesystem is mounted" )
+	;
+
+Attribute host
+	String (32)
+	Format ( "%-32.32s" )
+	Null ( "-" )
+	Description ( "hostname" )
+	Detail {
+		specifies the computer of origin
+	}
+	;
+
+Attribute idle
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "idle >= 0 && idle <=100" )
+	Description ( "percent of time cpu is idle" )
+	;
+
+Attribute inodes_avail
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "available inodes on filesystem" )
+	Detail {
+		total number of files and directories (and symbolic
+		links or other named entities) still available for use
+		on a filesystem.
+	}
+	;
+
+Attribute inodes_max
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "maximum inodes on filesystem" )
+	Detail {
+		maximum number of files and directories (and symbolic
+		links or other named entities) on a filesystem.
+	}
+	;
+
+Attribute kbytes_avail
+	Integer (13)
+	Format ( "%13ld" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "kbytes available on filesystem" )
+	Detail {
+		total size of available for new files and directories
+		on filesystem
+	}
+	;
+
+Attribute kbytes_max
+	Integer (13)
+	Format ( "%13ld" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "size" )
+	Detail {
+		size of filesystem
+	}
+	;
+
+Attribute kernel
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "kernel >= 0 && kernel <=100" )
+	Description ( "percent of time cpu is executing kernel level code" )
+	;
+
+Attribute lddate
+	Time (17)
+	Format ( "%17.5f" )
+	Null ( "-9999999.99999" )
+	Units ( "seconds" )
+	Description ( "last modification time" )
+	;
+
+Attribute memtotal
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Description ( "total kbytes of memory including swap" )
+	;
+
+Attribute memused
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Description ( "kbytes of memory in use" )
+	;
+
+Attribute ncpu
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Description ( "number of cpus" )
+	;
+
+Attribute nproc
+	Integer (3)
+	Format ( "%3ld" )
+	Null ( "-1" )
+	Description ( "number of processes running" )
+	;
+
+Attribute percent_cpu
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "percent_cpu >= 0 && percent_cpu <=100" )
+	Description ( "percent of cpu usage" )
+	;
+
+Attribute physmem
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Description ( "kbytes of physical memory" )
+	;
+
+Attribute pid
+	Integer (6)
+	Format ( "%6ld" )
+	Null ( "-1" )
+	Description ( "process id" )
+	;
+
+Attribute ppid
+	Integer (6)
+	Format ( "%6ld" )
+	Null ( "-1" )
+	Description ( "parent process id" )
+	;
+
+Attribute program
+	String (20)
+	Format ( "%-20s" )
+	Null ( "-" )
+	Description ( "program being executed" )
+	;
+
+Attribute rss
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "resident set size" )
+	;
+
+Attribute size
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Units ( "kbytes" )
+	Description ( "process memory size" )
+	;
+
+Attribute srcname
+	String (64)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "packet source name" )
+	;
+
+Attribute start
+	Time (17)
+	Format ( "%12.0f" )
+	Null ( "-9999999" )
+	Units ( "seconds" )
+	Description ( "start time " )
+	;
+
+Attribute swap
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "swap >= 0 && swap <=100" )
+	Description ( "percent of time cpu is swapping" )
+	;
+
+Attribute tchildren
+	Real (12)
+	Format ( "%.7g" )
+	Null ( "-9e+99" )
+	Description ( "measured time used by children" )
+	;
+
+Attribute threads
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "# of threads" )
+	;
+
+Attribute time
+	Time (17)
+	Format ( "%12.0f" )
+	Null ( "-9999999" )
+	Units ( "seconds" )
+	Description ( "time" )
+	Detail {
+		measurement time (to nearest second)
+	}
+	;
+
+Attribute uid
+	Integer (10)
+	Format ( "%10ld" )
+	Null ( "-1" )
+	Description ( "user id" )
+	;
+
+Attribute user
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "user >= 0 && user <=100" )
+	Description ( "percent of time cpu is executing user level code" )
+	;
+
+Attribute wait
+	Integer (2)
+	Format ( "%2ld" )
+	Null ( "-1" )
+	Range ( "wait >= 0 && wait <=100" )
+	Description ( "percent of time cpu is waiting for i/o" )
+	;
+
+Relation cpu_usage
+	Fields ( host cpu time user kernel wait idle swap )
+	Primary ( host cpu time )
+	Description ( "per cpu statistics" )
+	;
+
+Relation filesystem
+	Fields ( host directory time kbytes_max inodes_max kbytes_avail inodes_avail )
+	Primary ( host directory time )
+	Foreign ( host ) 
+	Description ( "filesystem capacities" )
+	Detail {
+		This table maintains a history of filesystem usage and
+		capacity.
+	}
+	;
+
+Relation logs
+	Fields ( srcname time dir dfile lddate )
+	Primary ( srcname )
+	Description ( "points to current log file" )
+	;
+
+Relation process
+	Fields ( pid start time threads ppid uid size rss percent_cpu program command tchildren )
+	Primary ( pid time )
+	Description ( "records process information" )
+	;
+
+Relation system
+	Fields ( host time ncpu  nproc avg1m avg5m avg15m memused memtotal physmem )
+	Primary ( host time )
+	Description ( "memory statistics" )
+	;
+

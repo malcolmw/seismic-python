@@ -1,0 +1,282 @@
+Schema Builds1.0
+	Description ( "Tracks builds and regression tests " )
+	Detail {
+		Keeping statistics on build problems and certify 
+		problems may provide some insight.
+	}
+	Timedate lddate
+	;
+
+Attribute LP64
+	String (1)
+	Format ( "%s" )
+	Null ( "-" )
+	Range ( "(y|n)" )
+	Description ( "32 or 64 bit" )
+	;
+
+Attribute compiletm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "time for actual make" )
+	;
+
+Attribute contribtm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "time for make in contrib" )
+	;
+
+Attribute updatetm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "time for cvs update" )
+	;
+
+Attribute dfile
+	String (48)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "problem file" )
+	;
+
+Attribute dir
+	String (96)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "problem directory " )
+	;
+
+Attribute ft
+	String (1)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "failure type: p=pre,m=make,r=return code,f=fault,d=diff" )
+	;
+
+Attribute finish
+	Time (12)
+	Format ( "%12.0f" )
+	Null ( "-9999999" )
+	Range ( "(y|n)" )
+	Units ( "seconds" )
+	Description ( "completion time" )
+	;
+
+Attribute gcc
+	String (1)
+	Format ( "%s" )
+	Null ( "-" )
+	Range ( "(y|n)" )
+	Description ( "gcc or something else" )
+	;
+
+Attribute contrib
+	String (1)
+	Format ( "%s" )
+	Null ( "n" )
+	Range ( "(y|n)" )
+	Description ( "contrib directory" )
+	;
+
+Attribute hostname
+	String (20)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "hostname where build occurred" )
+	Detail {
+		machine where the build or test was performed
+	}
+	;
+
+Attribute lddate
+	Time (12)
+	Format ( "%12.0f" )
+	Null ( "-9999999" )
+	Units ( "seconds" )
+	Description ( "time record was entered or changed" )
+	;
+
+Attribute ldlibstm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "time for ldlibs database construction" )
+	;
+
+Attribute mantm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "time for man page construction" )
+	;
+
+Attribute modified
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total files modified, not checked in" )
+	;
+
+Attribute os
+	String (20)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "operating system" )
+	Detail {
+		eg, Linux, Darwin or SunOS
+	}
+	;
+
+Attribute osrelease
+	String (25)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "operating system version" )
+	;
+
+Attribute tests
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total tests run" )
+	;
+
+Attribute fails
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total test failures" )
+	;
+
+Attribute problems
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total problems (not cvs)" )
+	;
+
+Attribute cproblems
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total contrib problems (not cvs)" )
+	;
+
+Attribute pre
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total failures of setup (pre) commands during certify" )
+	;
+
+Attribute make
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total make failures during certify" )
+	;
+
+Attribute cmd
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total bad return codes from certify command execution" )
+	;
+
+Attribute fault
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total faults during certify command execution (bus error, segmentation violation, etc)" )
+	;
+
+Attribute diff
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total diff problems during certify" )
+	;
+
+Attribute processor
+	String (8)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "processor type, eg sparc, x86 or powerpc" )
+	;
+
+Attribute id
+	String (10)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "Antelope id" )
+	;
+
+Attribute desc
+	String (100)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "test description" )
+	;
+
+Attribute testid
+	String (10)
+	Format ( "%s" )
+	Null ( "-" )
+	Description ( "problem testid" )
+	;
+
+Attribute totaltm
+	Real (12)
+	Format ( "%12.3f" )
+	Null ( "-9e99" )
+	Units ( "seconds" )
+	Description ( "total elapsed time" )
+	;
+
+Attribute updates
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total cvs updates" )
+	;
+
+Attribute cupdates
+	Integer (5)
+	Format ( "%5ld" )
+	Null ( "-1" )
+	Description ( "total cvs contrib updates" )
+	;
+
+Relation build
+	Fields ( hostname finish id problems cproblems modified updates cupdates totaltm updatetm compiletm contribtm mantm ldlibstm gcc LP64 os osrelease processor lddate )
+	Primary ( hostname finish )
+	Description ( "records makesw results" )
+	;
+
+Relation buildproblem
+	Fields ( hostname finish dir contrib)
+	Primary ( hostname dir finish )
+	Description ( "directory where make failed" )
+	;
+
+Relation regression
+	Fields ( hostname finish id tests fails pre make cmd fault diff modified updates totaltm gcc LP64 os osrelease processor lddate )
+	Primary ( hostname finish )
+	Description ( "records certify results" )
+	;
+
+Relation failure
+	Fields ( hostname finish dir testid contrib ft desc )
+	Primary ( hostname dir testid finish )
+	Description ( "directory/file where make failed" )
+	;
+
