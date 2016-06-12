@@ -2,14 +2,14 @@ Schema Trace4.1
 	Description ( "Trace Manipulation and Processing Database" )
 	Detail {
 		This database provides the parameter
-		information needed during standard processing of 
+		information needed during standard processing of
 		seismic waveform data.
 		
-		It is largely derived from the CSS 3.1 database, 
+		It is largely derived from the CSS 3.1 database,
 		with additions which address specific trace manipulation
-		issues, and the representation of traces in memory.  
+		issues, and the representation of traces in memory.
 		The information contained in the central
-		trace relation represents a join of many tables, 
+		trace relation represents a join of many tables,
 		in particular wfdisc, site, sitechan, sensor and instrument.
 
 		This is an update to the Trace4.0 schema to bew compatible
@@ -46,17 +46,17 @@ Attribute amp
 
 Attribute arid
 	Integer ( 12 )
-	Format ( "%12ld" ) 
-	Null  ( "-1"  ) 
-	Range ( "arid > 0" ) 
-	Description ( "arrival id" ) 
+	Format ( "%12ld" )
+	Null  ( "-1"  )
+	Range ( "arid > 0" )
+	Description ( "arrival id" )
 	Detail {
-	    Each arrival is assigned a unique positive integer
-	    identifying it with a unique sta, chan and time.  This
-	    number is used in the assoc relation along with the origin
-	    identifier to link arrival and origin.  
+		Each arrival is assigned a unique positive integer
+		identifying it with a unique sta, chan and time.  This
+		number is used in the assoc relation along with the origin
+		identifier to link arrival and origin.
 	}
-	; 
+	;
 
 Attribute arrivals
 	Dbptr (32)
@@ -68,7 +68,7 @@ Attribute arrivals
 		of some table or view.  In the former case, both the record
 		number and the field number should be dbALL.  In the latter
 		case, the record number and the field number specify a
-		range of records in the table.  
+		range of records in the table.
 	}
 	;
 
@@ -99,7 +99,7 @@ Attribute azdef
 		This is a one character flag that
 		indicates whether or not the azimuth of a phase was used to
 		determine the event's origin. It is defining (azdef=d)
-		if used to help locate the event or non-defining (azdef=n) 
+		if used to help locate the event or non-defining (azdef=n)
 		if it is not used.
 	}
 	;
@@ -142,7 +142,7 @@ Attribute bundle
 		of some table or view.  In the former case, both the record
 		number and the field number should be dbALL.  In the latter
 		case, the record number and the field number specify a
-		range of records in the table.  
+		range of records in the table.
 	}
 	;
 
@@ -241,38 +241,38 @@ Attribute data
 	Description ( "memory address of data" )
 	Detail {
 		This is the actual memory address of data.  Trfree
-	    will attempt to free this memory if data is non-zero.
+		will attempt to free this memory if data is non-zero.
 	}
 	;
 
 Attribute datatype
 	String ( 2 )
-	Format ( "%-2s" ) 
-	Null  ( "-"  ) 
+	Format ( "%-2s" )
+	Null  ( "-"  )
 	Range ( "datatype =~ /t4|s4|s2/" )
-	Description ( "numeric storage" ) 
+	Description ( "numeric storage" )
 	Detail {
-	    This attribute specifies the format of a data series in
-	    the file system.  Datatypes t4, s4 and s2 are the allowed
-	    values.  Datatype s4 denotes a 4-byte integer and t4
-	    denotes a 32-bit real number in Sun format.  Machine
-	    dependent formats are supported for common hardwares to
-	    allow data transfer in native machine binary formats. 
-	    Note that the CSS standard defines many other formats,
-	    which are not supported by the Antelope software.  
+		This attribute specifies the format of a data series in
+		the file system.  Datatypes t4, s4 and s2 are the allowed
+		values.  Datatype s4 denotes a 4-byte integer and t4
+		denotes a 32-bit real number in Sun format.  Machine
+		dependent formats are supported for common hardwares to
+		allow data transfer in native machine binary formats.
+		Note that the CSS standard defines many other formats,
+		which are not supported by the Antelope software.
 	}
-	; 
+	;
 
 Attribute dbptr
 	Dbptr (32)
 	Format ( "%ld %ld %ld %ld" )
-	Null ("-102 -102 -102 -102" ) 
+	Null ("-102 -102 -102 -102" )
 	Description ( "original database pointer" )
 	Detail {
 		Often, actual waveform data will have arisen
 		from a single row in an input database table.  This
 		database pointer references that row.  The information
-		in the tables which this pointer references may not 
+		in the tables which this pointer references may not
 		apply to the current trace, however.
 	}
 	;
@@ -441,7 +441,7 @@ Attribute eigenspectra
 	Description ( "eigenspectra" )
 	Detail {
 		pointer to the array of fft coefficients for all tapers, ie
-		the nth coefficient for taper j is 
+		the nth coefficient for taper j is
 		*(eigenspectra + j * nfft + n),  c
 		or
 		eigenspectra(n,j)    FORTRAN
@@ -636,15 +636,15 @@ Attribute hang
 
 Attribute instype
 	String ( 6 )
-	Format ( "%-6s" ) 
-	Null  ( "-"  ) 
-	Description ( "instrument code" ) 
+	Format ( "%-6s" )
+	Null  ( "-"  )
+	Description ( "instrument code" )
 	Detail {
-	    This character string is used to indicate the instrument
-	    type.  Some examples are: SRO, ASRO, DWWSSN, LRSM, and
-	    S-750.  
+		This character string is used to indicate the instrument
+		type.  Some examples are: SRO, ASRO, DWWSSN, LRSM, and
+		S-750.
 	}
-	; 
+	;
 
 Attribute iphase
 	String (8)
@@ -656,7 +656,7 @@ Attribute iphase
 		to a seismic phase.  Standard seismological labels for the
 		types of signals (or phases) are used (e.g., P, PKP, PcP,
 		pP).  Both upper and lower case letters are available and
-		should be used when appropriate, for example, pP or PcP. 
+		should be used when appropriate, for example, pP or PcP.
 		See phase.
 	}
 	;
@@ -799,7 +799,7 @@ Attribute lweights
 	Description ( "adaptive weights for line spectra" )
 	Detail {
 		pointer to the array of adapative weights for all line tapers, ie
-		the nth weight for taper j is 
+		the nth weight for taper j is
 		*(weight + j * nfft + n),  c
 		or
 		weight(n,j)    FORTRAN
@@ -811,7 +811,7 @@ Attribute m0
 	Format ( "%17.7f" )
 	Description ( "arbitrary measurement 0" )
 	Detail {
-		This may be used by different filters to keep some 
+		This may be used by different filters to keep some
 		measurement for this trace.
 	}
 	;
@@ -821,7 +821,7 @@ Attribute m1
 	Format ( "%17.7f" )
 	Description ( "arbitrary measurement 1" )
 	Detail {
-		This may be used by different filters to keep some 
+		This may be used by different filters to keep some
 		measurement for this trace.
 	}
 	;
@@ -979,7 +979,7 @@ Attribute nfft
 	Detail {
 		This is the size of array on which the fft is
 		calculated.  This is typically around 2*nsamp+1
-		(the second half of the array is zero filled), 
+		(the second half of the array is zero filled),
 		in order to increase the resolution in the frequency
 		domain.
 	}
@@ -1127,7 +1127,7 @@ Attribute processid
 	Range ( "processid > 0" )
 	Description ( "process id" )
 	Detail {
-		As a trace bundle is passed through various filters, 
+		As a trace bundle is passed through various filters,
 		a history of the processing is kept in the history table.
 		Each trace bundle has a unique processid.
 	}
@@ -1140,12 +1140,12 @@ Attribute procflag
 	Description ( "processing flag" )
 	Detail {
 		Bits in this flag indicate various essential processing steps:
-		    grouping,
-		    mapping,
-		    conversion to float,
-		    removal of bad data points,
-		    interpolation, 
-		    etcetera.
+		* grouping
+		* mapping
+		* conversion to float
+		* removal of bad data points
+		* interpolation
+		* etcetera...
 	}
 	;
 
@@ -1278,7 +1278,7 @@ Attribute segtype
 	Range ( "segtype =~ /A|V|D/" )
 	Description ( "indexing method" )
 	Detail {
-		Originally, this attribute indicated if a waveform were 
+		Originally, this attribute indicated if a waveform were
 		o(original), v(virtual), s(segmented) or d(duplicate).
 		However, in Antelope datasets, it indicates the "natural"
 		units of the detector -- 'A' (acceleration), 'V' (velocity),
@@ -1293,7 +1293,7 @@ Attribute sequence
 	Range ( "sequence > 0" )
 	Description ( "sequence number" )
 	Detail {
-		As a trace bundle is passed through various filters, 
+		As a trace bundle is passed through various filters,
 		a history of the processing is kept in the history table.
 		Each trace bundle has a unique processid, and this is
 		the sequence number.
@@ -1309,7 +1309,7 @@ Attribute slodef
 	Detail {
 		This one-character flag indicates
 		whether or not the slowness of a phase is d (defining), or
-		n (non-defining) for the origin associated with 
+		n (non-defining) for the origin associated with
 		this arrival. See azdef and timedef.
 	}
 	;
@@ -1459,7 +1459,7 @@ Attribute stt
 	Description ( "covariance matrix element" )
 	Detail {
 		This is an element of the covariance matrix for the location
-		identified by orid. 
+		identified by orid.
 		The covariance matrix is symmetric
 		(and positive definite) so that sxy = syx, etc., (x,y,z,t)
 		refer to latitude, longitude, depth and origin time,
@@ -1691,7 +1691,7 @@ Attribute traces
 		of some table or view.  In the former case, both the record
 		number and the field number should be dbALL.  In the latter
 		case, the record number and the field number specify a
-		range of records in the table.  
+		range of records in the table.
 	}
 	;
 
@@ -1743,7 +1743,7 @@ Attribute variance
 	Range ( "variance >= 0.0" )
 	Description ( "calculated variance of trace data" )
 	Detail {
-		Variance of input data, ie sum of squares of data values, 
+		Variance of input data, ie sum of squares of data values,
 		divided by number of samples.
 	}
 	;
@@ -1768,7 +1768,7 @@ Attribute weights
 	Description ( "adaptive weights" )
 	Detail {
 		pointer to the array of adapative weights for all tapers, ie
-		the nth weight for taper j is 
+		the nth weight for taper j is
 		    *(weight + j * nfft + n),  c
 		or
 		    weight(n,j)    FORTRAN
@@ -1820,7 +1820,7 @@ Relation history
 	Transient
 	Description ( "Processing history for trace bundle" )
 	Detail {
-		This is intended to provide a history of the 
+		This is intended to provide a history of the
 		processing sequence for a trace/trace bundle.
 	}
 	;
@@ -1850,8 +1850,8 @@ Relation mwspec
 	Transient
 	Description ( "Multi-window spectral estimate processing table" )
 	Detail {
-		This relation provides a set of parameters and pointers to 
-		various intermediate and final arrays produced during 
+		This relation provides a set of parameters and pointers to
+		various intermediate and final arrays produced during
 		a multiwindow spectral analysis.
 	}
 	;

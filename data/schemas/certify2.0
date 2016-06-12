@@ -2,7 +2,7 @@ Schema certify2.01
 	Description ( "Certification Tests" )
 	Detail {
 		These databases document how to execute a test and
-		provide some history of the results of tests. 
+		provide some history of the results of tests.
 	}
 	Timedate lddate
 	;
@@ -14,7 +14,7 @@ Attribute cd
 	Detail {
 		Some programs are better run from inside the
 		results/testid directory, for instance if they write
-		multiple files.  
+		multiple files.
 	} ;
 
 Attribute command
@@ -24,7 +24,7 @@ Attribute command
 	Detail {
 		This command line is executed.  Input is redirected
 		from input/testid, and output is redirected to
-		results/testid. 
+		results/testid.
 	}
 	;
 
@@ -34,7 +34,7 @@ Attribute description
 	Null ( "-" )
 	Description ( "purpose of test" )
 	Detail {
-		brief description of features of test 
+		brief description of features of test
 	}
 	;
 
@@ -49,11 +49,11 @@ Attribute diff
 		correct/testid.  For convenience, the following
 		substitutions are performed before the test is
 		executed:
-		    
-		    %r	results/testid
-		    %R  results/testid/testid
-		    %c	correct/testid
-		    %C  correct/testid/testid
+
+			%r	results/testid
+			%R  results/testid/testid
+			%c	correct/testid
+			%C  correct/testid/testid
 	}
 	;
 
@@ -85,7 +85,7 @@ Attribute failure_count
 	Null ( "0" )
 	Description ( "number of test failures" )
 	Detail {
-		This number is incremented whenever a test fails.    
+		This number is incremented whenever a test fails.
 	}
 	;
 
@@ -106,7 +106,7 @@ Attribute lddate
 	Units ( "seconds" )
 	Description ( "load date for a particular record" )
 	Detail {
-		created automatically when a record is updated    
+		created automatically when a record is updated
 	}
 	;
 
@@ -117,7 +117,7 @@ Attribute pre
 	Detail {
 		This command could create the input data.  If command
 		changes the input data, then the pre command should create
-		the input data in the directory results/testid. 
+		the input data in the directory results/testid.
 	}
 	;
 
@@ -136,7 +136,7 @@ Attribute release
 	Null ( "-" )
 	Description ( "OS release number" )
 	Detail {
-		The result of `uname -r`    
+		The result of `uname -r`
 	}
 	;
 
@@ -195,7 +195,7 @@ Attribute success_count
 	Null ( "0" )
 	Description ( "number of test successes" )
 	Detail {
-		This number is incremented whenever a test succeeds.    
+		This number is incremented whenever a test succeeds.
 	}
 	;
 
@@ -226,7 +226,7 @@ Attribute system
 	Units ( "seconds" )
 	Description ( "system time used by the command at last execution" )
 	Detail {
-		A large change in the cpu time may indicate a problem.   
+		A large change in the cpu time may indicate a problem.
 	}
 	;
 
@@ -237,7 +237,7 @@ Attribute testid
 	Detail {
 		Input and result files are named after the testid.  In
 		cases where the output results are not a single file, the
-		results are to be saved in the directory results/testid. 
+		results are to be saved in the directory results/testid.
 	}
 	;
 
@@ -246,7 +246,7 @@ Attribute who
 	Format ( "%-10s" )
 	Description ( "user id" )
 	Detail {
-	    user id 
+		user id
 	}
 	;
 
@@ -255,7 +255,7 @@ Attribute why
 	Format ( "%-60" )
 	Description ( "why an update?" )
 	Detail {
-	    short description justifying the change
+		short description justifying the change
 	}
 	;
 
@@ -266,7 +266,7 @@ Attribute user
 	Units ( "seconds" )
 	Description ( "user time used by the command at last successful execution" )
 	Detail {
-		A large change in the cpu time may indicate a problem.   
+		A large change in the cpu time may indicate a problem.
 	}
 	;
 
@@ -282,10 +282,10 @@ Relation certify
 Relation history
 	Fields (  testid release success success_host success_count system user failure failure_host failure_count )
 	Primary (  testid release )
-	Foreign (  testid ) 
+	Foreign (  testid )
 	Description ( "History of test performance" )
 	Detail {
-		This is an abbreviated history of test performance.    
+		This is an abbreviated history of test performance.
 		
 	}
 	;
@@ -296,7 +296,7 @@ Relation updates
 	Primary (  testid time )
 	Description ( "updates to correct performance" )
 	Detail {
-		This shows when the "correct" results were updated. 
+		This shows when the "correct" results were updated.
 		Because other things may change, like the diff or the
 		xdiff options, this is not a complete list.
 	}
@@ -305,6 +305,6 @@ Relation updates
 Relation log
 	Fields (  testid release time system user result host lddate )
 	Primary (  testid release time )
-	Foreign (  testid ) 
+	Foreign (  testid )
 	Description ( "log of tests performed" )
 	;

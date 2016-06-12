@@ -1,36 +1,36 @@
-Schema "places1.2"
+Schema places1.2
 	Description ( "Places Schema Version 1.2" )
 	Detail {
-		This schema is intended to describe places on the earth, 
+		This schema is intended to describe places on the earth,
 		for example point-coordinate locations of cities, populated
 		places, summits, etc. Support for specifying polygonal
-		regions is included. 
+		regions is included.
 	}
 	Timedate lddate
 	;
 
 Attribute bundle
 	Dbptr ( 32 )
-	Description ( "database pointer to bundled/grouped data" ) 
-	Format ( "%d %d %d %d" ) 
+	Description ( "database pointer to bundled/grouped data" )
+	Format ( "%d %d %d %d" )
 	Detail {
 	    A bundle is a special database pointer which refers to
 	    either an entire table or view, or to a contiguous subset
 	    of some table or view.  In the former case, both the
 	    record number and the field number should be dbALL.  In
 	    the latter case, the record number and the field number
-	    specify a range of records in the table.  
+	    specify a range of records in the table.
 	}
 	;
 
 
 Attribute bundletype
 	Integer ( 20 )
-	Format ("%20d" ) 
-	Description ( "type of bundle" ) 
-	Detail { 
+	Format ("%20d" )
+	Description ( "type of bundle" )
+	Detail {
 	    The bundle type is an arbitrary integer which specifies
-	    the kind of the bundle.  
+	    the kind of the bundle.
 	}
 	;
 
@@ -89,7 +89,7 @@ Attribute lon
 	Units ( "Degrees" )
 	Description ( "estimated longitude" )
 	Detail {
-		This attribute is the geographic longitude in degrees. 
+		This attribute is the geographic longitude in degrees.
 		Longitudes are measured positive east of the Greenwich
 		meridian.
 	}
@@ -137,7 +137,7 @@ Attribute state
 
 Attribute vertex
 	Integer ( 8 )
-	Format ( "%8d" ) 
+	Format ( "%8d" )
 	Null  ( "0" )
 	Range( "vertex > 0" )
 	Description ( "Sequence number of vertex specifying region" )
@@ -154,7 +154,7 @@ Relation places
 	Primary ( lat lon place )
 	Description ( "Geographic location of various features" )
 	Detail {
-		Geographic location of various features.  Includes 
+		Geographic location of various features.  Includes
 		locations for various landmarks (ie summits, populated
 		places-ppl, etc.).
 	}
@@ -167,20 +167,20 @@ Relation regions
 	Primary ( regname vertex )
 	Description ( "Vertices defining regions of interest" )
 	Detail {
-		This table specifies the vertex locations for the 
+		This table specifies the vertex locations for the
 		polygons enclosing each region. The vertex field
-		indicates the ordering of the vertices around the 
-		polygon. For implementations which need to 
-		distinguish unambiguously the difference between the 
+		indicates the ordering of the vertices around the
+		polygon. For implementations which need to
+		distinguish unambiguously the difference between the
 		inside and outside of a region, usually for regions
 		that include significant fractions of the globe or regions
-		that might be on the far side of the globe from a 
-		possibly included earthquake, the vertices should 
-		be listed in clockwise order looking down at the 
-		surface in map view. For situations in which there 
-		may be several types of overlapping regions, or 
-		overlapping regions which need to be ranked in 
-		priority, additional tables should be defined in 
+		that might be on the far side of the globe from a
+		possibly included earthquake, the vertices should
+		be listed in clockwise order looking down at the
+		surface in map view. For situations in which there
+		may be several types of overlapping regions, or
+		overlapping regions which need to be ranked in
+		priority, additional tables should be defined in
 		an expansion schema.
 	}
 	;

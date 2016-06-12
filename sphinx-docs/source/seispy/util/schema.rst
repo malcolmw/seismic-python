@@ -1,5 +1,5 @@
-:mod:`seispy.util.mtp` -- seispy.util.mtp submodule
-===================================================
+:mod:`seispy.util.schema` -- seispy.util.schema submodule
+=========================================================
 
-.. automodule:: seispy.util.mtp
+.. automodule:: seispy.util.schema
    :members:

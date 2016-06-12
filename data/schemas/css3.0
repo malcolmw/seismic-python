@@ -26,12 +26,12 @@ Schema css3.0
 		21) add snetsta, anetsta, schanloc and achanaux tables to translate between foreign volumes of SEED or autoDRM into local databases.
 		22) add specdisc table and associated attributes to support spectral estimation processing
 		23) add rsprm to specdisc table
-		24) added tables dmcseed and dmcwf to database to support all the DMC requirements for building DMC seed volumes.  Changed default value of fileno to -1. 
+		24) added tables dmcseed and dmcwf to database to support all the DMC requirements for building DMC seed volumes.  Changed default value of fileno to -1.
 		25) changed format of chksum from Integer %15ld to Real %12.0f to make sure table is written properly.  Previous format would wrap to negative numbers in some cases which would corrupt the database.
-		26) added fields calib, calper, samprate, timever to table dmcwf and field totbytes to table dmcseed. 
+		26) added fields calib, calper, samprate, timever to table dmcwf and field totbytes to table dmcseed.
 		27) changed primary keys of stamag from arid magtype sta and orid to magid magtype sta and orid.
-		28) changed fields dmcseedfile to dfile and jdate to yearday in tables dmcwf and dmcseed. 
-		29) added focal mechanism calculation related tables and emodel table. 
+		28) changed fields dmcseedfile to dfile and jdate to yearday in tables dmcwf and dmcseed.
+		29) added focal mechanism calculation related tables and emodel table.
 		30) extensive changes to wfrms table to make compatible with orbwfrms.
 		31) made instrument table alternate key all fields except inid and lddate.
 		32) introduced new calibration table, with new fields samprate, segtype, dlsta, dlchan, and lead.
@@ -74,7 +74,7 @@ Attribute anet
 	Description ( "SEED network code" )
 	Detail {
 		This is a network code from autoDRM.  It may
-		need to be combined with a station code to form a 
+		need to be combined with a station code to form a
 		unique key in local databases.
 	}
 	;
@@ -115,8 +115,8 @@ Attribute aux
 	Null ( "-" )
 	Description ( "autoDRM auxiliary code" )
 	Detail {
-		This is the auxiliary code 
-		from autoDRM which may 
+		This is the auxiliary code
+		from autoDRM which may
 		need to be combined with the channel code
 		to be unique in a css3.0 database.
 	}
@@ -226,7 +226,7 @@ Attribute calib
 		negative value means the opposite.  Calib generally
 		reflects the best calibration information available at the
 		time of recording, but refinement may be given in sensor
-		reflecting a subsequent recalibration of the instrument. 
+		reflecting a subsequent recalibration of the instrument.
 		See calratio.
 	}
 	;
@@ -325,7 +325,7 @@ Attribute clip
 		derived from status bits supplied with GDSN or RSTN data,
 		but could also be supplied as a result of analyst review.
 
-		For some data, a 'T' or a 't' in this field indicates 
+		For some data, a 'T' or a 't' in this field indicates
 		a time correction was applied.  The exact correction
 		should be found in the associated wfdisc_tshift table.
 	}
@@ -401,38 +401,67 @@ Attribute datatype
 	Range ( "datatype =~ /aa|as|ah|CA|c2|c4|ca|g2|i2|i3|i4|ic|rf|s2|s3|s4|sc|MS|sd|S1|sy|t4|u4|UE|zz|z/" )
 	Description ( "numeric storage" )
 	Detail {
-		This attribute specifies the format of a data series in
-                the file system.  The allowed datatypes are:
-                
-                aa        Alaska version of AH 
-                as        free-format ascii
-                ah        xdr version of AH 
-                CA        Canada compressed
-                c2        IDA compression of s2
-                c4        IDA compression of s4
-                ca        AutoDRM/GSE CM6 compressed ascii
-                f4        Intel/DEC order IEEE 4 byte floats (same as u4)
-                g2        gain range data
-                ic        Intel SAC format
-                i2        Intel/DEC order 2 byte integers
-                i3        Intel/DEC order 3 byte integers
-                i4        Intel/DEC order 4 byte integers
-                MS        mixed up MiniSeed: out of order, various record sizes 
-                rf        RefTek packet format
-                s2        Sparc/Motorola order 2 byte integers
-                s3        Sparc/Motorola order 3 byte integers
-                s4        Sparc/Motorola order 4 byte integers
-                sc        SAC format
-                sd        Steim compressed MiniSeed format
-                S1        Steim 1 compressed MiniSeed format
-                sy        SEGY format
-                t4        Sparc/Motorola order IEEE 4 byte floats
-                u4        Intel/DEC order IEEE 4 byte floats
-                UE        unevenly sampled data with both time and value
-                zz, z     data not saved
-                
-                Note that the CSS standard defines many other formats,
-                which are not supported by the Antelope software.
+		this attribute specifies the format of a data series in
+		the file system.  the allowed datatypes are:
+
+		+-----------+-----------------------------------------------------+
+		|Format code|Format                                               |
+		+===========+=====================================================+
+		|aa         |alaska version of ah                                 |
+		+-----------+-----------------------------------------------------+
+		|as         |free-format ascii                                    |
+		+-----------+-----------------------------------------------------+
+		|ah         |xdr version of ah                                    |
+		+-----------+-----------------------------------------------------+
+		|ca         |canada compressed                                    |
+		+-----------+-----------------------------------------------------+
+		|c2         |ida compression of s2                                |
+		+-----------+-----------------------------------------------------+
+		|c4         |ida compression of s4                                |
+		+-----------+-----------------------------------------------------+
+		|ca         |autodrm/gse cm6 compressed ascii                     |
+		+-----------+-----------------------------------------------------+
+		|f4         |intel/dec order ieee 4 byte floats (same as u4)      |
+		+-----------+-----------------------------------------------------+
+		|g2         |gain range data                                      |
+		+-----------+-----------------------------------------------------+
+		|ic         |intel sac format                                     |
+		+-----------+-----------------------------------------------------+
+		|i2         |intel/dec order 2 byte integers                      |
+		+-----------+-----------------------------------------------------+
+		|i3         |intel/dec order 3 byte integers                      |
+		+-----------+-----------------------------------------------------+
+		|i4         |intel/dec order 4 byte integers                      |
+		+-----------+-----------------------------------------------------+
+		|ms         |mixed up miniseed: out of order, various record sizes|
+		+-----------+-----------------------------------------------------+
+		|rf         |reftek packet format                                 |
+		+-----------+-----------------------------------------------------+
+		|s2         |sparc/motorola order 2 byte integers                 |
+		+-----------+-----------------------------------------------------+
+		|s3         |sparc/motorola order 3 byte integers                 |
+		+-----------+-----------------------------------------------------+
+		|s4         |sparc/motorola order 4 byte integers                 |
+		+-----------+-----------------------------------------------------+
+		|sc         |sac format                                           |
+		+-----------+-----------------------------------------------------+
+		|sd         |steim compressed miniseed format                     |
+		+-----------+-----------------------------------------------------+
+		|s1         |steim 1 compressed miniseed format                   |
+		+-----------+-----------------------------------------------------+
+		|sy         |segy format                                          |
+		+-----------+-----------------------------------------------------+
+		|t4         |sparc/motorola order ieee 4 byte floats              |
+		+-----------+-----------------------------------------------------+
+		|u4         |intel/dec order ieee 4 byte floats                   |
+		+-----------+-----------------------------------------------------+
+		|ue         |unevenly sampled data with both time and value       |
+		+-----------+-----------------------------------------------------+
+		|zz, z      |data not saved                                       |
+		+-----------+-----------------------------------------------------+
+
+		note that the css standard defines many other formats,
+		which are not supported by the antelope software.
         }
         ;
 
@@ -527,9 +556,9 @@ Attribute demean
 	Range ( "demean =~ /y|n/" )
 	Description ( "Time-series was was demeaned" )
 	Detail {
-		In many situations it is appropriate 
-		to remove the mean value before calculating the spectrum.  This 
-		flag indicates whether the mean was removed in the time-series ('y') 
+		In many situations it is appropriate
+		to remove the mean value before calculating the spectrum.  This
+		flag indicates whether the mean was removed in the time-series ('y')
 		or not ('n') ;
 	}
 	;
@@ -584,7 +613,7 @@ Attribute df
 	Description ( "Frequency interval (Hertz) in spectral file" )
 	Detail {
 		We assume all spectra are discretized at equal frequency
-		intervals (unless spectra are stored in fap2 files).  
+		intervals (unless spectra are stored in fap2 files).
 		df is the frequency interval.
 	}
 	;
@@ -655,7 +684,7 @@ Attribute dir
 	Null ( "-" )
 	Description ( "directory" )
 	Detail {
-		This attribute is the directory-part of a path name. 
+		This attribute is the directory-part of a path name.
 		Relative path names or '.' (dot), the notation for the
 		current directory, may be used.
 	}
@@ -681,7 +710,7 @@ Attribute dlchan
 	Null ( "-" )
 	Description ( "datalogger channel id" )
 	Detail {
-		A datalogger may insert some channel/loc code id into its 
+		A datalogger may insert some channel/loc code id into its
 		output datastream; this field records that id.  For some
 		situations, this id is a combination of a channel code
 		and a loc code, separated by an underscore.
@@ -707,7 +736,7 @@ Attribute dlsta
 	Null ( "-" )
 	Description ( "datalogger station id" )
 	Detail {
-		A datalogger may insert some network/station id into its 
+		A datalogger may insert some network/station id into its
 		output datastream; this field records that id.  For some
 		dataloggers, this id is a combination of a network code
 		and a station code, separated by an underscore.
@@ -991,7 +1020,7 @@ Attribute endtime
 	Format ( "%17.5f" )
 	Null ( "9999999999.99900" )
 	Units ( "Epochal seconds" )
-	Range ( "time <= endtime" ) 
+	Range ( "time <= endtime" )
 	Description ( "last valid time for data" )
 	Detail {
 		In wfdisc, this attribute is the time of the last sample
@@ -1049,7 +1078,7 @@ Attribute evid
 	Detail {
 		Each event is assigned a unique positive integer which
 		identifies it in a database.  It is possible for several
-		records in the origin relation to have the same evid. 
+		records in the origin relation to have the same evid.
 		This indicates there are several opinions about the
 		location of the event.
 	}
@@ -1085,7 +1114,7 @@ Attribute fchan
 	Null ( "-" )
 	Description ( "foreign channel" )
 	Detail {
-		This is the channel code from SEED or autoDRM which many 
+		This is the channel code from SEED or autoDRM which many
 		need to be combined with an auxiliary or location code
 		to be unique in a css3.0 database.
 	}
@@ -1104,7 +1133,7 @@ Attribute filter
 	Null ( "-" )
 	Description ( "filter description" )
 	Detail {
-		This is a character string filter specification.  (e.g. 
+		This is a character string filter specification.  (e.g.
 		"BW 1.0 5 5.0 5" for a Butterworth bandpass filter from 1
 		to 5 hz with 5 poles at each end)
 	}
@@ -1176,9 +1205,9 @@ Attribute fsta
 	Null ( "-" )
 	Description ( "foreign station code" )
 	Detail {
-		This is the common code-name of a seismic observatory. 
-		from SEED or autoDRM.  It may need to be combined with 
-		the network code to form a unique code in local 
+		This is the common code-name of a seismic observatory.
+		from SEED or autoDRM.  It may need to be combined with
+		the network code to form a unique code in local
 		databases.
 	}
 	;
@@ -1217,7 +1246,7 @@ Attribute grn
 	Description ( "geographic region number" )
 	Detail {
 		This is a geographic region number, as defined by Flinn,
-		Engdahl and Hill (Bull.  Seism.  Soc.  Amer.  vol 64, pp. 
+		Engdahl and Hill (Bull.  Seism.  Soc.  Amer.  vol 64, pp.
 		771-992, 1974).  See grname.
 	}
 	;
@@ -1229,7 +1258,7 @@ Attribute grname
 	Description ( "geographic region name" )
 	Detail {
 		This attribute is the common name of a geographic region,
-		as given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc. 
+		as given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc.
 		Amer., vol 64, pp 771-992, 1974).  Names may have changed
 		due to changing political circumstances (e.g., old
 		RHODESIA = new ZIMBABWE).  See grn and srname.
@@ -1361,7 +1390,7 @@ Attribute iphase
 		to a seismic phase.  Standard seismological labels for the
 		types of signals (or phases) are used (e.g., P, PKP, PcP,
 		pP).  Both upper and lower case letters are available and
-		should be used when appropriate, for example, pP or PcP. 
+		should be used when appropriate, for example, pP or PcP.
 		See phase.
 	}
 	;
@@ -1402,7 +1431,7 @@ Attribute jdate
 		This attribute is the date of an arrival, origin, seismic
 		recording, etc.  The same information is available in
 		epoch time, but the Julian date format is more convenient
-		for many types of searches.  Dates B.C.  are negative. 
+		for many types of searches.  Dates B.C.  are negative.
 		Note: there is no year = 0000 or day = 000.  Where only
 		the year is known, day of year = 001; where only year and
 		month are known, day of year = first day of month.  Note:
@@ -1507,7 +1536,7 @@ Attribute loc
 	Null ( "-" )
 	Description ( "SEED location code" )
 	Detail {
-		This is the location code from SEED which may 
+		This is the location code from SEED which may
 		need to be combined with the channel code
 		to be unique in a css3.0 database.
 	}
@@ -1547,7 +1576,7 @@ Attribute lon
 	Units ( "Degrees" )
 	Description ( "estimated longitude" )
 	Detail {
-		This attribute is the geographic longitude in degrees. 
+		This attribute is the geographic longitude in degrees.
 		Longitudes are measured positive east of the Greenwich
 		meridian.
 	}
@@ -1576,7 +1605,7 @@ Attribute magnitude
 	Detail {
 		This gives the magnitude value of the type indicated in
 		attribute magtype.  It is derived in a variety of ways,
-		which are not necessarily linked directly to an arrival. 
+		which are not necessarily linked directly to an arrival.
 		See imb, iml, ims, magtype, mb, ml and ms.
 	}
 	;
@@ -1604,7 +1633,7 @@ Attribute mb
 		This is the body wave magnitude of an event.  Associated
 		with this attribute is the identifier mbid which points to
 		magid in the netmag relation.  The information in that
-		record summarizes the method of analysis and data used. 
+		record summarizes the method of analysis and data used.
 		See imb, iml, ims, magnitude, magtype, ml and ms.
 	}
 	;
@@ -1629,7 +1658,7 @@ Attribute meastype
 	Detail {
 		This field describes the type of measurement performed
 		on a waveform, for example "amplitude" or "rms".
-		This determines how to interpret the other fields in 
+		This determines how to interpret the other fields in
 		the wfmeas table.
 	}
 	;
@@ -1645,7 +1674,7 @@ Attribute mechid
 		id.  A seperate key from orid is necessary because it is
 		possible for different methods to be used to produce different
 		solutions from the same first motion data.  Note this
-		key is for traditional focal mechanism solutions only.  
+		key is for traditional focal mechanism solutions only.
 		The moment table is used for moment tensor solutions and
 		each moment tensor solution will have a unique orid.
 	}
@@ -1810,7 +1839,7 @@ Attribute ms
 	Null ( "-999.00" )
 	Description ( "surface wave magnitude" )
 	Detail {
-		This is the surface wave magnitude for an event. 
+		This is the surface wave magnitude for an event.
 		Associated with this attribute is the identifier msid,
 		which points to magid in the netmag relation.  The
 		information in that record summarizes the method of
@@ -2188,7 +2217,7 @@ Attribute offdate
 	Description ( "Julian off date" )
 	Detail {
 		This attribute is the Julian Date on which the station or
-		sensor indicated was turned off, dismantled, or moved. 
+		sensor indicated was turned off, dismantled, or moved.
 		See ondate.
 	}
 	;
@@ -2266,7 +2295,7 @@ Attribute original_time
 	Units ( "Seconds" )
 	Description ( "time correction" )
 	Detail {
-		the original endtime found in the wfdisc record before 
+		the original endtime found in the wfdisc record before
 		correction.
 	}
 	;
@@ -2329,7 +2358,7 @@ Attribute paxval
 	Description ( "Length of P-axis vector" )
 	Detail {
 		Length of Compressional Axis Vector; Obtained by rotation
-		of the moment tensor into the principal axes system. 
+		of the moment tensor into the principal axes system.
 		Units given by mexpon (which see).
 	}
 	;
@@ -2367,7 +2396,7 @@ Attribute phase
 	Detail {
 		This field holds the identity of a seismic phase which has
 		been associated to an event.  Standard seismological
-		labels for phases are used (e.g., P, PKP, PcP, pP, etc.). 
+		labels for phases are used (e.g., P, PKP, PcP, pP, etc.).
 		Both upper and lower case letters are available and should
 		be used when appropriate, for example, pP or PcP.  See
 		iphase.
@@ -2458,7 +2487,7 @@ Attribute radamp
 	Description ( "Radiation pattern predicted amplitude" )
 	Detail {
 		A source has a body wave radiation pattern whose predicted
-		magnitude is to be stored in this field.  Because it is 
+		magnitude is to be stored in this field.  Because it is
 		a radiation pattern effect it should be scaled from 0 to 1.
 		This is useful for conventional focal mechanism, but less
 		useful for moment tensor solutions.
@@ -2500,14 +2529,14 @@ Attribute rayleigh
 	Description ( "Rayleigh bin size in cycles/sec " )
 	Detail {
 		This parameter is relevant for multitaper spectra which have
-		well defined properties in terms of the time-bandwidth 
-		product and this parameter.  The rayleigh bin size 
+		well defined properties in terms of the time-bandwidth
+		product and this parameter.  The rayleigh bin size
 		differs from the number of delta frequency when zero
 		padding is used or when the time series are tapered.
-		Rayleigh bins are determined by the 
-		of actual length of the time series and the time-bandwidth 
-		product of the taper while the number of 
-		frequency interval size is 
+		Rayleigh bins are determined by the
+		of actual length of the time series and the time-bandwidth
+		product of the taper while the number of
+		frequency interval size is
 		dependent upon the amount of zero padding used.
 	}
 	;
@@ -2567,11 +2596,11 @@ Attribute review
 	Null ( "-" )
 	Description ( "review status" )
 	Detail {
-		This indicates the level of review for an origin.  A value 
+		This indicates the level of review for an origin.  A value
 		of "y" indicates the origin has been inspected.  Higher
-		levels of review indicate a higher degree of confidence 
-		in the location.  Typical levels might be "auto" or null for 
-		automatic (no human review) locations, "pre"liminary and 
+		levels of review indicate a higher degree of confidence
+		in the location.  Typical levels might be "auto" or null for
+		automatic (no human review) locations, "pre"liminary and
 		"fin"al.
 	}
 	;
@@ -2595,8 +2624,8 @@ Attribute rsprm
 	Range ( "rsprm =~ /y|n/" )
 	Description ( "Response removed" )
 	Detail {
-		This 
-		flag indicates whether the instrument response was removed from the spectra ('y') 
+		This
+		flag indicates whether the instrument response was removed from the spectra ('y')
 		or not ('n') ;
 	}
 	;
@@ -2640,7 +2669,7 @@ Attribute samprate
 		the instrument relation this is specifically the nominal
 		sample rate, not accounting for clock drift.  In wfdisc,
 		the value may vary slightly from the nominal to reflect
-		clock drift.  
+		clock drift.
 		
 		Some special channels, like log channels, have this set to zero.
 	}
@@ -2723,52 +2752,91 @@ Attribute segtype
 	Description ( "detector measurement type / natural units" )
 	Detail {
 		Originally, this attribute indicated if a waveform were
-		o(original), v(virtual), s(segmented) or d(duplicate). 
+		o(original), v(virtual), s(segmented) or d(duplicate).
 		However, in Antelope datasets, it indicates the "natural"
 		units of the detector -- 'A' (acceleration), 'V'
 		(velocity), 'D' (displacement), 'I' (infrasound), or 'H'
 		(hydroacoustic), and more recently a host of other non-seismic
 		measurements.
-                
-                 segtype     units            type of data
-                A        nm/sec/sec       acceleration
-                B        25*mw/m/m        UV (sunburn) index (NOAA)
-                D        nm               displacement
-                H        pascal           hydroacoustic
-                I        pascal           infrasound
-                J        watts            power (Joules/sec) (UCSD)
-                K        kilopascal       generic pressure (UCSB)
-                M        millimeters      Wood-Anderson drum recorder
-                N        -                dimensionless
-                P        millibar         barometric pressure
-                R        millimeters      rain fall (UCSD)
-                S        nm/m             strain
-                T        seconds          time
-                V        nm/sec           velocity
-                W        watts/m/m        insolation
-                X        nm*sec           integrated displacement
-                Y        power            waveform power
-                a        degrees          azimuth
-                b        bits/second      bit rate
-                c        counts           dimensionless integer
-                d        meters           depth or height (e.g., water)
-                f        micromoles/s/m/m photoactive radiation flux
-                h        pH               hydrogen ion concentration
-                i        amperes          electric current
-                j        counts/m/m/s     hail intensity
-                l        sec/km           slowness
-                m        bitmap           dimensionless bitmap
-                n        nanoradians      angle (tilt)
-                o        milligrams/liter dilution of oxygen (Mark VanScoy)
-                p        percent          percentage
-                r        inches           rainfall (UCSD)
-                s        meter/second     speed (e.g., wind)
-                t        degrees_Celsius  temperature
-                u        microsiemens/cm  conductivity
-                v        volts            electric potential
-                w        radians/second   rotation rate
-        }
-        ;
+
+        +--------+-----------------+---------------------------------+
+		|segtype | units           |type of data                     |
+		+========+=================+=================================+
+		| A      | nm/sec/sec      |acceleration                     |
+		+--------+-----------------+---------------------------------+
+		| B      | 25*mw/m/m       |UV (sunburn) index (NOAA)        |
+		+--------+-----------------+---------------------------------+
+		| D      | nm              |displacement                     |
+		+--------+-----------------+---------------------------------+
+		| H      | pascal          |hydroacoustic                    |
+		+--------+-----------------+---------------------------------+
+		| I      | pascal          |infrasound                       |
+		+--------+-----------------+---------------------------------+
+		| J      | watts           |power (Joules/sec) (UCSD)        |
+		+--------+-----------------+---------------------------------+
+		| K      | kilopascal      |generic pressure (UCSB)          |
+		+--------+-----------------+---------------------------------+
+		| M      | millimeters     |Wood-Anderson drum recorder      |
+		+--------+-----------------+---------------------------------+
+		| N      | -               |dimensionless                    |
+		+--------+-----------------+---------------------------------+
+		| P      | millibar        |barometric pressure              |
+		+--------+-----------------+---------------------------------+
+		| R      | millimeters     |rain fall (UCSD)                 |
+		+--------+-----------------+---------------------------------+
+		| S      | nm/m            |strain                           |
+		+--------+-----------------+---------------------------------+
+		| T      | seconds         |time                             |
+		+--------+-----------------+---------------------------------+
+		| V      | nm/sec          |velocity                         |
+		+--------+-----------------+---------------------------------+
+		| W      | watts/m/m       |insolation                       |
+		+--------+-----------------+---------------------------------+
+		| X      | nm*sec          |integrated displacement          |
+		+--------+-----------------+---------------------------------+
+		| Y      | power           |waveform power                   |
+		+--------+-----------------+---------------------------------+
+		| a      | degrees         |azimuth                          |
+		+--------+-----------------+---------------------------------+
+		| b      | bits/second     |bit rate                         |
+		+--------+-----------------+---------------------------------+
+		| c      | counts          |dimensionless integer            |
+		+--------+-----------------+---------------------------------+
+		| d      | meters          |depth or height (e.g., water)    |
+		+--------+-----------------+---------------------------------+
+		| f      | micromoles/s/m/m|photoactive radiation flux       |
+		+--------+-----------------+---------------------------------+
+		| h      | pH              |hydrogen ion concentration       |
+		+--------+-----------------+---------------------------------+
+		| i      | amperes         |electric current                 |
+		+--------+-----------------+---------------------------------+
+		| j      | counts/m/m/s    |hail intensity                   |
+		+--------+-----------------+---------------------------------+
+		| l      | sec/km          |slowness                         |
+		+--------+-----------------+---------------------------------+
+		| m      | bitmap          |dimensionless bitmap             |
+		+--------+-----------------+---------------------------------+
+		| n      | nanoradians     |angle (tilt)                     |
+		+--------+-----------------+---------------------------------+
+		| o      | milligrams/liter|dilution of oxygen (Mark VanScoy)|
+		+--------+-----------------+---------------------------------+
+		| p      | percent         |percentage                       |
+		+--------+-----------------+---------------------------------+
+		| r      | inches          |rainfall (UCSD)                  |
+		+--------+-----------------+---------------------------------+
+		| s      | meter/second    |speed (e.g., wind)               |
+		+--------+-----------------+---------------------------------+
+		| t      | degrees_Celsius |temperature                      |
+		+--------+-----------------+---------------------------------+
+		| u      | microsiemens/cm |conductivity                     |
+		+--------+-----------------+---------------------------------+
+		| v      | volts           |electric potential               |
+		+--------+-----------------+---------------------------------+
+		| w      | radians/second  |rotation rate                    |
+		+--------+-----------------+---------------------------------+
+
+		}
+		;
 
 Attribute semax
 	Real (7)
@@ -2922,7 +2990,7 @@ Attribute snet
 	Description ( "SEED network code" )
 	Detail {
 		This is a network code from SEED.  It may
-		need to be combined with a station code to form a 
+		need to be combined with a station code to form a
 		unique key in local databases.
 	}
 	;
@@ -2982,11 +3050,11 @@ Attribute specfmt
 	Range ( "specfmt =~ /fap2/" )
 	Description ( "Format of spectra file" )
 	Detail {
-		This attribute describes the format of the spectra file.  
+		This attribute describes the format of the spectra file.
 		The intent is to have two allowable values:
 		fap2 - which are the ascii files used by the response library
 		       this format allows for representations of spectra with
-		       non-constant df.   
+		       non-constant df.
 		binary - assumes that the spectra file is stored as real numbers
 		       This format may be useful when calculating huge numbers
 		       of spectra.  No specific I/O routines exist for this yet.
@@ -3037,7 +3105,7 @@ Attribute srname
 	Description ( "seismic region name" )
 	Detail {
 		This attribute is the common name of a seismic region, as
-		given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc. 
+		given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc.
 		Amer., vol 64, pp 771-992, 1974).  Names may have changed
 		due to changing political circumstances (e.g., old
 		RHODESIA = new ZIMBABWE).  See srn and grname.
@@ -3061,7 +3129,7 @@ Attribute sta
 	Null ( "-" )
 	Description ( "station" )
 	Detail {
-		This is the common code-name of a seismic observatory. 
+		This is the common code-name of a seismic observatory.
 		Generally only three or four characters are used.
 	}
 	;
@@ -3075,7 +3143,7 @@ Attribute stageid
 	Detail {
 		The ordered stage number of this discrete stage in the
 		calibration response.  Each individual stage corresponds
-		to a sensor, analog filter, A/D converter, or FIR filter. 
+		to a sensor, analog filter, A/D converter, or FIR filter.
 		The numbering scheme for a seismic system will generally
 		assign stageid=1 for the sensor, stageid=2 for the
 		anti-alias filter, stageid=3 for the analog-to-digital
@@ -3120,9 +3188,9 @@ Attribute statype
 	Range ( "statype =~ /ss|ar|1C|3C|hfa|lpa/" )
 	Description ( "station type: single station, virt. array, etc." )
 	Detail {
-		This character string specifies the station type. 
-		Recommended entries are ss (single station) or ar (array). 
-		For autodrm, the only allowed values are 
+		This character string specifies the station type.
+		Recommended entries are ss (single station) or ar (array).
+		For autodrm, the only allowed values are
 		1C = single component
 		3C = three component
 		hfa = high-frequency array
@@ -3420,7 +3488,7 @@ Attribute tagid
 	Detail {
 		This contains the value of a foreign key identified in
 		tagname.  For example, if tagname is 'arid', then wftag
-		may be joined to arrival where arrival.  arid = wftag. 
+		may be joined to arrival where arrival.  arid = wftag.
 		tagid.  If tagname is 'orid', then wftag and origin may be
 		joined where origin.  orid = wftag.  tagid.
 	}
@@ -3448,7 +3516,7 @@ Attribute tapeblock
 		This attribute gives the first block (in some file of an
 		ANSI-labeled tape) at which a time series begins.  The
 		dearchiving program uses this number to skip blocks within
-		a tape file in order to retrieve the waveform specified. 
+		a tape file in order to retrieve the waveform specified.
 		See tapefile.
 	}
 	;
@@ -3461,7 +3529,7 @@ Attribute tapefile
 	Description ( "tape file number" )
 	Detail {
 		This attribute gives the file number (on a tape) at which
-		a time-series is written.  A tape begins with file 1. 
+		a time-series is written.  A tape begins with file 1.
 		This number can be used to skip files when retrieving data
 		from the tape.  See tapeblock.
 	}
@@ -3483,8 +3551,8 @@ Attribute taper
 	Null ( "-" )
 	Description ( "Taper applied to time-series before fft" )
 	Detail {
-		Descriptive word describing taper method applied to 
-		time-series before fft used to estimate this spectral file.  
+		Descriptive word describing taper method applied to
+		time-series before fft used to estimate this spectral file.
 		e.g. boxcar, 4pi-prolate, gaussian, cos-squared, 10%-cos, etc.
 	}
 	;
@@ -3495,7 +3563,7 @@ Attribute taxazm
 	Null ( "999.9" )
 	Description ( "Azimuth of P-axis vector" )
 	Detail {
-		Tension Azis Azimuth and Plunge; In fplane, as determined. 
+		Tension Azis Azimuth and Plunge; In fplane, as determined.
 		In moment, obtained by rotation of the moment tensor into
 		the principal axes system.  Associated with the largest
 		(in the absolute sense) negative eigenvalue.  In degrees,
@@ -3521,7 +3589,7 @@ Attribute taxplg
 	Null ( "999.9" )
 	Description ( "Plunge of T-axis" )
 	Detail {
-		Tension Azis Azimuth and Plunge; In fplane, as determined. 
+		Tension Azis Azimuth and Plunge; In fplane, as determined.
 		In moment, obtained by rotation of the moment tensor into
 		the principal axes system.  Associated with the largest
 		(in the absolute sense) negative eigenvalue.  In degrees,
@@ -3592,7 +3660,7 @@ Attribute time
 		data.  Where date of historical events is known, time is
 		set to the start time of that date; where the date of
 		contemporary arrival measurements is known but no time is
-		given, then the time attribute is set to the NA value. 
+		given, then the time attribute is set to the NA value.
 		The double-precision floating point number allows 15
 		decimal digits.  At 1 millisecond accuracy this is a range
 		of 3 years.  Where time is unknown, or prior to Feb.  10,
@@ -3615,7 +3683,7 @@ Attribute timecentryd
 		time of data.  Where date of historical events is known,
 		time is set to the start time of that date; where the date
 		of contemporary arrival measurements is known but no time
-		is given, then the time attribute is set to the NA value. 
+		is given, then the time attribute is set to the NA value.
 		The double-precision floating point number allows 15
 		decimal digits.  At 1 millisecond accuracy this is a range
 		of 3 years.  Where time is unknown, or prior to Feb.  10,
@@ -3673,7 +3741,7 @@ Attribute tmnlpb
 	Description ( "Cut-off period for mantle waves" )
 	Detail {
 		Minimum period used in mantle wve inversion.  The cut-off
-		period of the low pass flter app;oed before inversion. 
+		period of the low pass flter app;oed before inversion.
 		in seconds.
 	}
 	;
@@ -3827,7 +3895,7 @@ Attribute units
 	Null ( "-" )
 	Description ( "units of calib (e.g. nm, nm/sec, ...)" )
 	Detail {
-		This is the units which the calibration are measured. 
+		This is the units which the calibration are measured.
 		Normally the units are nm for displacement data, nm/sec
 		for velocity data, nm/sec**2 for acceleration data.
 	}
@@ -3910,7 +3978,7 @@ Attribute vmodel
 	Description ( "velocity model" )
 	Detail {
 		This character string identifies the velocity model of the
-		earth used to compute the travel times of seismic phases. 
+		earth used to compute the travel times of seismic phases.
 		These are required for event location (if phase is
 		defining) or for computing travel-time residuals.
 	}
@@ -3960,7 +4028,7 @@ Relation achanaux
 	Detail {
 		SEED and autoDRM use loc or aux to further specify
 		channel, but the css3.0 schema doesn't support loc
-		as a key.  This table maps autodrm chan+aux codes to 
+		as a key.  This table maps autodrm chan+aux codes to
 		a unique local channel code, using the corresponding local
 		sta name.  Note the combination of the local sta
 		name with the foreign chan and aux codes.
@@ -3994,7 +4062,7 @@ Relation arrival
 	Fields ( sta time arid jdate stassid chanid chan iphase stype deltim azimuth delaz slow delslo ema rect amp per logat clip fm snr qual auth commid lddate )
 	Primary ( sta time )
 	Alternate ( arid )
-	Foreign ( stassid chanid commid ) 
+	Foreign ( stassid chanid commid )
 	Defines arid
 	Description ( "Summary information on a seismic arrival" )
 	Detail {
@@ -4008,11 +4076,11 @@ Relation arrival
 Relation assoc
 	Fields ( arid orid sta phase belief delta seaz esaz timeres timedef azres azdef slores slodef emares wgt vmodel commid lddate )
 	Primary ( arid orid )
-	Foreign ( arid orid commid ) 
+	Foreign ( arid orid commid )
 	Description ( "Data associating arrivals with origins" )
 	Detail {
 		This table has information that connects arrivals (i.e.,
-		entries in the arrival relation) to a particular origin. 
+		entries in the arrival relation) to a particular origin.
 		It has a composite key made of arid and orid.  There are
 		two kinds of measurement data: three attributes are
 		related to the station ( delta, seaz, esaz ), and the
@@ -4030,7 +4098,7 @@ Relation beam
 	Primary ( wfid )
 	Description ( "beam description parameters" )
 	Detail {
-		Information characterizing an individual time-domain beam. 
+		Information characterizing an individual time-domain beam.
 		The beam waveform is referenced through an associated
 		entry in the wfdisc table.
 	}
@@ -4052,7 +4120,7 @@ Relation calibration
 Relation centryd
 	Fields ( orid jdate timecentryd lat lon depth coterr claerr cloerr cdperr durat nslpb nrlpb tmnlpb nsmw nrmw tmnmw dused auth commid lddate )
 	Primary ( orid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Description ( "Information on the centroid location" )
 	Detail {
 		This table is designed to accommodate the centroid
@@ -4067,7 +4135,7 @@ Relation centryd
 Relation emodel
 	Fields ( orid emodelx emodely emodelz emodelt lddate )
 	Primary ( orid )
-	Foreign ( orid ) 
+	Foreign ( orid )
 	Description ( "Velocity model error bound estimates table" )
 	Detail {
 		This relation holds velocity model error bound
@@ -4079,7 +4147,7 @@ Relation emodel
 Relation event
 	Fields ( evid evname prefor auth commid lddate )
 	Primary ( evid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Defines evid
 	Description ( "Event identification" )
 	Detail {
@@ -4107,7 +4175,7 @@ Relation fkgrid
 Relation fplane
 	Fields ( orid mechid str1 dip1 rake1 str2 dip2 rake2 taxazm taxplg paxazm paxplg algorithm auth lddate )
 	Primary ( mechid )
-	Foreign ( orid ) 
+	Foreign ( orid )
 	Description ( "Focal mechanism definition" )
 	Detail {
 		This table stored double couple focal mechanism plane
@@ -4164,7 +4232,7 @@ Relation lastid
 Relation moment
 	Fields ( orid mexpon mrr mtt mff mrt mrf mtf mrrerr mtterr mfferr mrterr mrferr mtferr taxval taxplg taxazm paxval paxplg paxazm naxval naxplg naxazm bestdc str1 dip1 rake1 str2 dip2 rake2 dused auth commid lddate )
 	Primary ( orid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Description ( "Describes the moment tensor for a given origin." )
 	Detail {
 		This table is designed to accommodate the tensor
@@ -4179,12 +4247,12 @@ Relation moment
 Relation mt
 	Fields ( mtid pubid qmlid orid tmpp tmrp tmrr tmrt tmtp tmtt taxlength taxplg taxazm paxlength paxplg paxazm naxlength naxplg naxazm scm pdc str1 dip1 rake1 str2 dip2 rake2 drdepth drtime drlat drlon drmag drmagt estatus rstatus utime auth lddate )
 	Primary ( mtid )
-	Foreign ( orid ) 
+	Foreign ( orid )
 	Description ( "Describes a moment tensor for a given origin." )
 	Detail {
 		This table is designed to accommodate the moment tensor
 		information in the form as distributed through the
-		USGS/NEIC GeoJSON web site. 
+		USGS/NEIC GeoJSON web site.
 		See http://earthquake.usgs.gov/earthquakes/feed/v1.0/geojson.php
 	}
 	;
@@ -4192,7 +4260,7 @@ Relation mt
 Relation netmag
 	Fields ( magid net orid evid magtype nsta magnitude uncertainty auth commid lddate )
 	Primary ( magid )
-	Foreign ( orid evid net commid ) 
+	Foreign ( orid evid net commid )
 	Defines magid
 	Description ( "Network magnitude" )
 	Detail {
@@ -4206,7 +4274,7 @@ Relation netmag
 Relation network
 	Fields ( net netname nettype auth commid lddate )
 	Primary ( net )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Description ( "Network description and identification" )
 	Detail {
 		This relation gives general information about seismic
@@ -4217,7 +4285,7 @@ Relation network
 Relation origerr
 	Fields ( orid sxx syy szz stt sxy sxz syz stx sty stz sdobs smajax sminax strike sdepth stime conf commid lddate )
 	Primary ( orid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Description ( "Summary of confidence bounds in origin estimations" )
 	Detail {
 		The error estimates associated with the parameters in the
@@ -4235,7 +4303,7 @@ Relation origin
 	Fields ( lat lon depth time orid evid jdate nass ndef ndp grn srn etype review depdp dtype mb mbid ms msid ml mlid algorithm auth commid lddate )
 	Primary ( time lat lon depth ndef nass )
 	Alternate ( orid )
-	Foreign ( evid commid grn srn ) 
+	Foreign ( evid commid grn srn )
 	Defines orid
 	Description ( "Data on event location and size" )
 	Detail {
@@ -4247,7 +4315,7 @@ Relation origin
 Relation predarr
 	Fields ( arid orid time slow seaz ema esaz dip lddate )
 	Primary ( arid orid )
-	Foreign ( arid orid ) 
+	Foreign ( arid orid )
 	Description ( "Earth model predictions of data associated with arrivals" )
 	Detail {
 		This table has information that connects arrival rows
@@ -4259,7 +4327,7 @@ Relation predarr
 		values of observables rather than residuals.  Note that
 		esaz and dip are azimuth and dip of the predicted emergence
 		angle of a given arrival in the focal sphere.  esaz is not
-		necessarily the same as that stored in assoc which is 
+		necessarily the same as that stored in assoc which is
 		conventionally the great circle path angle.  Similarly
 		seaz and ema are computed from a model, not from simple
 		spherical geometry.
@@ -4269,12 +4337,12 @@ Relation predarr
 Relation predmech
 	Fields ( arid orid mechid fm radamp lddate )
 	Primary ( arid orid mechid )
-	Foreign ( arid orid mechid ) 
+	Foreign ( arid orid mechid )
 	Description ( "Predicted focal mechanism properties" )
 	Detail {
 		This table is used to show predicted first motions
-		based on a particular focal mechanism.  It is 
-		assumed the earth model used is the same as that 
+		based on a particular focal mechanism.  It is
+		assumed the earth model used is the same as that
 		used to produce orid so the the angles defined
 		in predarr can be used to show inconsistencies
 		between actual and predicted first motions.
@@ -4303,7 +4371,7 @@ Relation schanloc
 	Detail {
 		SEED and autoDRM use loc or aux to further specify
 		channel, but the css3.0 schema doesn't support loc
-		as a key.  This table maps seed chan+loc codes to 
+		as a key.  This table maps seed chan+loc codes to
 		a unique local channel code, using the corresponding local
 		sta name.  Note the combination of the local sta
 		name with the foreign chan and loc codes.
@@ -4313,7 +4381,7 @@ Relation schanloc
 Relation sensor
 	Fields ( sta chan time endtime inid chanid jdate calratio calper tshift instant lddate )
 	Primary ( sta chan time::endtime )
-	Foreign ( inid chanid ) 
+	Foreign ( inid chanid )
 	Description ( "Specific calibration information for physical channels" )
 	Detail {
 		This table provides a record of updates in the calibration
@@ -4399,7 +4467,7 @@ Relation stage
 		Information characterizing an individual stage of the
 		total calibration of a station-channel.  Stageid provides
 		the specific ordering in the system response for the
-		stage.  gnom, gcalib, and gunits are given for the stage. 
+		stage.  gnom, gcalib, and gunits are given for the stage.
 		Combining all records having the same sta-chan-time will
 		provide calib in the calibration table.  This table can
 		describe analog or digital stages.  Each record provides
@@ -4411,7 +4479,7 @@ Relation stage
 Relation stamag
 	Fields ( magid sta arid orid evid phase magtype magnitude uncertainty auth commid lddate )
 	Primary ( magid magtype sta orid )
-	Foreign ( arid magid orid evid commid ) 
+	Foreign ( arid magid orid evid commid )
 	Description ( "Station magnitude" )
 	Detail {
 		This table summarizes station magnitude estimates based
@@ -4424,7 +4492,7 @@ Relation stamag
 Relation stassoc
 	Fields ( stassid sta etype review location dist azimuth lat lon depth time imb ims iml auth commid lddate )
 	Primary ( stassid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Defines stassid
 	Description ( "Arrivals from a single station grouped into an event" )
 	Detail {
@@ -4451,7 +4519,7 @@ Relation wfdisc
 	Fields ( sta chan time wfid chanid jdate endtime nsamp samprate calib calper instype segtype datatype clip dir dfile foff commid lddate )
 	Primary ( sta chan time::endtime )
 	Alternate ( wfid )
-	Foreign ( commid chanid ) 
+	Foreign ( commid chanid )
 	Defines wfid
 	Description ( "Waveform file header and descriptive information" )
 	Detail {
@@ -4467,7 +4535,7 @@ Relation wfedit
 	Fields ( sta chan edid time endtime probtype edittype auth commid lddate )
 	Primary ( sta chan time::endtime )
 	Alternate ( edid )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Defines edid
 	Description ( "Describes a waveform edit" )
 	Detail {
@@ -4479,7 +4547,7 @@ Relation wfedit
 Relation wfmeas
 	Fields ( sta chan meastype filter time endtime tmeas twin val1 val2 units1 units2 arid auth lddate )
 	Primary ( sta chan meastype filter time endtime )
-	Foreign ( arid ) 
+	Foreign ( arid )
 	Description ( "waveform measurements" )
 	Detail {
 		This relation provides a general way to store measurements made
@@ -4495,11 +4563,11 @@ Relation wfmeas
 Relation wfrms
 	Fields ( sta chan time twin filter fc arid stype segtype rms lddate )
 	Primary ( sta chan time twin filter )
-	Foreign ( arid ) 
+	Foreign ( arid )
 	Description ( "Waveform RMS values" )
 	Detail {
 		This relation provides a holder for waveform root-mean-square
-		values. These values can be used to form signal to noise 
+		values. These values can be used to form signal to noise
 		estimates or raw signal (or noise) estimates.
 	}
 	;
@@ -4507,7 +4575,7 @@ Relation wfrms
 Relation wftag
 	Fields ( tagname tagid wfid lddate )
 	Primary ( tagname tagid wfid )
-	Foreign ( wfid ) 
+	Foreign ( wfid )
 	Description ( "Waveform mapping file" )
 	Detail {
 		The wftag relation links various identifiers, e.g.  origin
@@ -4522,11 +4590,11 @@ Relation wftape
 	Fields ( sta chan time wfid chanid jdate endtime nsamp samprate calib calper instype segtype datatype clip dir dfile volname tapefile tapeblock commid lddate )
 	Primary ( sta chan time::endtime )
 	Alternate ( wfid )
-	Foreign ( chanid commid ) 
+	Foreign ( chanid commid )
 	Description ( "Waveform tape file header and descriptive information" )
 	Detail {
 		This relation provides a pointer or index to waveforms
-		that have been archived on official Center archive tapes. 
+		that have been archived on official Center archive tapes.
 		This is a companion relation to wfdisc.
 	}
 	;
@@ -4534,7 +4602,7 @@ Relation wftape
 Relation wftar
 	Fields ( sta chan time wfid chanid jdate endtime nsamp samprate calib calper instype segtype datatype clip dir dfile foff tapename fileno tfile tfoff commid lddate )
 	Primary ( sta chan time::endtime )
-	Foreign ( commid ) 
+	Foreign ( commid )
 	Description ( "Tar archived waveform file header and descriptive information" )
 	Detail {
 		This relation provides a pointer (or index) to waveforms

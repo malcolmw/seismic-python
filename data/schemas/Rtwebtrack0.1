@@ -1,8 +1,8 @@
 Schema Rtwebtrack0.1
 	Description ( "Schema to track webserver events" )
 	Detail {
-		This Rtwebtrack0.1 schema tracks events associated 
-		with the rtwebserver program, such as requests for 
+		This Rtwebtrack0.1 schema tracks events associated
+		with the rtwebserver program, such as requests for
 		specific URLs.
 	}
 	Timedate lddate
@@ -36,7 +36,7 @@ Attribute peer
 	Null ( "-" )
 	Description ( "IP address of remote peer from which a request was sent" )
 	Detail {
-		The peer field gives the IP address of the remote 
+		The peer field gives the IP address of the remote
 		peer issuing a given web request
 	}
 	;
@@ -47,7 +47,7 @@ Attribute peername
 	Null ( "-" )
 	Description ( "nameserved address of remote peer from which a request was sent" )
 	Detail {
-		The peername field gives the domain name of the remote 
+		The peername field gives the domain name of the remote
 		peer issuing a given web request
 	}
 	;
@@ -59,10 +59,10 @@ Attribute response
 	Null ( "-" )
 	Description ( "response issued for request" )
 	Detail {
-		The response field lists the response given to a 
-		web-server. Generally this is the integer response 
-		code followed by the string interpretation, 
-		separated by space characters. 
+		The response field lists the response given to a
+		web-server. Generally this is the integer response
+		code followed by the string interpretation,
+		separated by space characters.
 	}
 	;
 
@@ -74,8 +74,8 @@ Attribute time
 	Description ( "time of a web event" )
 	Detail {
 		The time field gives the Unix epoch time corresponding
-		to a particular web event. In the case of web requests, 
-		this is the time of the last request for the given 
+		to a particular web event. In the case of web requests,
+		this is the time of the last request for the given
 		url from the given peer.
 	}
 	;
@@ -86,7 +86,7 @@ Attribute url
 	Null ( "-" )
 	Description ( "url for a request" )
 	Detail {
-		The url field lists the resource requested from the 
+		The url field lists the resource requested from the
 		web-server.
 	}
 	;
@@ -106,7 +106,7 @@ Relation requests
 	Primary ( peer url )
 	Description ( "Table of web-site requests" )
 	Detail {
-		This table logs individual web-site requests received by 
+		This table logs individual web-site requests received by
 		the rtwebserver program.
 	}
 	;

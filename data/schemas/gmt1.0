@@ -37,8 +37,8 @@ Attribute dx
 	Range ( "dx > 0" )
 	Description ( "grid spacing in x (longitude) direction" )
 	Detail {
-		This field specifies the grid spacing in the x 
-		(longitude) direction. The units for this field are 
+		This field specifies the grid spacing in the x
+		(longitude) direction. The units for this field are
 		given in the xunit field.
 	}
 	;
@@ -50,8 +50,8 @@ Attribute dy
 	Range ( "dy > 0" )
 	Description ( "grid spacing in y (latitude) direction" )
 	Detail {
-		This field specifies the grid spacing in the y 
-		(latitude) direction. The units for this field are given 
+		This field specifies the grid spacing in the y
+		(latitude) direction. The units for this field are given
 		in the xunit field.
 	}
 	;
@@ -64,8 +64,8 @@ Attribute east
 	Units ( "Degrees" )
 	Description ( "easternmost longitude of file" )
 	Detail {
-		This field records the eastern longitude boundary of the 
-		GMT file. The phase may be unwrapped, in which case 
+		This field records the eastern longitude boundary of the
+		GMT file. The phase may be unwrapped, in which case
 		longitudes of -180 to 0 may appear as 180 to 360 degrees.
 	}
 	;
@@ -77,23 +77,23 @@ Attribute formatnum
 	Range ( "formatnum >= 0" )
 	Description ( "grdfile format number" )
 	Detail {
-		The formatnum field records the GMT format-number 
+		The formatnum field records the GMT format-number
 		type of the grid file. Predefined format numbers are:
-		 
-		0. GMT netCDF 4-byte float format [Default] 
-		1. Native binary single precision floats in scanlines 
-		   with leading grd header 
-		2. Native binary short integers in scanlines with leading 
-		   grd header 
-		3. 8-bit standard Sun rasterfile (colormap ignored) 
-		4. Native binary unsigned char in scanlines with leading 
-		   grd header 
-		5. Native binary bits in scanlines with leading grd header 
-		6. Native binary ``surfer'' grid files 
-		7. netCDF 1-byte byte format 
-		8. netCDF 1-byte char format 
-		9. netCDF 2-byte int format 
-		10. netCDF 4-byte int format 
+		
+		0. GMT netCDF 4-byte float format [Default]
+		1. Native binary single precision floats in scanlines
+		   with leading grd header
+		2. Native binary short integers in scanlines with leading
+		   grd header
+		3. 8-bit standard Sun rasterfile (colormap ignored)
+		4. Native binary unsigned char in scanlines with leading
+		   grd header
+		5. Native binary bits in scanlines with leading grd header
+		6. Native binary ``surfer'' grid files
+		7. netCDF 1-byte byte format
+		8. netCDF 1-byte char format
+		9. netCDF 2-byte int format
+		10. netCDF 4-byte int format
 		11. netCDF 8-byte double format
 	}
 	;
@@ -105,7 +105,7 @@ Attribute lddate
 	Units ( "seconds" )
 	Description ( "time of last record modification" )
 	Detail {
-		The lddate field records the last time the record was 
+		The lddate field records the last time the record was
 		entered or modified.
 	}
 	;
@@ -116,8 +116,8 @@ Attribute name
 	Null ( "-" )
 	Description ( "name of the grid file" )
 	Detail {
-		The name field specifies an optional unique name for the 
-		grid file, to be used to keep track of different 
+		The name field specifies an optional unique name for the
+		grid file, to be used to keep track of different
 		entities at an installation.
 	}
 	;
@@ -130,7 +130,7 @@ Attribute north
 	Units ( "Degrees" )
 	Description ( "northernmost latitude of file" )
 	Detail {
-		This field records the northern latitude boundary of the 
+		This field records the northern latitude boundary of the
 		GMT file.
 	}
 	;
@@ -165,7 +165,7 @@ Attribute offset
 	Null ( "-9e99" )
 	Description ( "offset for z direction" )
 	Detail {
-		This is a vertical offset to be added to the z-axis of 
+		This is a vertical offset to be added to the z-axis of
 		the grid
 	}
 	;
@@ -177,7 +177,7 @@ Attribute registration
 	Range ( "registration =~ /pixel|grid/" )
 	Description ( "type of node registration" )
 	Detail {
-		This field records whether the GMT file is 
+		This field records whether the GMT file is
 		pixel-registered or grid registered.
 	}
 	;
@@ -188,7 +188,7 @@ Attribute scale
 	Null ( "-9e99" )
 	Description ( "scale factor for z direction" )
 	Detail {
-		This is a scaling factor to be applied to the z-axis of 
+		This is a scaling factor to be applied to the z-axis of
 		the grid
 	}
 	;
@@ -201,7 +201,7 @@ Attribute south
 	Units ( "Degrees" )
 	Description ( "southernmost latitude of file" )
 	Detail {
-		This field records the southern latitude boundary of the 
+		This field records the southern latitude boundary of the
 		GMT file.
 	}
 	;
@@ -212,8 +212,8 @@ Attribute type
 	Null ( "-" )
 	Description ( "content type" )
 	Detail {
-		This is an optional field describing the nature 
-		of the file contents. Common values might by topography, 
+		This is an optional field describing the nature
+		of the file contents. Common values might by topography,
 		bathymetry, gradient, etc.
 	}
 	;
@@ -226,8 +226,8 @@ Attribute west
 	Units ( "Degrees" )
 	Description ( "westernmost longitude of file" )
 	Detail {
-		This field records the western longitude boundary of the 
-		GMT file. The phase may be unwrapped, in which case 
+		This field records the western longitude boundary of the
+		GMT file. The phase may be unwrapped, in which case
 		longitudes of -180 to 0 may appear as 180 to 360 degrees.
 	}
 	;
@@ -287,7 +287,7 @@ Relation grids
 	Primary ( dir dfile )
 	Description ( "info on gmt grid files" )
 	Detail {
-		This table contains vital statistics and locations 
+		This table contains vital statistics and locations
 		for GMT grid files.
 	}
 	;

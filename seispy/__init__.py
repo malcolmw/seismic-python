@@ -12,7 +12,7 @@ try:
 except ImportError:
     _antelope_defined = False
 _antelope_defined = True
-_datadir = "/home/mcwhite/.local/data/"
+_datadir = "/home/mcwhite/.local/data/schemas/"
 
 __all__ += ["_antelope_defined",
             "_datadir"]

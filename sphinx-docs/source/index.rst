@@ -16,6 +16,7 @@ Contents:
    :maxdepth: 2
 
    seispy
+   schemas
 
 Indices and tables
 ==================

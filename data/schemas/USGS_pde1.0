@@ -102,7 +102,7 @@ Attribute grname
 	Description ( "geographic region name" )
 	Detail {
 		This attribute is the common name of a geographic region,
-		as given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc. 
+		as given in Flinn, Engdahl and Hill (Bull.  Seism.  Soc.
 		Amer., vol 64, pp 771-992, 1974).  Names may have changed
 		due to changing political circumstances (e.g., old
 		RHODESIA = new ZIMBABWE).  See grn and srname.
@@ -112,9 +112,7 @@ Attribute grname
 Attribute gs
 	String (1)
 	Format ( "" )
-	Description ( "
-      GS fault plane solution (F)
-    " )
+	Description ( "GS fault plane solution (F)" )
 	;
 
 Attribute gswa
@@ -122,15 +120,25 @@ Attribute gswa
 	Format ( "" )
 	Description ( "ground, soil, water table and atmospheric phenomena" )
 	Detail {
-		ground, soil, water table and atmospheric phenomena
-		    L = liquifaction
-		    G = geyser
-		    S = landslide/avalanche
-		    B = sand blows
-		    C = ground cracks not known to be an expression of faulting
-		    V = visual/lights
-		    O = olfactory
-		    M = multiple effects
+		+-----------------------------------------------------------+
+		|ground, soil, water table and atmospheric phenomena        |
+		+==+========================================================+
+		|L | liquifaction                                           |
+		+--+--------------------------------------------------------+
+		|G | geyser                                                 |
+		+--+--------------------------------------------------------+
+		|S | landslide/avalanche                                    |
+		+--+--------------------------------------------------------+
+		|B | sand blows                                             |
+		+--+--------------------------------------------------------+
+		|C | ground cracks not known to be an expression of faulting|
+		+--+--------------------------------------------------------+
+		|V | visual/lights                                          |
+		+--+--------------------------------------------------------+
+		|O | olfactory                                              |
+		+--+--------------------------------------------------------+
+		|M | multiple effects                                       |
+		+--+--------------------------------------------------------+
 	}
 	;
 
@@ -139,12 +147,18 @@ Attribute guided
 	Format ( "" )
 	Description ( "guided waves in atmosphere/ocean" )
 	Detail {
-		T = t wave
-		A = acoustic wave
-		G = gravity wave
-		B = both acoustic and gravity waves
-		M = multiple effects
-	}
+		+--+--------------------------------+
+		|T | t wave                         |
+		+--+--------------------------------+
+		|A | acoustic wave                  |
+		+--+--------------------------------+
+		|G | gravity wave                   |
+		+--+--------------------------------+
+		|B | both acoustic and gravity waves|
+		+--+--------------------------------+
+		|M | multiple effects               |
+		+--+--------------------------------+
+	 }
 	;
 
 Attribute hour
@@ -170,12 +184,19 @@ Attribute hypoquality
 	Format ( "" )
 	Description ( "authority/quality indicator" )
 	Detail {
-		authority/quality indicator 
-		PDE symbol      QED letter      meaning
-		   &                f           furnished (contributed) hypocenter
-		   %                n           single network solution
-		   *                s           starred (less reliable) solution
-		   ?                p           poor solution
+		+--------------------------------------------------------+
+		|authority/quality indicator                             |
+		+==========+==========+==================================+
+		|PDE symbol|QED letter|meaning                           |
+		+==========+==========+==================================+
+		|&         |f         |furnished (contributed) hypocenter|
+		|----------+----------+----------------------------------+
+		|%         |n         |single network solution           |
+		|----------+----------+----------------------------------+
+		|*         |s         |starred (less reliable) solution  |
+		|----------+----------+----------------------------------+
+		|?         |p         |poor solution                     |
+		|----------+----------+----------------------------------+
 	}
 	;
 
@@ -208,9 +229,13 @@ Attribute isoseismal
 	Format ( "" )
 	Description ( "isoseismal/intensity map" )
 	Detail {
-		isoseismal/intensity map 
-		    P = PDE or Monthly Listing 
-		    U = U.S. Earthquakes
+		+--------------------------+
+		|isoseismal/intensity map  |
+		+==========================+
+		|P | PDE or Monthly Listing|
+		+--+-----------------------+
+		|U | U.S. Earthquakes      |
+		+--+-----------------------+
 	}
 	;
 
@@ -348,25 +373,25 @@ Relation gregion
 	;
 
 Relation pde
-    Separator ( "" ) 
-    Fields ( 
-	ident year month day hour minute second csec 
+	Separator ( "" )
+	Fields (
+	ident year month day hour minute second csec
 	latitude north longitude east
-	depth depthquality ndp 
-	hypoarrivals hypostddev hypoquality 
-	mb mbcount ms mscount msz 
+	depth depthquality ndp
+	hypoarrivals hypostddev hypoquality
+	mb mbcount ms mscount msz
 	contrib_mag1 contrib_type1 contrib1
-	contrib_mag2 contrib_type2 contrib2 
-	grn intensity 
-	macroseismic moment isoseismal gs ide 
+	contrib_mag2 contrib_type2 contrib2
+	grn intensity
+	macroseismic moment isoseismal gs ide
 	diastrophic tsunami seiche volcanism
 	atectonic guided gswa
 	lsep hypocontrib rsep
-    )
-    Primary (
-	ident year month day hour minute second csec 
+	)
+	Primary (
+	ident year month day hour minute second csec
 	latitude north longitude east
 	)
-    Foreign ( grn ) 
-    Description ( "Preliminary Determination of Epicenters from NEIC" ) 
-    ;
+	Foreign ( grn )
+	Description ( "Preliminary Determination of Epicenters from NEIC" )
+	;

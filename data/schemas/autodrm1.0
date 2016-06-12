@@ -9,26 +9,26 @@ Schema autodrm
 
 Attribute bundle
 	Dbptr ( 32 )
-	Description ( "database pointer to bundled/grouped data" ) 
-	Format ( "%ld %ld %ld %ld" ) 
+	Description ( "database pointer to bundled/grouped data" )
+	Format ( "%ld %ld %ld %ld" )
 	Detail {
-	    A bundle is a special database pointer which refers to
-	    either an entire table or view, or to a contiguous subset
-	    of some table or view.  In the former case, both the
-	    record number and the field number should be dbALL.  In
-	    the latter case, the record number and the field number
-	    specify a range of records in the table.  
+		A bundle is a special database pointer which refers to
+		either an entire table or view, or to a contiguous subset
+		of some table or view.  In the former case, both the
+		record number and the field number should be dbALL.  In
+		the latter case, the record number and the field number
+		specify a range of records in the table.
 	}
 	;
 
 
 Attribute bundletype
 	Integer ( 20 )
-	Format ("%20ld" ) 
-	Description ( "type of bundle" ) 
-	Detail { 
-	    The bundle type is an arbitrary integer which specifies
-	    the kind of the bundle.  
+	Format ("%20ld" )
+	Description ( "type of bundle" )
+	Detail {
+		The bundle type is an arbitrary integer which specifies
+		the kind of the bundle.
 	}
 	;
 
@@ -175,10 +175,10 @@ Attribute version
 Relation log
 	Fields (  email msg_id msg_type receipt version source_code in_kbytes result rsp_id out_kbytes disposal timestamp )
 	Primary ( email msg_id receipt )
-	Alternate ( rsp_id ) 
+	Alternate ( rsp_id )
 	Description ( "log file from AutoDRM" )
 	Detail {
-		This defines the minimum operations logs required by 
+		This defines the minimum operations logs required by
 		the IDC Formats and Protocols for Messages.
 	}
 	;
@@ -188,7 +188,7 @@ Relation requestors
 	Primary (  email )
 	Description ( "additional information about requestors" )
 	Detail {
-		Some additional information and overall statistics 
+		Some additional information and overall statistics
 		about requestors
 	}
 	;

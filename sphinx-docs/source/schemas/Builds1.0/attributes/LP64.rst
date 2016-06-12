@@ -1,0 +1,9 @@
+.. _Builds1.0-LP64_attributes:
+
+**LP64** -- 32 or 64 bit
+------------------------
+
+* **Field width:** 1
+* **Format:** %s
+* **Null:** -
+* **Range:** (y|n)

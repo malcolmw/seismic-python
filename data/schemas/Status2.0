@@ -303,7 +303,7 @@ Relation cpu_usage
 Relation filesystem
 	Fields ( host directory time kbytes_max inodes_max kbytes_avail inodes_avail )
 	Primary ( host directory time )
-	Foreign ( host ) 
+	Foreign ( host )
 	Description ( "filesystem capacities" )
 	Detail {
 		This table maintains a history of filesystem usage and

@@ -15,10 +15,12 @@ _token_conjugates = {'(': ')',
                      '{': '}',
                      '"': '"',
                      "'": "'"}
-_attribute_dtypes = {'String': str,
+_attribute_dtypes = {'Dbptr': None,
                      'Integer': int,
                      'Real': float,
+                     'String': str,
                      'Time': float,
+                     'Transient': None,
                      'YearDay': verify_time}
 
 #base class
@@ -46,13 +48,18 @@ class SchemaElement:
 class Attribute(SchemaElement):
     def sphinx_documentation_block(self, schema="NOSCHEMA", ref_sufx="_attributes"):
         block = ".. _%s-%s%s:\n\n" % (schema, self.name, ref_sufx)
-        title = "**%s** -- %s" % (self.name, self.description)
+        if hasattr(self, 'description'):
+            title = "**%s** -- %s" % (self.name, self.description)
+        else:
+            title = "**%s**" % self.name
         block += title + "\n"
         block += "-" * len(title) + "\n\n"
         if hasattr(self, 'detail'):
             block += self.detail + "\n\n"
-        block += "* **Field width:** %s\n" % self.width
-        block += "* **Format:** %s\n" % self.format
+        if hasattr(self, 'width'):
+            block += "* **Field width:** %s\n" % self.width
+        if hasattr(self, 'format'):
+            block += "* **Format:** %s\n" % self.format
         if hasattr(self, 'null'):
             block += "* **Null:** %s\n" % self.null
         if hasattr(self, 'units'):
@@ -91,16 +98,22 @@ class Relation(SchemaElement):
                                    ref_sufx="_relations",
                                    attr_ref_sufx="_attributes"):
         block = ".. _%s-%s%s:\n\n" % (schema, self.name, ref_sufx)
-        title = "**%s** -- %s" % (self.name, self.description)
+        if hasattr(self, 'description'):
+            title = "**%s** -- %s" % (self.name, self.description)
+        else:
+            title = "**%s**" % self.name
         block += title + "\n"
         block += "-" * len(title) + "\n\n"
-        block += self.detail + "\n\n"
-        block += "Fields\n^^^^^^\n\n"
-        block += draw_table(self.fields,
-                            schema=schema) + "\n"
-        block += "Primary Keys\n^^^^^^^^^^^^\n\n"
-        block += draw_table(self.primary_keys,
-                            schema=schema) + "\n"
+        if hasattr(self, 'detail'):
+            block += self.detail + "\n\n"
+        if hasattr(self, 'fields'):
+            block += "Fields\n^^^^^^\n\n"
+            block += draw_table(self.fields,
+                                schema=schema) + "\n"
+        if hasattr(self, 'primary_keys'):
+            block += "Primary Keys\n^^^^^^^^^^^^\n\n"
+            block += draw_table(self.primary_keys,
+                                schema=schema) + "\n"
         if hasattr(self, 'alternate_keys'):
             block += "Alternate Keys\n^^^^^^^^^^^^^^\n\n"
             block += draw_table(self.alternate_keys,
@@ -123,6 +136,7 @@ class Schema:
         if 'path' in kwargs:
             self.token_parser = TokenParser(kwargs['path'])
         elif 'schema' in kwargs:
+            print _datadir + kwargs['schema']
             self.token_parser = TokenParser(_datadir + kwargs['schema'])
         else:
             raise InitializationError("specify either 'path' or 'schema' "\
@@ -162,6 +176,11 @@ class Schema:
             if key in _attribute_dtypes:
                 kwargs['dtype'] = key.lower()
                 kwargs['width'] = tp.get_value()
+            elif key == 'Detail':
+                lines = tp.get_value().strip('"').splitlines()
+                kwargs['detail'] = '\n'.join([line.lstrip() for line in \
+                        tp.get_value().strip('"').splitlines()])
+
             else:
                 kwargs[key.lower()] = ' '.join(tp.get_value().strip('"').split())
         self.attributes[name] = Attribute(**kwargs)
@@ -171,6 +190,7 @@ class Schema:
         kwargs = {}
         name = tp.get_value()
         kwargs['name'] = name
+        kwargs['transient'] = False
         while tp.get_field():
             key = tp.get_key()
             if key == 'Fields' or\
@@ -197,6 +217,8 @@ class Schema:
                     else:
                         kwargs[key] += [self.attributes[attr]]
                 kwargs[key] = sorted(kwargs[key], key=sort_key)
+            elif key == 'Transient':
+                kwargs['transient'] = True
             else:
                 kwargs[tp.get_key().lower()] = ' '.join(tp.get_value().strip('"').split())
         self.relations[name] = Relation(**kwargs)
@@ -204,22 +226,15 @@ class Schema:
     def parse_header(self):
         tp = self.token_parser
         tp.get_block()
-        tp.get_field()
-        if tp.get_key() != 'Schema':
-            raise Exception("Error code 1000")
-        self.schema = tp.get_value().strip('"')
-        field = tp.get_field()
-        if tp.get_key() != 'Description':
-            raise Exception("Error code 1001")
-        self.description= tp.get_value().strip('"')
-        tp.get_field()
-        if tp.get_key() != 'Detail':
-            raise Exception("Error code 1002")
-        self.detail = tp.get_value().strip('"')
-        tp.get_field()
-        if tp.get_key() != 'Timedate':
-            raise Exception("Error code 1003")
-        self.timedate = tp.get_value()
+        while tp.get_field():
+            if tp.get_key() == 'Schema':
+                self.schema = tp.get_value().strip('"')
+            if tp.get_key() == 'Description':
+                self.description= tp.get_value().strip('"')
+            if tp.get_key() == 'Detail':
+                self.detail = tp.get_value().strip('"')
+            if tp.get_key() == 'Timedate':
+                self.timedate = tp.get_value()
 
     def write_sphinx_docs(self, output_dir):
         if not isdir(output_dir):
@@ -260,28 +275,34 @@ class Schema:
     def write_schema_index(self, subdir, attr_indices=None, rel_indices=None):
         fout = open("%s/%s_index.rst" % (subdir, self.schema), 'w')
         fout.write(".. _%s_schema_index:\n\n" % self.schema)
-        title = "**%s** -- %s" % (self.schema, self.description)
+        if hasattr(self, 'description'):
+            title = "**%s** -- %s" % (self.schema, self.description)
+        else:
+            title = "**%s**" % self.schema
         fout.write("%s\n" % title + "=" * len(title) + "\n\n")
         fout.write(".. toctree::\n")
         fout.write("   :hidden:\n\n")
         fout.write("   attributes/attributes_index_all\n")
         fout.write("   relations/relations_index_all\n\n")
-        fout.write("Attributes\n----------\n\n")
-        index = ""
-        for char in attr_indices:
-            index += ":ref:`%s <%s_attributes_index_%s>` | " %\
-                    (char, self.schema, char)
-        index += ":ref:`all <%s_attributes_index_all>`" % self.schema
-        fout.write("%s\n\n" % index)
-        fout.write("Relations\n---------\n\n")
-        index = ""
-        for char in rel_indices:
-            index += ":ref:`%s <%s_relations_index_%s>` | " %\
-                    (char, self.schema, char)
-        index += ":ref:`all <%s_relations_index_all>`" % self.schema
-        fout.write("%s\n\n" % index)
-        fout.write("Detail\n------\n\n")
-        fout.write("%s\n" % self.detail)
+        if attr_indices:
+            fout.write("Attributes\n----------\n\n")
+            index = ""
+            for char in attr_indices:
+                index += ":ref:`%s <%s_attributes_index_%s>` | " %\
+                        (char, self.schema, char)
+            index += ":ref:`all <%s_attributes_index_all>`" % self.schema
+            fout.write("%s\n\n" % index)
+        if rel_indices:
+            fout.write("Relations\n---------\n\n")
+            index = ""
+            for char in rel_indices:
+                index += ":ref:`%s <%s_relations_index_%s>` | " %\
+                        (char, self.schema, char)
+            index += ":ref:`all <%s_relations_index_all>`" % self.schema
+            fout.write("%s\n\n" % index)
+        if hasattr(self, 'detail'):
+            fout.write("Detail\n------\n\n")
+            fout.write("%s\n" % self.detail)
         fout.close()
 
     def write_schema_element_index(self,

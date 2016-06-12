@@ -35,7 +35,7 @@ Attribute duration
 	Description ( "length of time link was down" )
 	Detail {
 		This is measured as the time from the first (read or write)
-		timeout to the time when the a new socket connection 
+		timeout to the time when the a new socket connection
 		is opened.
 	}
 	;

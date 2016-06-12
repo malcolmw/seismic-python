@@ -53,6 +53,6 @@ Relation lastid
 		retrieve the last sequential value of one of the numeric
 		keys.  Id keys are required before inserting a record in
 		numerous tables.  The table has exactly one row for each
-		keyname.  
+		keyname.
 	}
 	;

@@ -1,7 +1,7 @@
 Schema Builds1.0
 	Description ( "Tracks builds and regression tests " )
 	Detail {
-		Keeping statistics on build problems and certify 
+		Keeping statistics on build problems and certify
 		problems may provide some insight.
 	}
 	Timedate lddate

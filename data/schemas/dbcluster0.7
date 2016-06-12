@@ -1,19 +1,19 @@
 #   Copyright (c) 2005 Lindquist Consulting, Inc.
-#   All rights reserved. 
-#                                                                     
-#   Written by Dr. Kent Lindquist, Lindquist Consulting, Inc. 
-# 
-#   This software may be used freely in any way as long as 
-#   the copyright statement above is not removed. 
+#   All rights reserved.
+#
+#   Written by Dr. Kent Lindquist, Lindquist Consulting, Inc.
+#
+#   This software may be used freely in any way as long as
+#   the copyright statement above is not removed.
 
 Schema dbcluster0.7
 	Description ( "Centralized registry of databases" )
 	Detail {
-		This schema provides a centralized registry of all 
-		databases available from a given filesystem (possibly 
-		a composite filesystem mounted from several different 
+		This schema provides a centralized registry of all
+		databases available from a given filesystem (possibly
+		a composite filesystem mounted from several different
 		sources and all visible from the same root location).
-		The schema supports clusters of databases with 
+		The schema supports clusters of databases with
 		regular naming conventions and divisions based (usually)
 		on time intervals.
 	}
@@ -26,8 +26,8 @@ Attribute clustername
 	Null ( "-" )
 	Description ( "name of database cluster" )
 	Detail {
-		This field provides a unique nickname for each database 
-		cluster, by which the database cluster will be 
+		This field provides a unique nickname for each database
+		cluster, by which the database cluster will be
 		known and accessed.
 	}
 	;
@@ -38,14 +38,14 @@ Attribute dbmachine
 	Null ( "-" )
 	Description ( "machine on which database is being created" )
 	Detail {
-		This is the Fully Qualified Domain Name, IP address, 
-		or host name of the machine on which a 
-		database is being created (which of these is chosen 
-		depends on the application of a particular cluster database 
-		instance). This attribute is optional and may be 
-		used for situations where databases exist on some 
+		This is the Fully Qualified Domain Name, IP address,
+		or host name of the machine on which a
+		database is being created (which of these is chosen
+		depends on the application of a particular cluster database
+		instance). This attribute is optional and may be
+		used for situations where databases exist on some
 		but not all machines in an intranet, possibly not all
-		cross-mounted. 
+		cross-mounted.
 	}
 	;
 
@@ -56,10 +56,10 @@ Attribute description
 	Description ( "short description of database or cluster" )
 	Detail {
 		This field gives a short description of a database
-		or database cluster, e.g. "master site database", 
+		or database cluster, e.g. "master site database",
 		"backup site database", "PDE Catalog", "main real-time
-		auto processing database", etc., as appropriate for 
-		the operational environment. 
+		auto processing database", etc., as appropriate for
+		the operational environment.
 	}
 	;
 
@@ -69,9 +69,9 @@ Attribute dfile
 	Null ( "-" )
 	Description ( "data file" )
 	Detail {
-		This attribute is the name of a disk-based file, 
-		such as the descriptor file of a database. This may 
-		include percent-escape sequences which will later be 
+		This attribute is the name of a disk-based file,
+		such as the descriptor file of a database. This may
+		include percent-escape sequences which will later be
 		filled in according to an appropriate time range.
 	}
 	;
@@ -82,10 +82,10 @@ Attribute dir
 	Null ( "-" )
 	Description ( "directory" )
 	Detail {
-		This attribute is the directory-part of a path name. 
-		Relative path names or '.' (dot), the notation for the 
-		current directory, may be used. This may contain 
-		percent-escape sequences, which will later be filled 
+		This attribute is the directory-part of a path name.
+		Relative path names or '.' (dot), the notation for the
+		current directory, may be used. This may contain
+		percent-escape sequences, which will later be filled
 		in based on a time value.
 	}
 	;
@@ -110,7 +110,7 @@ Attribute lddate
 	Units ( "seconds" )
 	Description ( "time of last record modification" )
 	Detail {
-		This field records a Unix epoch timestamp showing the 
+		This field records a Unix epoch timestamp showing the
 		last time the record was modified.
 	}
 	;
@@ -132,7 +132,7 @@ Attribute schema
 	Null ( "-" )
 	Description ( "schema in which a database is stored" )
 	Detail {
-		This field gives the schema under which a database 
+		This field gives the schema under which a database
 		is stored.
 	}
 	;
@@ -156,15 +156,15 @@ Attribute volumes
 	Null ( "-" )
 	Description ( "volume segmentation of clustered databases" )
 	Detail {
-		This field gives the boundary intervals for clustered 
-		databases, for example "day", "week", "month", "year", etc. 
-		The first volume is taken to start as specified by the 
-		time field of the clusters relation. If a cluster of 
-		databases has a non-standard start time for its volumes, 
-		an individual row should be used for each database in the 
-		cluster. If there is only one database referenced by 
+		This field gives the boundary intervals for clustered
+		databases, for example "day", "week", "month", "year", etc.
+		The first volume is taken to start as specified by the
+		time field of the clusters relation. If a cluster of
+		databases has a non-standard start time for its volumes,
+		an individual row should be used for each database in the
+		cluster. If there is only one database referenced by
 		a particular row in the clusters table, the volumes field
-		may be given as 'single'. 
+		may be given as 'single'.
 	}
 	;
 
@@ -174,15 +174,15 @@ Relation clusters
 	Alternate ( dir dfile )
 	Description ( "database clusters" )
 	Detail {
-		This table defines clusters of databases. Each row may 
-		specify one single database of a particular type 
+		This table defines clusters of databases. Each row may
+		specify one single database of a particular type
 		(indicated by clustername, for example a master_stations
 		database), or a collection of databases with a regular
-		naming convention. The time and endtime specify the 
+		naming convention. The time and endtime specify the
 		time range covered by the entire cluster (endtime may
-		be left null for open-ended clusters). The specific 
-		database name for each database in a cluster may be 
-		derived based on percent-escape sequences in the 
+		be left null for open-ended clusters). The specific
+		database name for each database in a cluster may be
+		derived based on percent-escape sequences in the
 		dir and dfile fields.
 	}
 	;

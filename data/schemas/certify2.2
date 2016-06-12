@@ -166,21 +166,21 @@ Attribute require
 	Description ( "test requires this characteristic" )
 	Detail {
 		Don't run test if machine doesn't have this characteristic:
-		    marmot   		e.g., kmieid test
-		    f77			requires fortran
-		    maps		requires map database
-		    regions		requires regions
-		    iasp91     		requires iasp91
-		    X			require X11 display
-		    Darwin		only on Macs
-		    SunOS		only on Suns
-		    Linux		only on Linux
-		    x86			must be Intel
-		    arm			must be ARM
-		    sparc		must be sparc
-		    -t			live user
-		    specific hostname
-		    specific user
+			marmot   		e.g., kmieid test
+			f77			requires fortran
+			maps		requires map database
+			regions		requires regions
+			iasp91     		requires iasp91
+			X			require X11 display
+			Darwin		only on Macs
+			SunOS		only on Suns
+			Linux		only on Linux
+			x86			must be Intel
+			arm			must be ARM
+			sparc		must be sparc
+			-t			live user
+			specific hostname
+			specific user
 	}
 	;
 
@@ -190,8 +190,8 @@ Attribute avoid
 	Description ( "avoid tests on machines with" )
 	Detail {
 		Don't run test if machine has this characteristic:
-		    marmot   		don't run on the marmot
-		    Linux		don't run on linux
+			marmot   		don't run on the marmot
+			Linux		don't run on linux
 	}
 	;
 
@@ -201,7 +201,7 @@ Attribute result
 	Null ( "9" )
 	Description ( "result: 0=ok, 1=pre-command failed, 2=command failed 3=diff failed 4=make failed" )
 	Detail {
-	    This is the result of running a test.
+		This is the result of running a test.
 		0 test passed
 		1 pre-command failed
 		2 command failed
@@ -339,7 +339,7 @@ Relation certify
 Relation history
 	Fields ( testid release success success_host success_count system user elapsed failure failure_host failure_count )
 	Primary ( testid release )
-	Foreign ( testid ) 
+	Foreign ( testid )
 	Description ( "History of test performance" )
 	Detail {
 		This is an abbreviated history of test performance.
@@ -349,7 +349,7 @@ Relation history
 Relation log
 	Fields ( testid release time system user elapsed result host lddate )
 	Primary ( testid release time )
-	Foreign ( testid ) 
+	Foreign ( testid )
 	Description ( "log of tests performed" )
 	;
 
@@ -358,7 +358,7 @@ Relation updates
 	Primary ( testid time )
 	Description ( "updates to correct performance" )
 	Detail {
-		This shows when the "correct" results were updated. 
+		This shows when the "correct" results were updated.
 		Because other things may change, like the diff or the
 		xdiff options, this is not a complete list.
 	}

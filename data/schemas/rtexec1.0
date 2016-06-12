@@ -94,17 +94,17 @@ Attribute failure
 
 Attribute signal
 	Integer (3)
-	Format ("%3d") 
-	Null ("-1" ) 
-	Description ( "signal causing task failure" ) 
-	; 
+	Format ("%3d")
+	Null ("-1" )
+	Description ( "signal causing task failure" )
+	;
 
 Attribute corefile
 	Integer (1)
-	Format ("%2d") 
-	Null ("0" ) 
-	Description ( "indicates if core file was generated" ) 
-	; 
+	Format ("%2d")
+	Null ("0" )
+	Description ( "indicates if core file was generated" )
+	;
 
 Attribute result
 	Integer (4)
@@ -170,9 +170,9 @@ Relation cron_history
 	Primary (  name start pid )
 	;
 
-Relation timespan 
+Relation timespan
 	Fields (pid up down who why)
-	Description ("records system startups and shutdowns" )  
+	Description ("records system startups and shutdowns" )
 	;
 
 Relation shutdown
@@ -184,5 +184,5 @@ Relation shutdown
 Relation incidents
 	Fields (  name start failure pid execution signal corefile incidentfile )
 	Primary ( name start )
-	Description ( "records task failures resulting from signals like SIGBUS" ) 
+	Description ( "records task failures resulting from signals like SIGBUS" )
 	;
