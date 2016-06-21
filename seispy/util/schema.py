@@ -9,7 +9,7 @@ from shutil import rmtree
 
 from seispy import _datadir
 from seispy.core.exceptions import InitializationError
-from seispy.util.time import verify_time
+from seispy.util.stime import verify_time
 _lead_tokens = ('(', '{', '"')
 _token_conjugates = {'(': ')',
                      '{': '}',

@@ -1,6 +1,6 @@
 from seispy.core.blackout import Blackout
 from seispy.core.exceptions import InitializationError
-from seispy.util.time import verify_time
+from seispy.util.stime import verify_time
 
 from copy import deepcopy
 class _BaseChannel:

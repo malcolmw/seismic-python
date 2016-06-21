@@ -7,8 +7,8 @@ This is module level documentation coming from sphinx-docs/source/seispy/util.rs
 
    util/mtp
    util/schema
-   util/time
+   util/stime
 
-.. automodule:: seispy.core
+.. automodule:: seispy.util
    :members:
 

@@ -14,7 +14,7 @@
 import sys, os
 import site
 sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
-site.addsitedir('%s/lib/python' % os.environ['ANF'])
+#site.addsitedir('%s/lib/python' % os.environ['ANF'])
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -246,4 +246,8 @@ texinfo_documents = [
 
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'http://docs.python.org/': None}
+intersphinx_mapping = {'python': ('http://docs.python.org/2.7', None)}
+
+#include todos
+[extensions]
+todo_include_todos=True

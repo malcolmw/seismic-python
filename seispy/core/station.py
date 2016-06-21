@@ -4,7 +4,7 @@ from seispy.core.channel import Channel,\
 from seispy.core.exceptions import ArgumentError,\
                                    InitializationError
 from seispy.core.dbparsable import DbParsable
-from seispy.util.time import verify_time
+from seispy.util.stime import verify_time
 
 import re
 
