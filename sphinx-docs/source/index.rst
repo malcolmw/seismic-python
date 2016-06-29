@@ -15,8 +15,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
-   seispy
-   schemas
+   seispy/index
+   schemas/index
 
 Indices and tables
 ==================
