@@ -6,7 +6,10 @@ from math import cos,\
 import matplotlib.pyplot as plt
 from matplotlib.mlab import griddata
 
+import numpy as np
 from numpy import linspace,\
+                  meshgrid,\
+                  ndarray,\
                   zeros
 #from seispy.geometry import deg2rad,\
 from geometry import EARTH_RADIUS,\
@@ -75,6 +78,8 @@ class VelocityModel(object):
                         self.model[phase][ir, itheta, iphi] = float(line[iphi])
 
     def _get_V(self, r, theta, phi, phase):
+        if phi < 0:
+            phi += 2 * pi
         if r > self.nodes[0, 0, 0][0]\
                 or r < self.nodes[-1, 0, 0][0]\
                 or theta > self.nodes [0, 0, 0][1]\
@@ -130,7 +135,7 @@ class VelocityModel(object):
         V1 = V01 + (dV1 / dtheta) * delta_theta
         dV = V1 - V0
         dphi = self.nodes[0, 0, iphi + 1][2] - self.nodes[0, 0, iphi][2]
-        delta_phi = phi - self.nodes[0, 0, phi][2]
+        delta_phi = phi - self.nodes[0, 0, iphi][2]
         V = V0 + (dV / dphi) * delta_phi
         return V
 
@@ -143,15 +148,50 @@ class VelocityModel(object):
         return self._get_V(r, theta, phi, 'Vs')
 
     def _plot(self, lat, lon, depth, phase):
-        NPTS = 100
+        NPTS = 50
         X, Y, V = [], [], []
         if lat == -999 and lon == -999:
-            #plot depth slice
-            pass
+            title = "Depth horizon - %.1f [km]" % depth
+            xlabel = "Distance from %.2f [km]" % self.phi_mid
+            ylabel = "Distance from %.2f [km]" % self.theta_mid
+            r = EARTH_RADIUS - depth
+            theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
+                                   self.theta_max - 0.01 * self.dtheta,
+                                   NPTS)
+            phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
+                                   self.phi_max - 0.01 * self.dphi,
+                                   NPTS)
+            X, Y = meshgrid(phi_nodes, theta_nodes)
+            V = np.ndarray(shape=X.shape)
+            for i in range(X.shape[0]):
+                for j in range(X.shape[1]):
+                    V[i, j] = self._get_V(r, Y[i, j], X[i, j], phase)
+                    X[i, j] = r * sin(self.phi_mid) - r * sin(X[i, j])
+                    Y[i, j] = r * sin(pi / 2 - Y[i, j]) - r * sin(pi / 2 - self.theta_mid)
         elif lat == -999 and depth == -999:
-            #plot longitudinal slice
-            pass
+            title = "Vertical, longitudinal slice - %.2f" % lon
+            xlabel = "Distance from %.2f [km]" % (90 - degrees(self.theta_mid))
+            ylabel = "Depth from surface [km]"
+            phi = radians(lon)
+            r_nodes = linspace(self.r_min + 0.01 * self.dr,
+                               self.r_max - 0.01 * self.dr,
+                               NPTS)
+            theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
+                                   self.theta_max - 0.01 * self.dtheta,
+                                   NPTS)
+            X, Y = meshgrid(theta_nodes, r_nodes)
+            V = np.ndarray(shape=X.shape)
+            for i in range(X.shape[0]):
+                for j in range(X.shape[1]):
+                    r = Y[i, j]
+                    theta = X[i, j]
+                    V[i, j] = self._get_V(r, theta, phi, phase)
+                    X[i, j] = r * sin(theta - self.theta_mid)
+                    Y[i, j] = r * cos(theta - self.theta_mid) - self.r_max
         elif lon == -999 and depth == -999:
+            title = "Vertical, latitudinal slice - %.2f" % lat
+            xlabel = "Distance from %.2f [km]" % degrees(self.phi_mid)
+            ylabel = "Depth from surface [km]"
             #get data points
             theta = radians(90 - lat)
             r_nodes = linspace(self.r_min + 0.01 * self.dr,
@@ -160,33 +200,33 @@ class VelocityModel(object):
             phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
                                  self.phi_max - 0.01 * self.dphi,
                                  NPTS)
-            T = sph2xyz(self.r_min, theta, self.phi_mid)
-            for r in r_nodes:
-                for phi in phi_nodes:
-                    X += [r * cos(pi / 2 - (phi - self.phi_mid))]
-                    Y += [r * sin(pi / 2 - (phi - self.phi_mid)) - self.r_max]
-                    V += [self._get_V(r, theta, phi, phase)]
-        x_min, x_max = min(X), max(X)
-        y_min, y_max = min(Y), max(Y)
-        Xi = linspace(x_min, x_max, NPTS)
-        Yi = linspace(y_min, y_max, NPTS)
-        Vi = griddata(X, Y, V, Xi, Yi)[-1::-1]
+            X, Y = meshgrid(phi_nodes, r_nodes)
+            V = np.ndarray(shape=X.shape)
+            for i in range(X.shape[0]):
+                for j in range(X.shape[1]):
+                    V[i, j] = self._get_V(Y[i, j], theta, X[i, j], phase)
+                    phi, r = X[i, j], Y[i, j]
+                    X[i, j] = r * cos(pi / 2 - (phi - self.phi_mid))
+                    Y[i, j] = r * sin(pi / 2 - (phi - self.phi_mid)) - self.r_max
         fig = plt.figure()
+        fig.suptitle(title)
         ax = fig.add_subplot(1, 1, 1)
-        ax.imshow(Vi,
-                  extent=(x_min, x_max, y_min, y_max),
-                  aspect=(x_max - x_min) / (y_max - y_min) * 0.5)
-        #ax = fig.add_subplot(2, 1, 2)
-        #ax.tripcolor(X, Y, V)
-        #ax.plot(X, Y, 'k.')
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        im = ax.pcolormesh(X, Y, V,
+                           #vmin=4.0,
+                           #vmax=8.5,
+                           cmap=plt.get_cmap('hsv'))
+        cbar = fig.colorbar(im, ax=ax)
+        cbar.set_label("%s [km/s]" % phase)
         plt.show()
         
 
     def plot_Vp(self, lat=-999, lon=-999, depth=-999):
         self._plot(lat, lon, depth, 'Vp')
 
-    def plot_Vs(self):
-        pass
+    def plot_Vs(self, lat=-999, lon=-999, depth=-999):
+        self._plot(lat, lon, depth, 'Vs')
 
     def plot_VpVs_ratio(self):
         pass
