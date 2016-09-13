@@ -28,6 +28,7 @@ lon = 0 axis and the z-axis aligns with North pole lat=90.
 from math import acos,\
                  atan2,\
                  cos,\
+                 degrees,\
                  pi,\
                  sin,\
                  sqrt
@@ -56,6 +57,16 @@ def geo2sph(lat, lon, z):
     phi = deg2rad(lon)
     r = EARTH_RADIUS - z
     return r, theta, phi
+
+def sph2geo(r, theta, phi):
+    z = EARTH_RADIUS - r
+    lat = 90 - degrees(theta)
+    lon = degrees(phi)
+    if lon < -180.:
+        lon += 360.
+    elif lon > 360.:
+        lon -= 360.
+    return lat, lon, z
 
 def sph2xyz(r, theta, phi):
     x = r * sin(theta) * cos(phi)

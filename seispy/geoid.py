@@ -34,13 +34,20 @@ class Geoid(np.ndarray):
         me.theta_min, me.theta_max = min(me._coords.X2[:,0]), max(me._coords.X2[:,0])
         return me
 
-    def call(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         return self._eval(*args, **kwargs)
 
     def _eval(self, u, v, coords="geographical"):
         if coords == "geographical":
             u = radians(u)
             v = radians(90. - v)
+        elif coords == "spherical":
+            #make sure phi falls in the same range as nodes
+            u = u + 2 * pi if u < self.phi_min\
+                    else u - 2 * pi if u > self.phi_max\
+                    else u
+        else:
+            raise ValueError("invalid coordinate system")
         return self.interpolate((u, v))
             
 

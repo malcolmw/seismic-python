@@ -11,12 +11,16 @@ from numpy import linspace,\
                   meshgrid,\
                   ndarray,\
                   zeros
-#from seispy.geometry import deg2rad,\
-from geometry import EARTH_RADIUS,\
+import scipy.interpolate
+#from geometry import EARTH_RADIUS,\
+from seispy.geoid import Geoid
+from seispy.geometry import EARTH_RADIUS,\
                             geo2sph,\
+                            sph2geo,\
                             sph2xyz,\
                             Vector
-import geometry as geom
+
+Vair = 0.314
 
 class VelocityModel(object):
     """
@@ -27,12 +31,13 @@ class VelocityModel(object):
     .. todo::
        document this class.
     """
-    def __init__(self, infile, fmt='fang'):
+    def __init__(self, infile, topo=None, fmt='fang'):
         if fmt.upper() == 'FANG':
-            self._read_fang(infile)
+            self._read_fang(infile, topo)
 
-    def _read_fang(self, infile):
+    def _read_fang(self, infile, topo_infile):
         infile = open(infile)
+        self.geoid = Geoid(topo_infile)
         lon_nodes = [float(lon) for lon in infile.readline().split()]
         for i in range(len(lon_nodes)):
             if lon_nodes[i] < -180.:
@@ -46,7 +51,7 @@ class VelocityModel(object):
         phi_nodes = [radians(lon) for lon in lon_nodes]
         self.model = {
             'Vp': zeros((len(r_nodes), len(theta_nodes), len(phi_nodes))),
-            'Vs': zeros((len(r_nodes), len(theta_nodes), len(phi_nodes)))
+            'Vs': zeros((len(r_nodes), len(theta_nodes), len(phi_nodes))),
             }
         self.nodes = zeros((len(r_nodes), len(theta_nodes), len(phi_nodes)),
                            dtype='float32, float32, float32')
@@ -75,7 +80,10 @@ class VelocityModel(object):
                 for itheta in range(len(theta_nodes)):
                     line = infile.readline().split()
                     for iphi in range(len(line)):
-                        self.model[phase][ir, itheta, iphi] = float(line[iphi])
+                        v = float(line[iphi])
+                        #if self.nodes[ir, itheta, iphi][0] > self.topo['r'][iphi, itheta]:
+                        #    v = Vair
+                        self.model[phase][ir, itheta, iphi] = v
 
     def _get_V(self, r, theta, phi, phase):
         if phi < 0:
@@ -87,6 +95,8 @@ class VelocityModel(object):
                 or phi < self.nodes[0, 0, 0][2]\
                 or phi > self.nodes[0, 0, -1][2]:
             raise ValueError("point lies outside velocity model")
+        if r > self.geoid(phi, theta, coords="spherical"):
+            return Vair
         ir0, itheta0, iphi0 = None, None, None
         for ir in range(self.nodes.shape[0] - 1):
             if self.nodes[ir, 0, 0][0] > r > self.nodes[ir + 1, 0, 0][0]:
@@ -147,39 +157,40 @@ class VelocityModel(object):
         r, theta, phi = geo2sph(lat, lon, depth)
         return self._get_V(r, theta, phi, 'Vs')
 
-    def _plot(self, lat, lon, depth, phase):
-        NPTS = 50
+    def _plot(self, lat, lon, depth, phase, nx, ny):
         X, Y, V = [], [], []
         if lat == -999 and lon == -999:
             title = "Depth horizon - %.1f [km]" % depth
-            xlabel = "Distance from %.2f [km]" % self.phi_mid
-            ylabel = "Distance from %.2f [km]" % self.theta_mid
+            xlabel = "Distance from %.2f [km]" % degrees(self.phi_mid)
+            ylabel = "Distance from %.2f [km]" % (90 - degrees(self.theta_mid))
             r = EARTH_RADIUS - depth
             theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
                                    self.theta_max - 0.01 * self.dtheta,
-                                   NPTS)
+                                   ny)
             phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
                                    self.phi_max - 0.01 * self.dphi,
-                                   NPTS)
+                                   nx)
             X, Y = meshgrid(phi_nodes, theta_nodes)
             V = np.ndarray(shape=X.shape)
             for i in range(X.shape[0]):
                 for j in range(X.shape[1]):
+                    phi = X[i, j]
+                    theta = Y[i, j]
                     V[i, j] = self._get_V(r, Y[i, j], X[i, j], phase)
-                    X[i, j] = r * sin(self.phi_mid) - r * sin(X[i, j])
-                    Y[i, j] = r * sin(pi / 2 - Y[i, j]) - r * sin(pi / 2 - self.theta_mid)
+                    X[i, j] = r * cos(pi / 2 - (phi - self.phi_mid))
+                    Y[i, j] = r * sin(theta - self.theta_mid)
         elif lat == -999 and depth == -999:
-            title = "Vertical, longitudinal slice - %.2f" % lon
+            title = "Vertical, longitudinal slice %.2f" % lon
             xlabel = "Distance from %.2f [km]" % (90 - degrees(self.theta_mid))
             ylabel = "Depth from surface [km]"
             phi = radians(lon)
             r_nodes = linspace(self.r_min + 0.01 * self.dr,
                                self.r_max - 0.01 * self.dr,
-                               NPTS)
+                               ny)
             theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
                                    self.theta_max - 0.01 * self.dtheta,
-                                   NPTS)
-            X, Y = meshgrid(theta_nodes, r_nodes)
+                                   nx)
+            X, Y = np.meshgrid(theta_nodes, r_nodes)
             V = np.ndarray(shape=X.shape)
             for i in range(X.shape[0]):
                 for j in range(X.shape[1]):
@@ -187,46 +198,47 @@ class VelocityModel(object):
                     theta = X[i, j]
                     V[i, j] = self._get_V(r, theta, phi, phase)
                     X[i, j] = r * sin(theta - self.theta_mid)
-                    Y[i, j] = r * cos(theta - self.theta_mid) - self.r_max
+                    Y[i, j] = r * cos(theta - self.theta_mid) - EARTH_RADIUS
         elif lon == -999 and depth == -999:
-            title = "Vertical, latitudinal slice - %.2f" % lat
+            title = "Vertical, latitudinal slice %.2f" % lat
             xlabel = "Distance from %.2f [km]" % degrees(self.phi_mid)
             ylabel = "Depth from surface [km]"
-            #get data points
             theta = radians(90 - lat)
             r_nodes = linspace(self.r_min + 0.01 * self.dr,
                                self.r_max - 0.01 * self.dr,
-                               NPTS)
+                               ny)
             phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
                                  self.phi_max - 0.01 * self.dphi,
-                                 NPTS)
-            X, Y = meshgrid(phi_nodes, r_nodes)
+                                nx)
+            X, Y = np.meshgrid(phi_nodes, r_nodes)
             V = np.ndarray(shape=X.shape)
             for i in range(X.shape[0]):
                 for j in range(X.shape[1]):
                     V[i, j] = self._get_V(Y[i, j], theta, X[i, j], phase)
                     phi, r = X[i, j], Y[i, j]
                     X[i, j] = r * cos(pi / 2 - (phi - self.phi_mid))
-                    Y[i, j] = r * sin(pi / 2 - (phi - self.phi_mid)) - self.r_max
+                    Y[i, j] = r * sin(pi / 2 - (phi - self.phi_mid)) - EARTH_RADIUS
+        V = np.ma.masked_inside(V, Vair - 0.1 * Vair, Vair + 0.1 * Vair)
         fig = plt.figure()
         fig.suptitle(title)
         ax = fig.add_subplot(1, 1, 1)
         ax.set_xlabel(xlabel)
+        ax.set_xlim(min([min(x) for x in X]),
+                    max([max(x) for x in X]))
         ax.set_ylabel(ylabel)
+        ax.set_ylim(min([min(y) for y in Y]),
+                    max([max(y) for y in Y]))
         im = ax.pcolormesh(X, Y, V,
-                           #vmin=4.0,
-                           #vmax=8.5,
                            cmap=plt.get_cmap('hsv'))
         cbar = fig.colorbar(im, ax=ax)
         cbar.set_label("%s [km/s]" % phase)
         plt.show()
         
+    def plot_Vp(self, lat=-999, lon=-999, depth=-999, nx=50, ny=50):
+        self._plot(lat, lon, depth, 'Vp', nx, ny)
 
-    def plot_Vp(self, lat=-999, lon=-999, depth=-999):
-        self._plot(lat, lon, depth, 'Vp')
-
-    def plot_Vs(self, lat=-999, lon=-999, depth=-999):
-        self._plot(lat, lon, depth, 'Vs')
+    def plot_Vs(self, lat=-999, lon=-999, depth=-999, nx=50, ny=50):
+        self._plot(lat, lon, depth, 'Vs', nx, ny)
 
     def plot_VpVs_ratio(self):
         pass

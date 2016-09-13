@@ -599,14 +599,14 @@ class Trace(obspy.core.Trace):
                 self.stats = tr.stats
                 self.data = tr.data
             else:
-                try:
-                    import os
-                    import sys
-                    sys.path.append("{:s}/data/python".format(os.environ['ANTELOPE']))
-                except ImportError:
-                    raise ImportError("$ANTELOPE environment variable not defined")
-                from antelope.datascope import Dbptr,\
-                                            dbTABLE_NAME
+                #try:
+                #    import os
+                #    import sys
+                #    sys.path.append("{:s}/data/python".format(os.environ['ANTELOPE']))
+                #except ImportError:
+                #    raise ImportError("$ANTELOPE environment variable not defined")
+                #from antelope.datascope import Dbptr,\
+                #                            dbTABLE_NAME
                 if isinstance(args[0], Dbptr):
                     dbptr = args[0]
                     if dbptr.query(dbTABLE_NAME) == 'wfdisc':
@@ -650,15 +650,15 @@ class Trace(obspy.core.Trace):
                 if not isfile("{:s}.wfdisc".format(kwargs['database_path'])):
                     raise InitializationError("wfdisc does not exist "\
                             "{:s}.wfdisc".format(kwargs['database_path']))
-                import os
-                import sys
-                try:
-                    sys.path.append("{:s}/data/python".format(os.environ['ANTELOPE']))
-                except ImportError:
-                    raise ImportError("$ANTELOPE environment variable not set")
-                from antelope.datascope import closing,\
-                                                dbopen,\
-                                                dbTABLE_IS_VIEW
+                #import os
+                #import sys
+                #try:
+                #    sys.path.append("{:s}/data/python".format(os.environ['ANTELOPE']))
+                #except ImportError:
+                #    raise ImportError("$ANTELOPE environment variable not set")
+                #from antelope.datascope import closing,\
+                #                                dbopen,\
+                #                                dbTABLE_IS_VIEW
                 dbptr = dbopen(kwargs['database_path'], 'r')
             elif 'database_pointer' in kwargs and\
                     isinstance(kwargs['database_pointer'], Dbptr):
