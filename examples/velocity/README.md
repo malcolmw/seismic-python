@@ -12,3 +12,5 @@ To run the example edit the paths in example.py to point to the appropriate data
 Then execute:
 
 bash>$ python example.py
+
+![alt-text](https://github.com/malcolmw/SeismicPython/blob/master/examples/velocity/vslice116.2w.pdf)
