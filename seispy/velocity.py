@@ -81,13 +81,14 @@ class VelocityModel(object):
                     line = infile.readline().split()
                     for iphi in range(len(line)):
                         v = float(line[iphi])
-                        #if self.nodes[ir, itheta, iphi][0] > self.topo['r'][iphi, itheta]:
-                        #    v = Vair
                         self.model[phase][ir, itheta, iphi] = v
 
     def _get_V(self, r, theta, phi, phase):
         if phi < 0:
             phi += 2 * pi
+        if r > self.geoid(phi, theta, coords="spherical"):
+            if phase == 'Vp': return Vair
+            elif phase == 'Vs': return -1
         if r > self.nodes[0, 0, 0][0]\
                 or r < self.nodes[-1, 0, 0][0]\
                 or theta > self.nodes [0, 0, 0][1]\
@@ -95,8 +96,6 @@ class VelocityModel(object):
                 or phi < self.nodes[0, 0, 0][2]\
                 or phi > self.nodes[0, 0, -1][2]:
             raise ValueError("point lies outside velocity model")
-        if r > self.geoid(phi, theta, coords="spherical"):
-            return Vair
         ir0, itheta0, iphi0 = None, None, None
         for ir in range(self.nodes.shape[0] - 1):
             if self.nodes[ir, 0, 0][0] > r > self.nodes[ir + 1, 0, 0][0]:
@@ -153,7 +152,7 @@ class VelocityModel(object):
         r, theta, phi = geo2sph(lat, lon, depth)
         return self._get_V(r, theta, phi, 'Vp')
 
-    def get_Vs(self):
+    def get_Vs(self, lat, lon, depth):
         r, theta, phi = geo2sph(lat, lon, depth)
         return self._get_V(r, theta, phi, 'Vs')
 
