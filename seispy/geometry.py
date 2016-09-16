@@ -17,7 +17,7 @@ GEOGRAPHICAL
 Geographical coordinates are assumed to be in degrees and are defined
 as:
 lat - latitude [90, -90]
-lon - longitude [-180, 180]
+lon - longitude [0, 360)
 z - depth from surface
 
 CARTESIAN
@@ -45,15 +45,10 @@ def geo2sph(lat, lon, z):
     Convert geographic coordinates to spherical coordinates.
     Returns r, theta, phi.
     """
-    if lat < -90. or lat > 90.\
-            or lon < -180. or lon > 360.\
-            or z >= EARTH_RADIUS:
+    if not (-90. <= lat <= 90.) or not (-180. < lon < 360.):
         raise ValueError("invalid geographic coordinates")
+    lon %= 360.
     theta = deg2rad(90. - lat)
-    if lon < -180.:
-        lon += 360.
-    elif lon > 360.:
-        lon -= 360.
     phi = deg2rad(lon)
     r = EARTH_RADIUS - z
     return r, theta, phi
@@ -62,10 +57,7 @@ def sph2geo(r, theta, phi):
     z = EARTH_RADIUS - r
     lat = 90 - degrees(theta)
     lon = degrees(phi)
-    if lon < -180.:
-        lon += 360.
-    elif lon > 360.:
-        lon -= 360.
+    lon %= 360.
     return lat, lon, z
 
 def sph2xyz(r, theta, phi):
