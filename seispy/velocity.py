@@ -61,8 +61,6 @@ class VelocityModel(object):
                     line = infile.readline().split()
                     for iphi in range(len(line)):
                         values[phase] += [float(line[iphi])]
-        self._interpolator = {'Vp': LinearNDInterpolator(nodes, values['Vp']),
-                              'Vs': LinearNDInterpolator(nodes, values['Vs'])}
         self._basement = {'Vp': np.median([values['Vp'][i]\
                                             for i in range(len(values['Vp']))\
                                             if nodes[i][0] == self.r_min]),
@@ -71,8 +69,15 @@ class VelocityModel(object):
                                             if nodes[i][0] == self.r_min])}
         self._default = {'Vp': np.median(values['Vp']),
                          'Vs': np.median(values['Vs'])}
-        self._air = {'Vp': 0.3432,
-                     'Vs': 0.1}
+        #self._air = {'Vp': 0.3432,
+        self._air = {'Vp': 1.0,
+                     'Vs': 1.0}
+        self._interpolator = {'Vp': LinearNDInterpolator(nodes,
+                                                         values['Vp'],
+                                                         fill_value=self._default['Vp']),
+                              'Vs': LinearNDInterpolator(nodes,
+                                                         values['Vs'],
+                                                         fill_value=self._default['Vs'])}
 
     def _get_V(self, r, theta, phi, phase):
         #Make sure phi is a postive number < 2 * pi.
@@ -180,79 +185,98 @@ class VelocityModel(object):
         cbar.set_label("%s [km/s]" % phase)
         plt.show()
 
-    def write_fm3d(self, grid1, grid2, interface_grid, propgrid):
-        self.write_vgrids(grid1, grid2)
-        self.write_interfaces(interface_grid)
-        self.write_propgrid(propgrid, grid1)
+    def write_fm3d(self, propgrid, stretch=1.01, size_ratio=2, basement=30.):
+        self.write_propgrid(propgrid)
+        self.write_vgrids(propgrid,
+                          stretch=stretch,
+                          size_ratio=size_ratio)
+        self.write_interfaces(propgrid, 
+                              stretch=stretch,
+                              size_ratio=size_ratio,
+                              basement=basement)
 
-    def write_vgrids(self, grid1, grid2):
+    def write_vgrids(self, grid, stretch=1.01, size_ratio=2):
+        stretch = 1.01
+        size_ratio = 2
         outfileP = open("vgrids.in_P", "w")
         outfileS = open("vgrids.in_S", "w")
-        outfileP.write("2 1\n")
-        outfileS.write("2 1\n")
-        for grid in (grid1, grid2):
-            lon0, dlon, nlon = grid['lon0'], grid['dlon'], grid['nlon']
-            lat0, dlat, nlat = grid['lat0'], grid['dlat'], grid['nlat']
-            r0, dr, nr = grid1['r0'], grid1['dr'], grid1['nr']
-            lon0, dlon, nlon = radians(lon0), radians(dlon), nlon
-            lat0, dlat, nlat = radians(lat0), radians(dlat), nlat
-            for outfile in (outfileP, outfileS):
-                outfile.write("%d %d %d\n" % (grid['nr'], grid['nlat'], grid['nlon']))
-                outfile.write("%.4f %.4f %.4f\n" % (dr, dlat, dlon))
-                outfile.write("%.4f %.4f %.4f\n" % (r0, lat0, lon0))
-            for ir in range(nr):
-                for ilat in range(nlat):
-                    for ilon in range(nlon):
-                        lat = lat0 + dlat * ilat
-                        _lat = degrees(lat)
-                        lon = lon0 + dlon * ilon
-                        _lon = degrees(lon)
-                        _lon -= 360.
-                        r = r0 + dr * ir
-                        depth = EARTH_RADIUS - r
-                        outfileP.write("%f\n" % self.get_Vp(_lat, _lon, depth))
-                        outfileS.write("%f\n" % self.get_Vs(_lat, _lon, depth))
+        outfileP.write("1 1\n")
+        outfileS.write("1 1\n")
+        pnr, pnlat, pnlon =  grid['nr'], grid['nlat'], grid['nlon']
+        pdr, pdlat, pdlon = grid['dr'], radians(grid['dlat']), radians(grid['dlon'])
+        ph0, plat0, plon0 = grid['h0'], radians(grid['lat0']), radians(grid['lon0'] % 360.)
+        pr0 = EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
+        i = (pnr - 1) % size_ratio
+        pnr = pnr + (size_ratio - i) if i > 0 else pnr
+        i = (pnlat - 1) % size_ratio
+        pnlat = pnlat + (size_ratio - i) if i > 0 else pnlat
+        i = (pnlon - 1) % size_ratio
+        pnlon = pnlon + (size_ratio - i) if i > 0 else pnlon
+        nr = (pnr - 1) / size_ratio + 3
+        nlat = (pnlat - 1) / size_ratio + 3
+        nlon = (pnlon - 1) / size_ratio + 3
+        dr = stretch * pdr * size_ratio
+        dlat = stretch * pdlat * size_ratio
+        dlon = stretch * pdlon * size_ratio
+        r0 = pr0 - dr - (nr - 1) * dr * (stretch - 1.0) / 2
+        lat0 = plat0 - dlat - (nlat - 1) * dlat * (stretch - 1.0) / 2
+        lon0 = plon0 - dlon - (nlon - 1) * dlon * (stretch - 1.0) / 2
+        for outfile in (outfileP, outfileS):
+            outfile.write("%d %d %d\n" % (nr, nlat, nlon))
+            outfile.write("%.4f %.4f %.4f\n" % (dr, dlat, dlon))
+            outfile.write("%.4f %.4f %.4f\n" % (r0, lat0, lon0))
+        for ir in range(nr):
+            for ilat in range(nlat):
+                for ilon in range(nlon):
+                    lat = lat0 + dlat * ilat
+                    _lat = degrees(lat)
+                    lon = lon0 + dlon * ilon
+                    _lon = degrees(lon) % 360.
+                    r = r0 + dr * ir
+                    depth = EARTH_RADIUS - r
+                    outfileP.write("%f\n" % self.get_Vp(_lat, _lon, depth))
+                    outfileS.write("%f\n" % self.get_Vs(_lat, _lon, depth))
         outfileP.close()
         outfileS.close()
 
-    def write_interfaces(self, grid):
+    def write_interfaces(self, grid, stretch=1.01, size_ratio=2, basement=30.):
         outfile = open("interfaces.in", "w")
-        lon0, dlon, nlon = grid['lon0'], grid['dlon'], grid['nlon']
-        lat0, dlat, nlat = grid['lat0'], grid['dlat'], grid['nlat']
-        lon0, dlon, nlon = radians(lon0), radians(dlon), nlon
-        lat0, dlat, nlat = radians(lat0), radians(dlat), nlat
-        outfile.write("3\n")
+        pnlat, pnlon =  grid['nlat'], grid['nlon']
+        pdlat, pdlon = radians(grid['dlat']), radians(grid['dlon'])
+        plat0, plon0 = radians(grid['lat0']), radians(grid['lon0'] % 360.)
+        i = (pnlat - 1) % size_ratio
+        pnlat = pnlat + (size_ratio - i) if i > 0 else pnlat
+        i = (pnlon - 1) % size_ratio
+        pnlon = pnlon + (size_ratio - i) if i > 0 else pnlon
+        nlat = (pnlat - 1) / size_ratio + 3
+        nlon = (pnlon - 1) / size_ratio + 3
+        dlat = stretch * pdlat * size_ratio
+        dlon = stretch * pdlon * size_ratio
+        lat0 = plat0 - dlat - (nlat - 1) * dlat * (stretch - 1.0) / 2
+        lon0 = plon0 - dlon - (nlon - 1) * dlon * (stretch - 1.0) / 2
+        outfile.write("2\n")
         outfile.write("%d %d\n" % (nlat, nlon))
         outfile.write("%.4f %.4f\n" % (dlat, dlon))
         outfile.write("%.4f %.4f\n" % (lat0, lon0))
-        for interface in ('top', 'surface', 'bottom'):
+        for interface in ('top', 'bottom'):
             if interface == 'top':
                 R = lambda lat, lon: EARTH_RADIUS + 5.
-            elif interface == 'surface':
-                R = lambda lat, lon: self.geoid(lon, lat)
             elif interface == 'bottom':
-                R = lambda lat, lon: EARTH_RADIUS - 29.
+                R = lambda lat, lon: EARTH_RADIUS - basement
             for ilat in range(nlat):
                 lat = lat0 + ilat * dlat
                 _lat = degrees(lat)
                 for ilon in range(nlon):
                     lon = lon0 + ilon * dlon
                     _lon = degrees(lon)
-                    _lon -= 360.
+                    _lon %= 360.
                     outfile.write("%.4f\n" % R(_lat, _lon))
         outfile.close()
 
-    def write_propgrid(self, propgrid, vgrid):
-        nr, nlon, nlat = propgrid['nr'], propgrid['nlon'], propgrid['nlat']
-        h0 = vgrid['r0'] + (vgrid['nr'] - 2.01) * vgrid['dr'] - EARTH_RADIUS
-        lon0 = vgrid['lon0'] + 1.01 * vgrid['dlon']
-        lat0 = vgrid['lat0'] + 1.01 * vgrid['dlat']
-        hm = vgrid['r0'] + 1.01 * vgrid['dr'] - EARTH_RADIUS
-        lonm = vgrid['lon0'] + (vgrid['nlon'] - 2.01) * vgrid['dlon']
-        latm = vgrid['lat0'] + (vgrid['nlat'] - 2.01) * vgrid['dlat']
-        dr = abs(h0 - hm) / (nr - 1)
-        dlon = (lonm - lon0) / (nlon - 1)
-        dlat = (latm - lat0) / (nlat - 1)
+    def write_propgrid(self, pgrid):
+        nr, nlon, nlat = pgrid['nr'], pgrid['nlon'], pgrid['nlat']
+        h0, lon0, lat0 = pgrid['h0'], pgrid['lon0'], pgrid['lat0']
+        dr, dlon, dlat = pgrid['dr'], pgrid['dlon'], pgrid['dlat']
         outfile = open("propgrid.in", "w")
         outfile.write("%d %d %d\n" % (nr, nlat, nlon))
         outfile.write("%.6f %.6f %.6f\n" % (dr, dlat, dlon))
@@ -272,6 +296,4 @@ class VelocityModel(object):
 if __name__ == "__main__":
     vm = VelocityModel("/home/shake/malcolcw/products/velocity/FANG2016/original/VpVs.dat",
                        topo="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz")
-    for i in range(10):
-        vm.plot_Vs(lat=(33 + 0.1 * i), nx=75, ny=75)
-        exit()
+    vm.plot_Vp(depth=5, nx=100, ny=100)
