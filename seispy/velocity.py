@@ -11,7 +11,7 @@ from numpy import linspace,\
                   meshgrid,\
                   ndarray,\
                   zeros
-import scipy.interpolate
+from scipy.interpolate import LinearNDInterpolator
 #from geometry import EARTH_RADIUS,\
 from seispy.geoid import Geoid
 from seispy.geometry import EARTH_RADIUS,\
@@ -20,7 +20,6 @@ from seispy.geometry import EARTH_RADIUS,\
                             sph2xyz,\
                             Vector
 
-Vair = 0.314
 
 class VelocityModel(object):
     """
@@ -36,126 +35,62 @@ class VelocityModel(object):
             self._read_fang(infile, topo)
 
     def _read_fang(self, infile, topo_infile):
-        infile = open(infile)
+        #initialize a Geoid object with topography
         self.geoid = Geoid(topo_infile)
-        lon_nodes = [float(lon) for lon in infile.readline().split()]
-        for i in range(len(lon_nodes)):
-            if lon_nodes[i] < -180.:
-                lon_nodes[i] += 360.
-            elif lon_nodes[i] > 360.:
-                lon_nodes[i] -= 360.
+        #Read grid nodes.
+        infile = open(infile)
+        lon_nodes = [float(lon) % 360 for lon in infile.readline().split()]
         lat_nodes = [float(lat) for lat in infile.readline().split()]
         z_nodes = [float(z) for z in infile.readline().split()]
         r_nodes = [EARTH_RADIUS - z for z in z_nodes]
         theta_nodes = [radians(90. - lat) for lat in lat_nodes]
         phi_nodes = [radians(lon) for lon in lon_nodes]
-        self.model = {
-            'Vp': zeros((len(r_nodes), len(theta_nodes), len(phi_nodes))),
-            'Vs': zeros((len(r_nodes), len(theta_nodes), len(phi_nodes))),
-            }
-        self.nodes = zeros((len(r_nodes), len(theta_nodes), len(phi_nodes)),
-                           dtype='float32, float32, float32')
-        #initalize the grid of node coordinates
-        for ir in range(len(r_nodes)):
-            for itheta in range(len(theta_nodes)):
-                for iphi in range(len(phi_nodes)):
-                    self.nodes[ir, itheta, iphi] = (r_nodes[ir],
-                                                    theta_nodes[itheta],
-                                                    phi_nodes[iphi])
-        self.r_max = max([n[0] for n in self.nodes[:, 0, 0]])
-        self.r_min = min([n[0] for n in self.nodes[:, 0, 0]])
-        self.r_mid = (self.r_max + self.r_min) / 2.
-        self.dr = (self.r_max - self.r_min) / len(r_nodes)
-        self.theta_max = max([n[1] for n in self.nodes[0, :, 0]])
-        self.theta_min = min([n[1] for n in self.nodes[0, :, 0]])
-        self.theta_mid = (self.theta_max + self.theta_min) / 2.
-        self.dtheta = (self.theta_max - self.theta_min) / len(theta_nodes)
-        self.phi_max = max([n[2] for n in self.nodes[0, 0, :]])
-        self.phi_min = min([n[2] for n in self.nodes[0, 0, :]])
-        self.phi_mid = (self.phi_max + self.phi_min) / 2.
-        self.dphi = (self.phi_max - self.phi_min) / len(phi_nodes)
-        #initialize the grids of velocity values
+        nodes = [(r, t, p) for r in r_nodes\
+                           for t in theta_nodes\
+                           for p in phi_nodes]
+        self.r_min = min(r_nodes)
+        self.r_max = max(r_nodes)
+        self.theta_min = min(theta_nodes)
+        self.theta_max = max(theta_nodes)
+        self.phi_min = min(phi_nodes)
+        self.phi_max = max(phi_nodes)
+        values = {'Vp': [], 'Vs': []}
         for phase in ('Vp', 'Vs'):
             for ir in range(len(r_nodes)):
                 for itheta in range(len(theta_nodes)):
                     line = infile.readline().split()
                     for iphi in range(len(line)):
-                        v = float(line[iphi])
-                        self.model[phase][ir, itheta, iphi] = v
-        self.Vp_basement = np.median(np.concatenate(self.model['Vp'][-1,:,:]))
-        self.Vs_basement = np.median(np.concatenate(self.model['Vs'][-1,:,:]))
-        self.Vp_default = np.median(np.concatenate(self.model['Vp']))
-        self.Vs_default = np.median(np.concatenate(self.model['Vs']))
+                        values[phase] += [float(line[iphi])]
+        self._interpolator = {'Vp': LinearNDInterpolator(nodes, values['Vp']),
+                              'Vs': LinearNDInterpolator(nodes, values['Vs'])}
+        self._basement = {'Vp': np.median([values['Vp'][i]\
+                                            for i in range(len(values['Vp']))\
+                                            if nodes[i][0] == self.r_min]),
+                          'Vs': np.median([values['Vs'][i]\
+                                            for i in range(len(values['Vs']))\
+                                            if nodes[i][0] == self.r_min])}
+        self._default = {'Vp': np.median(values['Vp']),
+                         'Vs': np.median(values['Vs'])}
+        self._air = {'Vp': 0.3432,
+                     'Vs': 0.1}
 
     def _get_V(self, r, theta, phi, phase):
-        if phi < 0:
-            phi += 2 * pi
+        #Make sure phi is a postive number < 2 * pi.
+        phi %= (2 * pi)
+        #If the position requested is above the surface, return the
+        #velocity of air for Vp and a NULL value, -1, for Vs.
         if r > self.geoid(phi, theta, coords="spherical"):
-            if phase == 'Vp': return Vair
-            elif phase == 'Vs': return -1
-        if r <= self.r_min:
-            if phase == 'Vp': return self.Vp_basement
-            elif phase == 'Vs': return self.Vs_basement
-        if r > self.nodes[0, 0, 0][0]\
-                or r < self.nodes[-1, 0, 0][0]\
-                or theta > self.nodes [0, 0, 0][1]\
-                or theta < self.nodes[0, -1, 0][1]\
-                or phi < self.nodes[0, 0, 0][2]\
-                or phi > self.nodes[0, 0, -1][2]:
-            if phase == 'Vp': return self.Vp_default
-            elif phase == 'Vs': return self.Vs_default
-            #raise ValueError("point lies outside velocity model")
-        ir0, itheta0, iphi0 = None, None, None
-        for ir in range(self.nodes.shape[0] - 1):
-            if self.nodes[ir, 0, 0][0] > r > self.nodes[ir + 1, 0, 0][0]:
-                ir0 = ir
-                break
-        for itheta in range(self.nodes.shape[1] - 1):
-            if self.nodes[0, itheta, 0][1] > theta > self.nodes[0, itheta + 1, 0][1]:
-                itheta0 = itheta
-                break
-        for iphi in range(self.nodes.shape[2] - 1):
-            if self.nodes[0, 0, iphi][2] < phi < self.nodes[0, 0, iphi + 1][2]:
-                iphi0 = iphi
-                break
-        if ir0 == None:
-            ir0 = [n[0] for n in self.nodes[:, 0, 0]].index(r)
-        if itheta0 == None:
-            itheta0 = [n[1] for n in self.nodes[0, :, 0]].index(theta)
-        if iphi0 == None:
-            iphi0 = [n[2] for n in self.nodes[0, 0, :]].index(phi)
-        #still need to deal with edges properly
-        #do a trilinear interpolation
-        model = self.model[phase]
-        V000 = model[ir0, itheta0, iphi0]
-        V100 = model[ir0 + 1, itheta0, iphi0]
-        V010 = model[ir0, itheta0 + 1, iphi0]
-        V110 = model[ir0 + 1, itheta0 + 1, iphi0]
-        V001 = model[ir0, itheta0, iphi0 + 1]
-        V101 = model[ir0 + 1, itheta0, iphi0 + 1]
-        V011 = model[ir0, itheta0 + 1, iphi0 + 1]
-        V111 = model[ir0 + 1, itheta0 + 1, iphi0 + 1]
-        dV00 = V100 - V000
-        dV10 = V110 - V010
-        dV01 = V101 - V001
-        dV11 = V111 - V011
-        dr = self.nodes[ir0 + 1, 0, 0][0] - self.nodes[ir0, 0, 0][0]
-        delta_r = r - self.nodes[ir0, 0, 0][0]
-        V00 = V000 + (dV00 / dr) * delta_r
-        V10 = V010 + (dV10 / dr) * delta_r
-        V01 = V001 + (dV01 / dr) * delta_r
-        V11 = V011 + (dV11 / dr) * delta_r
-        dV0 = V10 - V00
-        dV1 = V11 - V01
-        dtheta = self.nodes[0, itheta + 1, 0][1] - self.nodes[0, itheta, 0][1]
-        delta_theta = theta - self.nodes[0, itheta, 0][1]
-        V0 = V00 + (dV0 / dtheta) * delta_theta
-        V1 = V01 + (dV1 / dtheta) * delta_theta
-        dV = V1 - V0
-        dphi = self.nodes[0, 0, iphi + 1][2] - self.nodes[0, 0, iphi][2]
-        delta_phi = phi - self.nodes[0, 0, iphi][2]
-        V = V0 + (dV / dphi) * delta_phi
-        return V
+            return self._air[phase]
+        #If the location requested is below the grid, return the
+        #basement velocity.
+        if r < self.r_min:
+            return self._basement[phase]
+        #If the location requested is outside the grid laterally,
+        #return the default velocity.
+        if not (self.theta_min <= theta <= self.theta_max)\
+                or not (self.phi_min <= phi <= self.phi_max):
+            return self._default[phase]
+        return self._interpolator[phase]((r, theta, phi))
 
     def get_Vp(self, lat, lon, depth):
         r, theta, phi = geo2sph(lat, lon, depth)
@@ -167,16 +102,18 @@ class VelocityModel(object):
 
     def _plot(self, lat, lon, depth, phase, nx, ny):
         X, Y, V = [], [], []
+        phim = np.mean([self.phi_max, self.phi_min])
+        thetam = np.mean([self.theta_max, self.theta_min])
         if lat == -999 and lon == -999:
             title = "Depth horizon - %.1f [km]" % depth
-            xlabel = "Distance from %.2f [km]" % degrees(self.phi_mid)
-            ylabel = "Distance from %.2f [km]" % (90 - degrees(self.theta_mid))
+            xlabel = "Distance from %.2f [km]" % degrees(phim)
+            ylabel = "Distance from %.2f [km]" % (90 - degrees(thetam))
             r = EARTH_RADIUS - depth
-            theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
-                                   self.theta_max - 0.01 * self.dtheta,
+            theta_nodes = linspace(self.theta_min,
+                                   self.theta_max,
                                    ny)
-            phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
-                                   self.phi_max - 0.01 * self.dphi,
+            phi_nodes = linspace(self.phi_min,
+                                   self.phi_max,
                                    nx)
             X, Y = meshgrid(phi_nodes, theta_nodes)
             V = np.ndarray(shape=X.shape)
@@ -185,18 +122,18 @@ class VelocityModel(object):
                     phi = X[i, j]
                     theta = Y[i, j]
                     V[i, j] = self._get_V(r, Y[i, j], X[i, j], phase)
-                    X[i, j] = r * cos(pi / 2 - (phi - self.phi_mid))
-                    Y[i, j] = r * sin(theta - self.theta_mid)
+                    X[i, j] = r * cos(pi / 2 - (phi - phim))
+                    Y[i, j] = r * sin(theta - thetam)
         elif lat == -999 and depth == -999:
             title = "Vertical, longitudinal slice %.2f" % lon
-            xlabel = "Distance from %.2f [km]" % (90 - degrees(self.theta_mid))
+            xlabel = "Distance from %.2f [km]" % (90 - degrees(thetam))
             ylabel = "Depth from surface [km]"
             phi = radians(lon)
-            r_nodes = linspace(self.r_min + 0.01 * self.dr,
-                               self.r_max - 0.01 * self.dr,
+            r_nodes = linspace(self.r_min,
+                               self.r_max,
                                ny)
-            theta_nodes = linspace(self.theta_min + 0.01 * self.dtheta,
-                                   self.theta_max - 0.01 * self.dtheta,
+            theta_nodes = linspace(self.theta_min,
+                                   self.theta_max,
                                    nx)
             X, Y = np.meshgrid(theta_nodes, r_nodes)
             V = np.ndarray(shape=X.shape)
@@ -205,27 +142,28 @@ class VelocityModel(object):
                     r = Y[i, j]
                     theta = X[i, j]
                     V[i, j] = self._get_V(r, theta, phi, phase)
-                    X[i, j] = r * sin(theta - self.theta_mid)
-                    Y[i, j] = r * cos(theta - self.theta_mid) - EARTH_RADIUS
+                    X[i, j] = r * sin(theta - thetam)
+                    Y[i, j] = r * cos(theta - thetam) - EARTH_RADIUS
         elif lon == -999 and depth == -999:
             title = "Vertical, latitudinal slice %.2f" % lat
-            xlabel = "Distance from %.2f [km]" % degrees(self.phi_mid)
+            xlabel = "Distance from %.2f [km]" % degrees(phim)
             ylabel = "Depth from surface [km]"
             theta = radians(90 - lat)
-            r_nodes = linspace(self.r_min + 0.01 * self.dr,
-                               self.r_max - 0.01 * self.dr,
+            r_nodes = linspace(self.r_min,
+                               self.r_max,
                                ny)
-            phi_nodes = linspace(self.phi_min + 0.01 * self.dphi,
-                                 self.phi_max - 0.01 * self.dphi,
-                                nx)
+            phi_nodes = linspace(self.phi_min,
+                                 self.phi_max,
+                                 nx)
             X, Y = np.meshgrid(phi_nodes, r_nodes)
             V = np.ndarray(shape=X.shape)
             for i in range(X.shape[0]):
                 for j in range(X.shape[1]):
                     V[i, j] = self._get_V(Y[i, j], theta, X[i, j], phase)
                     phi, r = X[i, j], Y[i, j]
-                    X[i, j] = r * cos(pi / 2 - (phi - self.phi_mid))
-                    Y[i, j] = r * sin(pi / 2 - (phi - self.phi_mid)) - EARTH_RADIUS
+                    X[i, j] = r * cos(pi / 2 - (phi - phim))
+                    Y[i, j] = r * sin(pi / 2 - (phi - phim)) - EARTH_RADIUS
+        Vair = self._air[phase]
         V = np.ma.masked_inside(V, Vair - 0.1 * Vair, Vair + 0.1 * Vair)
         fig = plt.figure()
         fig.suptitle(title)
@@ -330,3 +268,10 @@ class VelocityModel(object):
 
     def plot_VpVs_ratio(self):
         pass
+
+if __name__ == "__main__":
+    vm = VelocityModel("/home/shake/malcolcw/products/velocity/FANG2016/original/VpVs.dat",
+                       topo="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz")
+    for i in range(10):
+        vm.plot_Vs(lat=(33 + 0.1 * i), nx=75, ny=75)
+        exit()
