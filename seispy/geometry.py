@@ -30,15 +30,12 @@ from math import acos,\
                  cos,\
                  degrees,\
                  pi,\
+                 radians,\
                  sin,\
                  sqrt
 import numpy as np
 
 EARTH_RADIUS = 6371.
-
-rad2deg = lambda phi: phi * (180. / pi)
-
-deg2rad = lambda theta: theta * (pi / 180.)
 
 def geo2sph(lat, lon, z):
     """
@@ -48,8 +45,8 @@ def geo2sph(lat, lon, z):
     if not (-90. <= lat <= 90.) or not (-180. < lon < 360.):
         raise ValueError("invalid geographic coordinates")
     lon %= 360.
-    theta = deg2rad(90. - lat)
-    phi = deg2rad(lon)
+    theta = radians(90. - lat)
+    phi = radians(lon)
     r = EARTH_RADIUS - z
     return r, theta, phi
 
