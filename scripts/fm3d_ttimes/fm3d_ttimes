@@ -1,0 +1,111 @@
+#!/usr/bin/env python
+
+def parse_config(config_file):
+    cfg, propgrid = {}, {}
+    cfg_file = RawConfigParser()
+    cfg_file.read(config_file)
+    propgrid['h0'] = cfg_file.getfloat('General', 'h0')
+    propgrid['lon0'] = cfg_file.getfloat('General', 'lon0')
+    propgrid['lat0'] = cfg_file.getfloat('General', 'lat0')
+    propgrid['dr'] = cfg_file.getfloat('General', 'dr')
+    propgrid['dlon'] = cfg_file.getfloat('General', 'dlon')
+    propgrid['dlat'] = cfg_file.getfloat('General', 'dlat')
+    propgrid['nr'] = cfg_file.getint('General', 'nr')
+    propgrid['nlon'] = cfg_file.getint('General', 'nlon')
+    propgrid['nlat'] = cfg_file.getint('General', 'nlat')
+    cfg['propgrid'] = propgrid
+    cfg['velocity_model'] = cfg_file.get('General', 'velocity_model')
+    cfg['topography'] = cfg_file.get('General', 'topography')
+    cfg['stations'] = cfg_file.get('General', 'stations')
+    return cfg
+
+def write_frechet():
+    ofile = open('frechet.in', 'w')
+    ofile.write("0")
+    ofile.close()
+
+def write_gridsave():
+    ofile = open('gridsave.in', 'w')
+    ofile.write("1 1\n")
+    ofile.write("1\n")
+    ofile.write("1\n")
+    ofile.close()
+
+def write_mode_set():
+    ofile = open('mode_set.in', 'w')
+    ofile.write("F file_mode\n")
+    ofile.write("T no_pp_mode\n")
+    ofile.write("F parallel_mode\n")
+    ofile.write("F display_mode\n")
+    ofile.write("T save_rays_mode\n")
+    ofile.write("T save_timefields_mode\n")
+    ofile.close()
+
+def write_source(lon, lat, elev):
+    ofile = open('sources.in', 'w')
+    ofile.write("1\n")
+    ofile.write("0\n")
+    ofile.write("%.4f %.4f %.4f\n" % (-elev, lat, lon % 360.))
+    ofile.write("1\n")
+    ofile.write("1\n")
+    ofile.write("0 2\n")
+    ofile.write("1\n")
+    ofile.close()
+
+def write_receiver(rxlon0, rxlat0):
+    ofile = open('receivers.in', 'w')
+    ofile.write("1\n")
+    ofile.write("1 %.4f %.4f\n" % (rxlat0, rxlon0))
+    ofile.write("1\n")
+    ofile.write("1\n")
+    ofile.write("1\n")
+    ofile.close()
+
+def main(cfg):
+    print "loading velocity model"
+    vm = VelocityModel(cfg['velocity_model'],
+                       cfg['topography'])
+    print "writing vgrids.in, interfaces.in and propgrid.in"
+    vm.write_fm3d(cfg['propgrid'])
+    propgrid = cfg['propgrid']
+    rxlon0 = propgrid['lon0'] + (propgrid['nlon'] / 2.) * propgrid['dlon']
+    rxlat0 = propgrid['lat0'] + (propgrid['nlat'] / 2.) * propgrid['dlat']
+    write_frechet()
+    write_gridsave()
+    write_mode_set()
+    write_receiver(rxlon0, rxlat0)
+    stations = ()
+    ifile = open(cfg['stations'])
+    for line in ifile:
+        name, lon, lat, elev = line.split()
+        lon, lat, elev = float(lon), float(lat), float(elev)
+        stations += (Station(name, lon, lat, elev),)
+    ifile.close()
+    for phase in ('P', 'S'):
+        shutil.copyfile("vgrids.in_%s" % phase, "vgrids.in")
+        for station in stations:
+            print "=" * (len(station.name) + 4)
+            print "=" + " " * (len(station.name) + 2) + "="
+            print "= " + station.name + " ="
+            print "=" + " " * (len(station.name) + 2) + "="
+            print "=" * (len(station.name) + 4)
+            write_source(station.lon, station.lat, station.elev)
+            subprocess.call("/home/shake/malcolcw/.local/bin/fm3d")
+            shutil.move("arrtimes.dat", "%s.%s.tt" % (station.name, phase))
+            shutil.move("rays.dat", "%s.%s.rays" % (station.name, phase))
+
+class Station:
+    def __init__(self, name, lon, lat, elev):
+        self.name = name
+        self.lon = lon
+        self.lat = lat
+        self.elev = elev
+    
+if __name__ == "__main__":
+    from ConfigParser import RawConfigParser
+    import os.path
+    import shutil
+    import subprocess
+    import sys
+    from seispy.velocity import VelocityModel
+    main(parse_config(os.path.abspath(sys.argv[1])))

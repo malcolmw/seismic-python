@@ -21,9 +21,5 @@ setup(name='seispy',
                   'seispy.geometry',
                   'seispy.util',
                   'seispy.velocity'],
-      scripts=['scripts/tests/test_arrival',
-               'scripts/tests/test_origin',
-               'scripts/tests/test_station',
-               'scripts/tests/test_trace',
-               'scripts/tests/test_database']
+      scripts=['scripts/fm3d_ttimes/fm3d_ttimes']
       )
