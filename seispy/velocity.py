@@ -148,16 +148,16 @@ class VelocityModel(object):
 
     def get_Vp(self, lat, lon, depth, interpolation_method='linear'):
         r, theta, phi = geo2sph(lat, lon, depth)
-        if method == 'linear':
+        if interpolation_method == 'linear':
             return self._get_V_trilinear_interpolation(r, theta, phi, 'Vp')
-        elif method == 'spline':
+        elif interpolation_method == 'spline':
             return self._get_V_spline_interpolation(r, theta, phi, 'Vp')
 
     def get_Vs(self, lat, lon, depth, interpolation_method='linear'):
         r, theta, phi = geo2sph(lat, lon, depth)
-        if method == 'linear':
+        if interpolation_method == 'linear':
             return self._get_V_trilinear_interpolation(r, theta, phi, 'Vs')
-        elif method == 'spline':
+        elif interpolation_method == 'spline':
             return self._get_V_spline_interpolation(r, theta, phi, 'Vs')
 
     def _plot(self, lat, lon, depth, phase, nx, ny):
