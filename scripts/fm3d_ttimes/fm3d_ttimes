@@ -61,6 +61,22 @@ def write_receiver(rxlon0, rxlat0):
     ofile.write("1\n")
     ofile.close()
 
+def asc2bin(station, phase):
+    infile = open("arrtimes.dat", "rb")
+    outfile = open("%s.%s.tt" % (station, phase), "wb")
+    nr, nlat, nlon = [int(v) for v in infile.readline().split()]
+    dr, dlat, dlon = [float(v) for v in infile.readline().split()]
+    r0, lat0, lon0 = [float(v) for v in infile.readline().split()]
+    outfile.write(struct.pack("3i", nr, nlat, nlon))
+    outfile.write(struct.pack("3f", dr, dlat, dlon))
+    outfile.write(struct.pack("3f", r0, lat0, lon0))
+    infile.readline()
+    infile.readline()
+    V = [float(line.strip()) for line in infile]
+    infile.close()
+    [outfile.write(struct.pack("f", v)) for v in V]
+    outfile.close()
+
 def main(cfg):
     print "loading velocity model"
     vm = VelocityModel(cfg['velocity_model'],
@@ -91,7 +107,8 @@ def main(cfg):
             print "=" * (len(station.name) + 4)
             write_source(station.lon, station.lat, station.elev)
             subprocess.call("/home/shake/malcolcw/.local/bin/fm3d")
-            shutil.move("arrtimes.dat", "%s.%s.tt" % (station.name, phase))
+            asc2bin(station.name, phase)
+            #shutil.move("arrtimes.dat", "%s.%s.tt" % (station.name, phase))
             shutil.move("rays.dat", "%s.%s.rays" % (station.name, phase))
 
 class Station:
@@ -105,6 +122,7 @@ if __name__ == "__main__":
     from ConfigParser import RawConfigParser
     import os.path
     import shutil
+    import struct
     import subprocess
     import sys
     from seispy.velocity import VelocityModel
