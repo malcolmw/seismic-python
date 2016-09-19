@@ -8,9 +8,11 @@ vslice116.2W.pdf is a example vertical slice plot of the velocity model.
 
 anza.xyz is a file containing topography data, in lon lat elevation column format.
 
-To run the example edit the paths in example.py to point to the appropriate data files.
+To run the example edit the paths in convert.py to point to the appropriate data files.
 Then execute:
 
-bash>$ python example.py
+```bash
+bash>$ python convert.py
+```
 
 ![alt-text](https://github.com/malcolmw/SeismicPython/blob/master/examples/velocity/vslice116.2w.pdf)
