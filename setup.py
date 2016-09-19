@@ -19,6 +19,7 @@ setup(name='seispy',
       py_modules=['seispy.core',
                   'seispy.geoid',
                   'seispy.geometry',
+                  'seispy.locate',
                   'seispy.util',
                   'seispy.velocity'],
       scripts=['scripts/fm3d_ttimes/fm3d_ttimes']

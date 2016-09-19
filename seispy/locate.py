@@ -192,30 +192,3 @@ class Locator(object):
                 for arrival in arrivals])
         sdobs0 = np.std(res0)
         return r0, theta0, phi0, t0, sdobs0, res0
-
-if __name__ == "__main__":
-    from seispy.core import Arrival, Origin
-    origin = Origin(33.9723, -116.8177, 16.5905, 1357001730.24105)
-    arrivals = [Arrival('SNO', 1357001733.41840, 'P', 0.25),
-                Arrival('MSC', 1357001734.31840, 'P', 0.25),
-                Arrival('FOST', 1357001735.49500, 'P', 0.25),
-                Arrival('SNO', 1357001735.59840, 'S', 0.25),
-                Arrival('IWR', 1357001735.76950, 'P', 0.25),
-                Arrival('GVAR1', 1357001736.87450, 'P', 0.25),
-                Arrival('BCCC', 1357001737.15490, 'P', 0.25),
-                Arrival('MSC', 1357001737.29840, 'S', 0.25),
-                Arrival('SFTR', 1357001737.34500, 'P', 0.25),
-                Arrival('DGR', 1357001737.68840, 'P', 0.25),
-                Arrival('FOST', 1357001739.24500, 'S', 0.25),
-                Arrival('IWR', 1357001739.56950, 'S', 0.25),
-                Arrival('TFRD', 1357001740.40950, 'P', 0.25),
-                Arrival('FRD', 1357001740.41840, 'P', 0.25),
-                Arrival('GVAR1', 1357001741.83950, 'S', 0.25),
-                Arrival('DGR', 1357001742.65840, 'S', 0.25),
-                Arrival('BCCC', 1357001742.67490, 'S', 0.25),
-                Arrival('TFRD', 1357001747.72950, 'S', 0.25),
-                Arrival('FRD', 1357001747.74840, 'S', 0.25),
-                Arrival('SFTR', 1357001743.89000, 'S', 0.25)]
-    origin.add_arrivals(arrivals)
-    locator = Locator("/home/shake/malcolcw/data/fm3d_ttimes")
-    print locator.relocate(origin)
