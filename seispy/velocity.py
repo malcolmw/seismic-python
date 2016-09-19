@@ -84,7 +84,47 @@ class VelocityModel(object):
         self._air = {'Vp': 1.0,
                      'Vs': 1.0}
 
-    def _get_V(self, r, theta, phi, phase):
+    def _get_V_trilinear_interpolation(self, r, theta, phi, phase):
+        #Make sure phi is a postive number < 2 * pi.
+        phi %= (2 * pi)
+        #If the position requested is above the surface, return the
+        #velocity of air for Vp and a NULL value, -1, for Vs.
+        if r > self.geoid(phi, theta, coords="spherical"):
+            return self._air[phase]
+        #If the location requested is below the grid, return the
+        #basement velocity.
+        if r < self.nodes['r_min']:
+            return self._basement[phase]
+        #If the location requested is outside the grid laterally,
+        if not (self.nodes['theta_min'] <= theta <= self.nodes['theta_max'])\
+                or not (self.nodes['phi_min'] <= phi <= self.nodes['phi_max']):
+            return self._default[phase]
+        ir0 = (r - self.nodes['r_min']) / self.nodes['dr']
+        delta_r = ir0 % 1
+        ir0 = int(ir0)
+        itheta0 = (theta - self.nodes['theta_min']) / self.nodes['dtheta']
+        delta_theta = itheta0 % 1
+        itheta0 = int(itheta0)
+        iphi0 = (phi - self.nodes['phi_min']) / self.nodes['dphi']
+        delta_phi = iphi0 % 1
+        iphi0 = int(iphi0)
+        ir1 = ir0 if ir0 == self.nodes['nr'] - 1 else ir0 + 1
+        itheta1 = itheta0 if itheta0 == self.nodes['ntheta'] - 1 else itheta0 + 1
+        iphi1 = iphi0 if iphi0 == self.nodes['nphi'] - 1 else iphi0 + 1
+        values = self.values[phase]
+        V000, V100 = values[ir0, itheta0, iphi0], values[ir1, itheta0, iphi0]
+        V010, V110 = values[ir0, itheta1, iphi0], values[ir1, itheta1, iphi0]
+        V001, V101 = values[ir0, itheta0, iphi1], values[ir1, itheta0, iphi1]
+        V011, V111 = values[ir0, itheta1, iphi1], values[ir1, itheta1, iphi1]
+        V00 = V000 + (V100 - V000) * delta_r
+        V10 = V010 + (V110 - V010) * delta_r
+        V01 = V001 + (V101 - V001) * delta_r
+        V11 = V011 + (V111 - V011) * delta_r
+        V0 = V00 + (V10 - V00) * delta_theta
+        V1 = V01 + (V11 - V01) * delta_theta
+        return V0 + (V1 - V0) * delta_phi
+
+    def _get_V_spline_interpolation(self, r, theta, phi, phase):
         #Make sure phi is a postive number < 2 * pi.
         phi %= (2 * pi)
         ir = (r - self.nodes['r_min']) / self.nodes['dr']
@@ -106,13 +146,19 @@ class VelocityModel(object):
         return ndimage.map_coordinates(self.values[phase], [[ir], [itheta], [iphi]], order=4)[0]
         #return float(self._interpolator[phase](r, theta, phi))
 
-    def get_Vp(self, lat, lon, depth):
+    def get_Vp(self, lat, lon, depth, interpolation_method='linear'):
         r, theta, phi = geo2sph(lat, lon, depth)
-        return self._get_V(r, theta, phi, 'Vp')
+        if method == 'linear':
+            return self._get_V_trilinear_interpolation(r, theta, phi, 'Vp')
+        elif method == 'spline':
+            return self._get_V_spline_interpolation(r, theta, phi, 'Vp')
 
-    def get_Vs(self, lat, lon, depth):
+    def get_Vs(self, lat, lon, depth, interpolation_method='linear'):
         r, theta, phi = geo2sph(lat, lon, depth)
-        return self._get_V(r, theta, phi, 'Vs')
+        if method == 'linear':
+            return self._get_V_trilinear_interpolation(r, theta, phi, 'Vs')
+        elif method == 'spline':
+            return self._get_V_spline_interpolation(r, theta, phi, 'Vs')
 
     def _plot(self, lat, lon, depth, phase, nx, ny):
         lon %= 360.
@@ -306,4 +352,4 @@ class VelocityModel(object):
 if __name__ == "__main__":
     vm = VelocityModel("/home/shake/malcolcw/products/velocity/FANG2016/original/VpVs.dat",
                        topo="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz")
-    vm.plot_Vp(depth=5, nx=100, ny=100)
+    vm.plot_Vp(lon=-116.455, nx=250, ny=250)
