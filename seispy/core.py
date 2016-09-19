@@ -14,11 +14,18 @@ class Origin(object):
         self.arrivals = ()
         self.add_arrivals(arrivals)
 
+    def __str__(self):
+        return "origin: %.4f %.4f %.4f %.4f" % (self.lat,\
+                                                self.lon,\
+                                                self.depth,\
+                                                self.time)
+
     def add_arrivals(self, arrivals):
         for arrival in arrivals:
             if not isinstance(arrival, Arrival):
                 raise TypeError("not an Arrival object")
             self.arrivals += (arrival,)
+
 
 class Station(object):
     def __init__(self, name, lon, lat, elev):
