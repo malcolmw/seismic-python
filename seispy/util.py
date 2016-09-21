@@ -7,7 +7,7 @@ from Queue import Empty
 from time import sleep
 
 #import 3rd party package functionality
-from obspy.core import UTCDateTime
+#from obspy.core import UTCDateTime
 
 #######################
 #                     #
@@ -89,17 +89,18 @@ class MultiThreadProcess(object):
             for key in ('input_init_args',
                         'main_init_args',
                         'output_init_args'):
-                if key in extra_args\
-                        and not isinstance(extra_args[key], tuple)\
-                        and not isinstance(extra_args[key], list):
-                    raise TypeError
+                if key in extra_args:
+                    if not isinstance(extra_args[key], tuple)\
+                            and not isinstance(extra_args[key], list):
+                        raise TypeError
                 else:
                     extra_args[key] = ()
             for key in ('input_init_kwargs',
                         'main_init_kwargs',
                         'output_init_kwargs'):
-                if key in extra_args and not isinstance(extra_args[key], dict):
-                    raise TypeError
+                if key in extra_args:
+                    if not isinstance(extra_args[key], dict):
+                        raise TypeError
                 else:
                     extra_args[key] = {}
         else:
@@ -112,8 +113,15 @@ class MultiThreadProcess(object):
                         'main_init_kwargs',
                         'output_init_kwargs'):
                 extra_args[key] = {}
-        if config_params and not isinstance(config_params, dict):
-            raise TypeError
+        if config_params:
+            if not isinstance(config_params, dict):
+                raise TypeError
+            if 'n_threads' not in config_params:
+                config_params['n_threads'] = cpu_count() / 2
+            if 'input_q_max_size' not in config_params:
+                config_params['input_q_max_size'] = 100
+            if 'output_q_max_size' not in config_params:
+                config_params['output_q_max_size'] = 100
         else:
             config_params = {'n_threads': cpu_count(),
                              'input_q_max_size': 100,
@@ -374,19 +382,19 @@ class _MainPool(object):
 
 isfunction = lambda func: hasattr(func, '__call__')
 
-def verify_time(time):
-    if not isinstance(time, UTCDateTime) and\
-            not isinstance(time, float) and\
-            not isinstance(time, int) and\
-            not isinstance(time, str):
-        raise TypeError("invalid type for time argument")
-    if not isinstance(time, UTCDateTime):
-        if isinstance(time, str):
-            time = float(time)
-        if isinstance(time, int) and time >= 1000000 and time <= 9999999:
-            time = UTCDateTime(year=time / 1000, julday=time % 1000)
-        elif isinstance(time, float) and time == -1.0:
-            time = UTCDateTime(year=3000, julday=365, hour=23, minute=59, second=59)
-        else:
-            time = UTCDateTime(time)
-    return time
+#def verify_time(time):
+#    if not isinstance(time, UTCDateTime) and\
+#            not isinstance(time, float) and\
+#            not isinstance(time, int) and\
+#            not isinstance(time, str):
+#        raise TypeError("invalid type for time argument")
+#    if not isinstance(time, UTCDateTime):
+#        if isinstance(time, str):
+#            time = float(time)
+#        if isinstance(time, int) and time >= 1000000 and time <= 9999999:
+#            time = UTCDateTime(year=time / 1000, julday=time % 1000)
+#        elif isinstance(time, float) and time == -1.0:
+#            time = UTCDateTime(year=3000, julday=365, hour=23, minute=59, second=59)
+#        else:
+#            time = UTCDateTime(time)
+#    return time

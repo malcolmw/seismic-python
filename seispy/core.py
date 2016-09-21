@@ -1,18 +1,20 @@
 class Arrival(object):
-    def __init__(self, sta, time, phase, deltime):
+    def __init__(self, sta, time, phase, arid=-1):
         self.sta = sta
         self.time = time
         self.phase = phase
-        self.deltime = deltime
+        self.arid = arid
 
 class Origin(object):
-    def __init__(self, lat, lon, depth, time, arrivals=()):
+    def __init__(self, lat, lon, depth, time, arrivals=(), orid=-1, evid=-1):
         self.lat = lat
         self.lon = lon
         self.depth = depth
         self.time = time
         self.arrivals = ()
         self.add_arrivals(arrivals)
+        self.orid = orid
+        self.evid = evid
 
     def __str__(self):
         return "origin: %.4f %.4f %.4f %.4f" % (self.lat,\
@@ -25,6 +27,9 @@ class Origin(object):
             if not isinstance(arrival, Arrival):
                 raise TypeError("not an Arrival object")
             self.arrivals += (arrival,)
+
+    def clear_arrivals(self):
+        self.arrivals = ()
 
 
 class Station(object):

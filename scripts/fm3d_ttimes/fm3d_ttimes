@@ -107,8 +107,8 @@ def main(cfg):
             print "=" * (len(station.name) + 4)
             write_source(station.lon, station.lat, station.elev)
             subprocess.call("/home/shake/malcolcw/.local/bin/fm3d")
-            asc2bin(station.name, phase)
-            #shutil.move("arrtimes.dat", "%s.%s.tt" % (station.name, phase))
+            #asc2bin(station.name, phase)
+            shutil.move("arrtimes.dat", "%s.%s.tt" % (station.name, phase))
             shutil.move("rays.dat", "%s.%s.rays" % (station.name, phase))
 
 class Station:

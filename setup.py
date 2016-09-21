@@ -22,5 +22,9 @@ setup(name='seispy',
                   'seispy.locate',
                   'seispy.util',
                   'seispy.velocity'],
-      scripts=['scripts/fm3d_ttimes/fm3d_ttimes']
+      scripts=['scripts/fm3d_ttimes/fm3d_ttimes',
+               'scripts/locate/dblocate',
+               'scripts/synthetics/make_synthetics',
+               'scripts/synthetics/synthetics2db',
+               'scripts/tests/test_mtp']
       )

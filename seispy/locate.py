@@ -1,4 +1,4 @@
-from math import radians
+from math import radians, degrees
 import mmap
 import os.path
 import struct
@@ -7,7 +7,8 @@ import time
 import numpy as np
 
 from seispy.core import Origin
-from seispy.geometry import sph2geo
+from seispy.geometry import EARTH_RADIUS,\
+                            sph2geo
 
 HDR_OFST = 36
 
@@ -15,21 +16,43 @@ class Locator(object):
     def __init__(self, tt_dir):
         self.tt_dir = tt_dir
 
-    def relocate(self, origin):
+    def _locate_init(self, origin):
         self.mmttf, self.grid = self._initialize_mmap(origin)
+        arrivals = [arrival for arrival in origin.arrivals\
+                            if arrival.sta in self.mmttf]
+        origin.clear_arrivals()
+        origin.add_arrivals(arrivals)
         grid = self.grid
         r = [grid['r0'] + grid['dr'] * ir for ir in range(grid['nr'])]
-        theta = [radians(90. - grid['lat0'] + grid['dlat'] * ilat)\
+        theta = [radians(90. - grid['lat0'] - grid['dlat'] * ilat)\
                 for ilat in range(grid['nlat'])]
         phi = [radians((grid['lon0'] + grid['dlon'] * ilon) % 360.)\
                 for ilon in range(grid['nlon'])]
         R, T, P = np.meshgrid(r, theta, phi, indexing='ij')
         self.nodes = {'r': R, 'theta': T, 'phi': P}
-        #r0, theta0, phi0, t0 = self._grid_search(origin)
-        r0, theta0, phi0, t0 = self.nodes['r'][20, 161, 136],\
-                               self.nodes['theta'][20, 161, 136],\
-                               self.nodes['phi'][20, 161, 136],\
-                               1357001730.69
+        self.byteoffset = np.ndarray(shape=self.nodes['r'].shape)
+        offset = 36
+        for iphi in range(self.grid['nphi']):
+            for itheta in range(self.grid['ntheta']):
+                for ir in range(self.grid['nr']):
+                    self.byteoffset[ir, itheta, iphi] = offset
+                    offset += 4
+
+    def locate(self, origin):
+        self._locate_init(origin)
+        r0, theta0, phi0, t0 = self._grid_search(origin)
+        r0, theta0, phi0, t0, sdobs0, res0 = self._subgrid_inversion(r0, theta0, phi0, t0,\
+                                                       origin.arrivals)
+        lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
+        lon0 -= 360.
+        return Origin(lat0, lon0, z0, t0)
+
+    def relocate(self, origin):
+        self._locate_init(origin)
+        r0 = EARTH_RADIUS - origin.depth
+        theta0 = radians(90 - origin.lat)
+        phi0 = radians(origin.lon)
+        t0 = origin.time
         r0, theta0, phi0, t0, sdobs0, res0 = self._subgrid_inversion(r0, theta0, phi0, t0,\
                                                        origin.arrivals)
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
@@ -38,13 +61,7 @@ class Locator(object):
 
     def _get_node_tt(self, arrival, ir, itheta, iphi):
         f = self.mmttf[arrival.sta][arrival.phase]
-        iphi = iphi - 1 if iphi > 0 else 0
-        itheta = itheta - 1 if itheta > 0 else 0
-        offset =    ( self.grid['nr'] * self.grid['ntheta'] * iphi\
-                    + self.grid['nr'] * itheta\
-                    + ir)\
-                * 4\
-                + HDR_OFST
+        offset = self.byteoffset[ir, itheta, iphi]
         f.seek(int(round(offset)))
         return struct.unpack("f", f.read(4))[0]
 
@@ -56,9 +73,9 @@ class Locator(object):
         dr = self.grid['dr']
         dtheta = self.grid['dtheta']
         dphi = self.grid['dphi']
-        ir0 = (r - self.nodes['r'][0, 0, 0]) / dr
-        itheta0 = abs((theta - self.nodes['theta'][0, 0, 0])) / dtheta
-        iphi0 = (phi - self.nodes['phi'][0, 0, 0]) / dphi
+        ir0 = (r - self.grid['r0']) / dr
+        itheta0 = (self.grid['theta0'] - theta) / dtheta
+        iphi0 = (phi - self.grid['phi0']) / dphi
         delr, deltheta, delphi = ir0 % 1., itheta0 % 1., iphi0 % 1.
         ir0, itheta0, iphi0 = int(ir0), int(itheta0), int(iphi0)
         ir1 = ir0 if ir0 == nr - 1 else ir0 + 1
@@ -81,6 +98,7 @@ class Locator(object):
         return V0 + (V1 - V0) * delphi
 
     def _grid_search(self, origin):
+        print "grid searching for", origin
         nr = self.grid['nr']
         ntheta = self.grid['ntheta']
         nphi = self.grid['nphi']
@@ -90,14 +108,13 @@ class Locator(object):
                               for j in range(ntheta)\
                               for k in range(nphi)]:
             at = [arr.time for arr in origin.arrivals]
-            tt = [self._get_node_tt(arr, ir, itheta, iphi) for arr in arrivals]
+            tt = [self._get_node_tt(arr, ir, itheta, iphi) for arr in origin.arrivals]
             ots = [at[i] - tt[i] for i in range(len(at))]
             ot = np.mean(ots)
             misfit = sum([abs((ot + tt[i]) - at[i]) for i in range(len(at))])
             if misfit < best_fit:
                 best_fit = misfit
                 ir0, itheta0, iphi0, t0 = ir, itheta, iphi, ot
-                print ir0, itheta0, iphi0, t0, best_fit
         return self.nodes['r'][ir0, itheta0, iphi0],\
                self.nodes['theta'][ir0, itheta0, iphi0],\
                self.nodes['phi'][ir0, itheta0, iphi0],\
@@ -107,11 +124,15 @@ class Locator(object):
         mmttf, grid = {}, None
         for arrival in origin.arrivals:
             sta = arrival.sta
+            try:
+                f = open(os.path.abspath(os.path.join(self.tt_dir, "%s.%s.tt"\
+                        % (sta, arrival.phase))), 'rb')
+            except IOError:
+                print "no %s-wave travel-time file for %s" % (arrival.phase, sta)
+                continue
+            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             if sta not in mmttf:
                 mmttf[sta] = {}
-            f = open(os.path.abspath(os.path.join(self.tt_dir, "%s.%s.tt"\
-                    % (sta, arrival.phase))), 'rb')
-            mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             mmttf[sta][arrival.phase] = mm
             if not grid:
                 grid = {}
@@ -144,15 +165,16 @@ class Locator(object):
 
     def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals):
         ir0 = (r0 - self.grid['r0']) / self.grid['dr']
-        itheta0 = abs(theta0 - self.grid['theta0'])\
+        itheta0 = (self.grid['theta0'] - theta0)\
                 / self.grid['dtheta']
         iphi0 = (phi0 - self.grid['phi0']) / self.grid['dphi']
         delr = ir0 % 1
         deltheta = itheta0 % 1
         delphi = iphi0 % 1
+        ir0, itheta0, iphi0 = int(ir0), int(itheta0), int(iphi0)
         ir1 = ir0 if ir0 == self.grid['nr'] - 1 else ir0 + 1
-        itheta1 = ithetar0 if itheta0 == self.grid['ntheta'] - 1 else itheta0 + 1
-        iphi1 = iphir0 if iphi0 == self.grid['nphi'] - 1 else iphi0 + 1
+        itheta1 = itheta0 if itheta0 == self.grid['ntheta'] - 1 else itheta0 + 1
+        iphi1 = iphi0 if iphi0 == self.grid['nphi'] - 1 else iphi0 + 1
         D = np.empty(shape=(len(arrivals), 4))
         res = np.empty(shape=(len(arrivals),))
         for i  in range(len(arrivals)):
