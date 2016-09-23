@@ -1,0 +1,89 @@
+#! /usr/bin/env python
+import argparse
+import ConfigParser
+import os
+import sys
+sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
+from seispy.core import Arrival,\
+                        Origin
+from seispy.locate import Locator
+from seispy.util import MultiThreadProcess
+from gazelle.datascope import closing,\
+                               dbopen
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("db", type=str, nargs=1)
+    parser.add_argument("config", type=str, nargs=1)
+    return parser.parse_args()
+    
+
+def parse_config(args):
+    cfg = {}
+    config = ConfigParser.RawConfigParser()
+    config.read(args.config[0])
+    cfg["tt_dir"] = config.get("General", "tt_dir")
+    return cfg
+
+def getter(db):
+    tbl_origin = db.lookup(table="origin")
+    tbl_origin = tbl_origin.sort("time")
+    _tbl_origin = tbl_origin.join("event")
+    tbl_origin.free()
+    tbl_origin = _tbl_origin
+    _tbl_origin = tbl_origin.subset("orid == prefor")
+    tbl_origin.free()
+    tbl_origin = _tbl_origin
+    for record in tbl_origin.iter_record():
+        orid, evid, lat, lon, depth, time\
+                = record.getv("orid", "evid", "lat", "lon", "depth", "time")
+        view = tbl_origin.subset("orid == %d" % orid)
+        _view = view.join("assoc")
+        view.free()
+        view = _view
+        _view = view.join("arrival")
+        view.free()
+        view = _view
+        arrivals = []
+        for arrival in view.iter_record():
+            sta, time, phase, arid = arrival.getv("sta", "time", "phase", "arid")
+            arrivals += [Arrival(sta, time, phase, 0.25, arid=arid)]
+        origin = Origin(lat, lon, depth, time, arrivals=arrivals, evid=evid)
+        view.free()
+        yield origin
+
+def main_processor(origin, tt_dir):
+    print "processing", origin
+    locator = Locator(tt_dir)
+    return locator.relocate(origin)
+
+def outputter(origin, db):
+    print "writing", origin
+    tbl_origin = db.lookup(table="origin")
+    tbl_assoc = db.lookup(table="assoc")
+    orid = tbl_origin.nextid("orid")
+    tbl_origin.record = tbl_origin.addnull()
+    tbl_origin.putv(("orid", orid),
+                    ("evid", origin.evid),
+                    ("lat", origin.lat),
+                    ("lon", origin.lon),
+                    ("depth", origin.depth),
+                    ("time", origin.time))
+    for arrival in origin.arrivals:
+        tbl_assoc.record = tbl_assoc.addnull()
+        tbl_assoc.putv(("sta", arrival.sta),
+                       #("time", arrival.time),
+                       ("phase", arrival.phase),
+                       ("arid", arrival.arid),
+                       ("orid", orid))
+
+def main(cfg):
+    with closing(dbopen(args.db[0], 'r+')) as db:
+        for origin in getter(db):
+            main_processor(origin, cfg['tt_dir'])
+            outputter(origin, db)
+
+if __name__ == "__main__":
+    args = parse_args()
+    cfg = parse_config(args)
+    main(cfg)

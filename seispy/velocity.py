@@ -11,7 +11,6 @@ from numpy import linspace,\
                   meshgrid,\
                   ndarray,\
                   zeros
-from scipy.interpolate import LinearNDInterpolator, NearestNDInterpolator, Rbf
 from scipy import ndimage
 #from geometry import EARTH_RADIUS,\
 from seispy.geoid import Geoid
