@@ -15,6 +15,7 @@ def parse_config(config_file):
     cfg['db'] = cfg_file.get('General', 'database')
     cfg['stations'] = cfg_file.get('General', 'stations')
     cfg['sources'] = cfg_file.get('General', 'sources')
+    cfg['author'] = cfg_file.get('General', 'author')
     cfg['niter'] = cfg_file.getint('General', 'iterations_per_source')
     cfg['minsta'] = cfg_file.getint('General', 'min_stations')
     cfg['maxsta'] = cfg_file.getint('General', 'max_stations')
@@ -43,17 +44,19 @@ def main(cfg):
             for i in range(cfg['niter']):
                 orid = tbl_origin.nextid('orid')
                 print "updating event:", evid, "orid:", orid, i
-                tbl_event.record = tbl_event.addnull()
-                tbl_event.putv(("evid", evid),
-                               ("prefor", orid),
-                               ("auth", "synth:malcolcw"))
+                if i == 0:
+                    tbl_event.record = tbl_event.addnull()
+                    tbl_event.putv(("evid", evid),
+                                   ("prefor", orid),
+                                   ("auth", cfg['author']))
                 tbl_origin.record = tbl_origin.addnull()
                 tbl_origin.putv(("orid", orid),
                                 ("evid", evid),
                                 ("lat", lat0),
                                 ("lon", lon0),
                                 ("depth", z0),
-                                ("time", t0))
+                                ("time", t0),
+                                ("auth", cfg['author']))
                                 
                 arrivals = {'P': [], 'S': []}
                 for phase in ('P', 'S'):
@@ -66,7 +69,6 @@ def main(cfg):
                         arrivals[phase] += [Arrival(sta.name, ta, phase)]
                 nParr = int(np.random.random(1)[0] * (cfg['maxsta'] - cfg['minsta'])) + cfg['minsta']
                 nSarr = int(np.random.random(1)[0] * nParr)
-                print nParr, nSarr
                 arrivals['P'] = np.random.choice(arrivals['P'], size=nParr)
                 _arrivals = []
                 for arrival in arrivals['S']:
@@ -82,7 +84,7 @@ def main(cfg):
                         #print "updating arrival:", arrival.sta, phase, arrival.time,  arid
                         scale = 0.5 if phase == 'P' else 1.0
                         noise = np.random.normal(scale=scale)
-                        ta = arrival.time + noise
+                        arrtime = arrival.time + noise
                         print "adding %.3f seconds of noise to arrival:" % noise, arrival.sta, phase, arid
                         tbl_assoc.putv(("arid", arid),
                                        ("orid", orid),
@@ -91,7 +93,7 @@ def main(cfg):
                         tbl_arrival.putv(("arid", arid),
                                          ("iphase", phase),
                                          ("sta", arrival.sta),
-                                         ("time", ta))
+                                         ("time", arrtime))
 
 if __name__ == "__main__":
     cfg = parse_config(sys.argv[1])

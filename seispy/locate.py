@@ -13,16 +13,19 @@ from seispy.geometry import EARTH_RADIUS,\
 HDR_OFST = 36
 
 class Locator(object):
-    def __init__(self, tt_dir):
-        self.tt_dir = tt_dir
+    def __init__(self, cfg):
+        self.cfg = cfg
 
     def _locate_init(self, origin):
         self.mmttf, self.grid = self._initialize_mmap(origin)
+        grid = self.grid
         arrivals = [arrival for arrival in origin.arrivals\
                             if arrival.sta in self.mmttf]
+        if not self.check_nsta(arrivals):
+            print "unable to relocate event, not enough stations"
+            return None
         origin.clear_arrivals()
         origin.add_arrivals(arrivals)
-        grid = self.grid
         r = [grid['r0'] + grid['dr'] * ir for ir in range(grid['nr'])]
         theta = [radians(90. - grid['lat0'] - grid['dlat'] * ilat)\
                 for ilat in range(grid['nlat'])]
@@ -37,32 +40,64 @@ class Locator(object):
                 for ir in range(self.grid['nr']):
                     self.byteoffset[ir, itheta, iphi] = offset
                     offset += 4
+        return True
+
+    def check_nsta(self, arrivals):
+        stations = []
+        for arrival in arrivals:
+            if arrival.sta not in stations:
+                stations += [arrival.sta]
+        if len(stations) >= self.cfg['min_nsta']:
+            return True
+        else:
+            return False
 
     def locate(self, origin):
-        self._locate_init(origin)
+        if not self._locate_init(origin):
+            return None
         r0, theta0, phi0, t0 = self._grid_search(origin)
-        r0, theta0, phi0, t0, sdobs0, res0 = self._subgrid_inversion(r0, theta0, phi0, t0,\
-                                                       origin.arrivals)
+        soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
+        if soln ==  None:
+            return None
+        else:
+            r0, theta0, phi0, t0, sdobs0, res0, arrivals = soln
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        lon0 -= 360.
-        return Origin(lat0, lon0, z0, t0)
+        #lon0 -= 360.
+        return Origin(lat0, lon0, z0, t0,
+                      arrivals=arrivals,
+                      evid=origin.evid,
+                      sdobs=sdobs0)
 
     def relocate(self, origin):
-        self._locate_init(origin)
+        if not self._locate_init(origin):
+            return None
+        grid = self.grid
+        if not (EARTH_RADIUS - grid['mr'] < origin.depth < EARTH_RADIUS - grid['r0'])\
+                or not (grid['lat0'] < origin.lat < grid['mlat'])\
+                or not (grid['lon0'] < origin.lon < grid['mlon']):
+            print "unable to use starting location outside of grid, performing grid search"
+            return None
+            return self.locate(origin)
         r0 = EARTH_RADIUS - origin.depth
         theta0 = radians(90 - origin.lat)
-        phi0 = radians(origin.lon)
+        phi0 = radians(origin.lon % 360.)
         t0 = origin.time
-        r0, theta0, phi0, t0, sdobs0, res0 = self._subgrid_inversion(r0, theta0, phi0, t0,\
-                                                       origin.arrivals)
+        soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
+        if soln ==  None:
+            return None
+        else:
+            r0, theta0, phi0, t0, sdobs0, res0, arrivals = soln
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        lon0 -= 360.
-        return Origin(lat0, lon0, z0, t0)
+        #lon0 -= 360.
+        return Origin(lat0, lon0, z0, t0,
+                      arrivals=arrivals,
+                      evid=origin.evid,
+                      sdobs=sdobs0)
 
     def _get_node_tt(self, arrival, ir, itheta, iphi):
         f = self.mmttf[arrival.sta][arrival.phase]
         offset = self.byteoffset[ir, itheta, iphi]
-        f.seek(int(round(offset)))
+        f.seek(int(offset))
         return struct.unpack("f", f.read(4))[0]
 
     def _get_tt(self, arrival, r, theta, phi):
@@ -125,7 +160,7 @@ class Locator(object):
         for arrival in origin.arrivals:
             sta = arrival.sta
             try:
-                f = open(os.path.abspath(os.path.join(self.tt_dir, "%s.%s.tt"\
+                f = open(os.path.abspath(os.path.join(self.cfg['tt_dir'], "%s.%s.tt"\
                         % (sta, arrival.phase))), 'rb')
             except IOError:
                 print "no %s-wave travel-time file for %s" % (arrival.phase, sta)
@@ -142,6 +177,9 @@ class Locator(object):
                         = struct.unpack("3f", mm.read(12))
                 grid['r0'], grid['lat0'], grid['lon0']\
                         = struct.unpack("3f", mm.read(12))
+                grid['mr'] = grid['r0'] + (grid['nr'] - 1) * grid['dr']
+                grid['mlat'] = grid['lat0'] + (grid['nlat'] - 1) * grid['dlat']
+                grid['mlon'] = grid['lon0'] + (grid['nlon'] - 1) * grid['dlon']
                 grid['dtheta'] = radians(grid['dlat'])
                 grid['dphi'] = radians(grid['dlon'])
                 grid['ntheta'], grid['nphi'] = grid['nlat'], grid['nlon']
@@ -163,7 +201,11 @@ class Locator(object):
                     raise ValueError("travel-time headers do not match")
         return mmttf, grid
 
-    def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals):
+    def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals, itern=0):
+        res_start = np.array([arrival.time\
+                              - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
+                              for arrival in arrivals])
+        sdobs_start = np.sqrt(np.sum(np.square(res_start))) / (len(res_start) - 4)
         ir0 = (r0 - self.grid['r0']) / self.grid['dr']
         itheta0 = (self.grid['theta0'] - theta0)\
                 / self.grid['dtheta']
@@ -203,14 +245,54 @@ class Locator(object):
             dVdp11 = V111 - V110
             dVdp = np.mean([dVdp00, dVdp10, dVdp01, dVdp11])
             D[i] = [dVdr, dVdt, dVdp, 1]
-            res[i] = arrivals[i].time - (t0 + self._get_tt(arrivals[i], r0, theta0, phi0))
+            res[i] = arrival.time - (t0 + self._get_tt(arrival, r0, theta0, phi0))
         delU, res_, rank, s = np.linalg.lstsq(D, res)
         delr, deltheta, delphi, delt = delU
         r0 += delr * self.grid['dr']
         theta0 += deltheta * self.grid['dtheta']
         phi0 += delphi * self.grid['dphi']
         t0 += delt
+        #if solution does not converge within grid, return None
+        gr0, gtheta0, gphi0 = self.grid['r0'], self.grid['theta0'], self.grid['phi0']
+        gnr, gntheta, gnphi = self.grid['nr'], self.grid['ntheta'], self.grid['nphi']
+        gdr, gdtheta, gdphi = self.grid['dr'], self.grid['dtheta'], self.grid['dphi']
+        #if solution is above propagation grid, fix depth to surface
+        #if r0 > gr0 + gdr * (gnr - 1):
+        #    r0 = gr0 + gdr * (gnr - 1)
+        #    #fix_depth = True
+        if not gr0 < r0 < gr0 + gdr * (gnr - 1)\
+                or not (gtheta0 - (gntheta - 1) * gdtheta < theta0 < gtheta0)\
+                or not (gphi0 < phi0 < gphi0 + (gnphi - 1) * gdphi):
+            return None
         res0 = np.array([arrival.time - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
                 for arrival in arrivals])
-        sdobs0 = np.std(res0)
-        return r0, theta0, phi0, t0, sdobs0, res0
+        sdobs0 = np.sqrt(np.sum(np.square(res0))) / (len(res0) - 4)
+        arrivals = self.remove_outliers(r0, theta0, phi0, t0, arrivals)
+        if not self.check_nsta(arrivals):
+            print "not enough stations remaining"
+            return None
+        if itern < self.cfg['max_iterations'] and\
+                abs(sdobs0 - sdobs_start) > self.cfg['convergance_threshold']:
+            self._subgrid_inversion(r0, theta0, phi0, t0,
+                                    arrivals,
+                                    itern=itern + 1)
+        elif itern >= self.cfg['max_iterations']:
+            print "soultion did not converge after %d iterations" % itern
+            return None
+        return r0, theta0, phi0, t0, sdobs0, res0, arrivals
+
+    def remove_outliers(self, r0, theta0, phi0, t0, arrivals):
+        res = np.array([arr.time - (t0 + self._get_tt(arr, r0, theta0, phi0))\
+                    for arr in arrivals])
+        new_arrivals = []
+        for i in range(len(arrivals)):
+            arr = arrivals[i]
+            r = res[i]
+            tol = self.cfg['P_residual_tolerance']\
+                  if  arr.phase == 'P'\
+                  else self.cfg['S_residual_tolerance']
+            if abs(r) < tol: new_arrivals += [arr]
+        print "removing %d/%d arrivals"\
+                % ((len(arrivals) - len(new_arrivals)), len(arrivals))
+        return new_arrivals
+

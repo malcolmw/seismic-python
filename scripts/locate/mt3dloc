@@ -23,7 +23,16 @@ def parse_config(args):
     config = ConfigParser.RawConfigParser()
     config.read(args.config[0])
     cfg["tt_dir"] = config.get("General", "tt_dir")
+    cfg["mode"] = config.get("General", "mode")
+    cfg["author"] = config.get("General", "author")
     cfg["n_threads"] = config.getint("General", "n_threads")
+    cfg["min_nsta"] = config.getint("General", "min_nsta")
+    cfg["P_residual_tolerance"] = config.getfloat("General", "P_residual_tolerance")
+    cfg["S_residual_tolerance"] = config.getfloat("General", "S_residual_tolerance")
+    cfg["convergance_threshold"] = config.getfloat("General", "convergance_threshold")
+    cfg["max_iterations"] = config.getint("General", "max_iterations")
+    cfg["input_q_size"] = config.getint("General", "input_q_size")
+    cfg["output_q_size"] = config.getint("General", "output_q_size")
     return cfg
 
 def getter(db):
@@ -35,9 +44,12 @@ def getter(db):
     _tbl_origin = tbl_origin.subset("orid == prefor")
     tbl_origin.free()
     tbl_origin = _tbl_origin
+    _tbl_origin = tbl_origin.join("origerr", outer=True)
+    tbl_origin.free()
+    tbl_origin = _tbl_origin
     for record in tbl_origin.iter_record():
-        orid, evid, lat, lon, depth, t0\
-                = record.getv("orid", "evid", "lat", "lon", "depth", "time")
+        orid, evid, lat0, lon0, depth0, t0, sdobs\
+                = record.getv("orid", "evid", "lat", "lon", "depth", "time", "sdobs")
         view = tbl_origin.subset("orid == %d" % orid)
         _view = view.join("assoc")
         view.free()
@@ -47,43 +59,58 @@ def getter(db):
         view = _view
         arrivals = []
         for arrival in view.iter_record():
-            sta, time, phase, arid = arrival.getv("sta", "arrival.time", "phase", "arid")
-            arrivals += [Arrival(sta, time, phase, arid=arid)]
-        origin = Origin(lat, lon, depth, t0, arrivals=arrivals, evid=evid)
+            sta, arrtime, phase, arid = arrival.getv("sta", "arrival.time", "phase", "arid")
+            arrivals += [Arrival(sta, arrtime, phase, arid=arid)]
+        origin = Origin(lat0, lon0, depth0, t0, arrivals=arrivals, evid=evid, sdobs=sdobs)
         view.free()
         yield origin
 
-def main_processor(origin, tt_dir):
-    print "processing", origin, len(origin.arrivals)
-    locator = Locator(tt_dir)
-    return locator.locate(origin)
+def main_processor(origin, cfg):
+    print "processing", origin
+    locator = Locator(cfg)
+    if cfg['mode'] == 'relocate':
+        return locator.relocate(origin)
+    elif cfg['mode'] == 'locate':
+        return locator.locate(origin)
+    else:
+        print "invalid mode: %s" % cfg['mode']
+        exit()
 
-def outputter(origin, db):
+def outputter(origin, db, cfg):
+    if origin == None: return
+    if cfg['mode'] == 'relocate':
+        auth = cfg['author'] + ":reloc"
+    elif cfg['mode'] == 'locate':
+        auth = cfg['author'] + ":loc"
     print "writing", origin
     tbl_origin = db.lookup(table="origin")
     tbl_assoc = db.lookup(table="assoc")
     orid = tbl_origin.nextid("orid")
     tbl_origin.record = tbl_origin.addnull()
     tbl_origin.putv(("orid", orid),
-                           ("evid", origin.evid),
-                           ("lat", origin.lat),
-                           ("lon", origin.lon),
-                           ("depth", origin.depth),
-                           ("time", origin.time))
+                    ("evid", origin.evid),
+                    ("lat", origin.lat),
+                    ("lon", origin.lon),
+                    ("depth", origin.depth),
+                    ("time", origin.time),
+                    ("auth", auth),
+                    ("ndef", len(origin.arrivals)),
+                    ("nass", len(origin.arrivals)))
     for arrival in origin.arrivals:
         tbl_assoc.record = tbl_assoc.addnull()
         tbl_assoc.putv(("sta", arrival.sta),
-                       ("time", arrival.time),
                        ("phase", arrival.phase),
                        ("arid", arrival.arid),
                        ("orid", orid))
 
-def main(cfg):
+def main():
     with closing(dbopen(args.db[0], 'r+')) as db:
-        config_params = {'n_threads': cfg['n_threads']}
+        config_params={'n_threads': cfg['n_threads'],
+                       'input_q_max_size': cfg['input_q_size'],
+                       'output_q_max_size': cfg['output_q_size']}
         extra_args={'input_init_args': (db,),
-                    'main_init_args': (cfg['tt_dir'],),
-                    'output_init_args': (db,)}
+                     'main_init_args': (cfg,),
+                     'output_init_args': (db, cfg)}
         mtp = MultiThreadProcess(getter,
                                  main_processor,
                                  outputter,
@@ -94,4 +121,4 @@ def main(cfg):
 if __name__ == "__main__":
     args = parse_args()
     cfg = parse_config(args)
-    main(cfg)
+    main()
