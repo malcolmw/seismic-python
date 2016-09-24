@@ -339,6 +339,14 @@ class VelocityModel(object):
         outfile.write("5 10")
         outfile.close()
 
+    def model_1D(self, phase='Vp'):
+        V = []
+        for ir in range(self.nodes['nr']):
+            v = np.median(np.concatenate(self.values[phase][ir]))
+            z = EARTH_RADIUS - (self.nodes['r'][0, 0, 0] + ir * self.nodes['dr'])
+            V += [(z, v)]
+        return V
+
     def plot_Vp(self, lat=-999, lon=-999, depth=-999, nx=50, ny=50):
         self._plot(lat, lon, depth, 'Vp', nx, ny)
 
@@ -351,4 +359,16 @@ class VelocityModel(object):
 if __name__ == "__main__":
     vm = VelocityModel("/home/shake/malcolcw/products/velocity/FANG2016/original/VpVs.dat",
                        topo="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz")
-    vm.plot_Vp(lon=-116.455, nx=250, ny=250)
+    #vm.plot_Vp(lon=-116.455, nx=250, ny=250)
+    Vp = vm.model_1D(phase='Vp')
+    Vs = vm.model_1D(phase='Vs')
+    s = ""
+    for v in [Vp[i][0] for i in range(len(Vp))][-1::-1]:
+        s += "%.2f " % v
+    s += "\n"
+    for v in [Vp[i][1] for i in range(len(Vp))][-1::-1]:
+        s += "%.2f " % v
+    s += "\n"
+    for v in [Vp[i][1]/Vs[i][1] for i in range(len(Vp))][-1::-1]:
+        s += "%.2f " % v
+    print s
