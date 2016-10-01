@@ -1,12 +1,15 @@
-#!/usr/bin/env/python
+#!/usr/bin/env python
 import sys
 import os
-sys.path.append('{:s}/data/python'.format(os.environ['ANTELOPE']))
-from antelope.datascope import dbopen, closing
 
-from seispy.core.trace import Trace
+from seispy.core import Trace
+from obspy.core import read
+import seispy
+import gazelle.datascope
+from gazelle.datascope import closing,\
+                              dbopen
 
-with closing(dbopen('/Users/mcwhite/staging/wfs/dummy/db', 'r')) as db:
+with closing(dbopen('/home/shake/malcolcw/data/wfs/ramona', 'r')) as db:
     tbl_wfdisc = db.lookup(table='wfdisc')
     tbl_wfdisc.record = 0
     tr = Trace(tbl_wfdisc)

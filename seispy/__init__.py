@@ -11,11 +11,11 @@ site.addsitedir("/usr/lib64/python2.7/site-packages")
 __all__ = []
 
 try:
-    sys.path.append('%s/data/python/antelope' % os.environ['ANTELOPE'])
-    import antelope
-    __all__ += ["antelope"]
+    sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
+    import antelope.datascope as datascope
+    __all__ += ["datascope"]
+    _ANTELOPE_DEFINED = True
 except (ImportError, KeyError):
     _ANTELOPE_DEFINED = False
-_ANTELOPE_DEFINED = True
 
 __all__ += ["_ANTELOPE_DEFINED"]
