@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import obspy
 from obspy.core import read,\
                        Stream
+from obspy.core.utcdatetime import UTCDateTime
 
 from seispy.signal.detect import detectS as _detectS_cc
 from seispy.util import validate_time
@@ -12,8 +13,9 @@ from gazelle.datascope import Dbptr,\
                               dbTABLE_NAME
 
 class Arrival(object):
-    def __init__(self, sta, time, phase, arid=-1):
-        self.sta = sta
+    def __init__(self, station, channel, time, phase, arid=-1):
+        self.station = station
+        self.channel = channel
         self.time = time
         self.phase = phase
         self.arid = arid
@@ -196,33 +198,63 @@ class Gather3C(obspy.core.Stream):
                                       self.stats.starttime + lag,
                                       'S')]
 
-    #def plot(self):
-    #    self.fig = plt.figure()
-    #    time = [float(self.stats.starttime + i * self.stats.delta)\
-    #            for i in range(self.stats.npts)]
-    #    print time
-    #    ax1 = self.fig.add_subplot(3, 1, 1)
-    #    ax1.plot(time, self.V.data)
-    #    ax2 = self.fig.add_subplot(3, 1, 2)
-    #    ax2.plot(time, self.H1.data)
-    #    ax3 = self.fig.add_subplot(3, 1, 3)
-    #    ax3.plot(time, self.H2.data)
-    #    self._plot_set_x_ticks()
-    #    plt.show()
-
-    #def _plot_set_x_ticks(self):
-    #    #self.fig.subplots_adjust(hspace=0)
-    #    for ax in self.fig.axes[:-1]:
-    #        plt.setp(ax.get_xticklabels(), visible=False)
-    #    ax = self.fig.axes[-1]
-    #    ax.xaxis_date()
-    #    locator = AutoDateLocator(minticks=3, maxticks=6)
-    #    locator.intervald[MINUTELY] = [1, 2, 5, 10, 15, 30]
-    #    locator.intervald[SECONDLY] = [1, 2, 5, 10, 15, 30]
-    #    #ax.xaxis.set_major_formatter(ObsPyAutoDateFormatter(locator))
-    #    #ax.xaxis.set_major_formatter(AutoDateFormatter(locator))
-    #    ax.xaxis.set_major_locator(locator)
-    #    plt.setp(ax.get_xticklabels(), fontsize='small')
+    def plot(self,
+             starttime=None,
+             endtime=None,
+             arrivals=None,
+             detections=None,
+             show=True,
+             xticklabel_fmt=None):
+        fig, axs = plt.subplots(nrows=3, sharex=True, figsize=(12, 9))
+        fig.subplots_adjust(hspace=0)
+        fig.suptitle("Station %s" % self.stats.station, fontsize=20)
+        axV, axH1, axH2 = axs
+        detections_V = [d for d in detections\
+                        if d.channel == self.V.stats.channel]\
+                        if detections\
+                        else None
+        arrivals_V = [a for a in arrivals\
+                      if a.channel == self.V.stats.channel]\
+                      if arrivals\
+                      else None
+        axV = self.V.subplot(axV,
+                             starttime=starttime,
+                             endtime=endtime,
+                             arrivals=arrivals_V,
+                             detections=detections_V,
+                             xticklabel_fmt=xticklabel_fmt)
+        detections_H1 = [d for d in detections\
+                         if d.channel == self.H1.stats.channel]\
+                         if detections\
+                         else None
+        arrivals_H1 = [a for a in arrivals\
+                       if a.channel == self.H1.stats.channel]\
+                       if arrivals\
+                       else None
+        axH1 = self.H1.subplot(axH1,
+                               starttime=starttime,
+                               endtime=endtime,
+                               arrivals=arrivals_H1,
+                               detections=detections_H1,
+                               xticklabel_fmt=xticklabel_fmt)
+        detections_H2 = [d for d in detections\
+                         if d.channel == self.H2.stats.channel]\
+                         if detections\
+                         else None
+        arrivals_H2 = [a for a in arrivals\
+                       if a.channel == self.H2.stats.channel]\
+                       if arrivals\
+                       else None
+        axH2 = self.H2.subplot(axH2,
+                               starttime=starttime,
+                               endtime=endtime,
+                               arrivals=arrivals_H2,
+                               detections=detections_H2,
+                               xticklabel_fmt=xticklabel_fmt)
+        if show:
+            plt.show()
+        else:
+            return fig
 
 class Network:
     """
@@ -390,13 +422,73 @@ class Trace(obspy.core.Trace):
             self.stats = tr.stats
             self.data = tr.data
 
-    def plot(self):
-        fig = plt.figure()
-        time = [float(self.stats.starttime + i * self.stats.delta)\
-                for i in range(self.stats.npts)]
+    def plot(self,
+             starttime=None,
+             endtime=None,
+             arrivals=None,
+             detections=None,
+             show=True,
+             xticklabel_fmt=None):
+        fig = plt.figure(figsize=(12, 3))
         ax = fig.add_subplot(1, 1, 1)
-        ax.plot(time, self.data)
-        plt.show()
+        ax = self.subplot(ax,
+                          starttime=starttime,
+                          endtime=endtime,
+                          arrivals=arrivals,
+                          detections=detections,
+                          xticklabel_fmt=xticklabel_fmt)
+        if show:
+            plt.show()
+        else:
+            return fig
+
+    def subplot(self,
+                ax,
+                starttime=None,
+                endtime=None,
+                arrivals=None,
+                detections=None,
+                xticklabel_fmt=None,
+                set_xlabel=True):
+        if xticklabel_fmt == None:
+            xticklabel_fmt = "%Y%j %H:%M:%S.%f"
+        starttime = float(starttime) if starttime else float(self.stats.starttime)
+        first_sample = int(round((starttime - float(self.stats.starttime)) / self.stats.delta))
+        endtime = float(endtime) if endtime else float(self.stats.endtime)
+        npts = int((endtime - starttime) / self.stats.delta)
+        time = [(starttime + i * self.stats.delta) for i in range(npts)]
+        x_range = endtime - starttime
+        y_range = max(self.data[first_sample:npts]) - min(self.data[first_sample:npts])
+        aspect = (x_range / y_range) * 0.25
+        ax.set_aspect(aspect)
+        ax.plot(time, self.data[first_sample:npts], 'k')
+        ax.set_xlim([float(self.stats.starttime), float(self.stats.endtime)])
+        ax.set_xticklabels([UTCDateTime(time).strftime(xticklabel_fmt)\
+                            for time in ax.get_xticks()],
+                           rotation=10,
+                           horizontalalignment='right')
+        ax.set_ylabel(self.stats.channel, fontsize=16)
+        if set_xlabel:
+            stime = UTCDateTime(starttime).strftime("%Y%j")
+            etime = UTCDateTime(endtime).strftime("%Y%j")
+            if stime == etime:
+                ax.set_xlabel(stime, fontsize=16)
+            else:
+                ax.set_xlabel("%s - %s" % (stime, etime),
+                              fontsize=16)
+        if arrivals: [ax.axvline(x=arrival.time,
+                                 ymin=0.1,
+                                 ymax=0.9,
+                                 color='r',
+                                 linewidth=2)\
+                      for arrival in arrivals]
+        if detections: [ax.axvline(x=detection.time,
+                                   ymin=0.1,
+                                   ymax=0.9,
+                                   color='b',
+                                   linewidth=2)\
+                        for detection in detections]
+        return ax
 
 class VirtualNetwork:
     """
