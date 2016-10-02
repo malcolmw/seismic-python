@@ -3,10 +3,7 @@ This is top-level documenation. It is coming from seispy/__init__.py doc
 string.
 """
 import os
-import site
 import sys
-
-site.addsitedir("/usr/lib64/python2.7/site-packages")
 
 __all__ = []
 

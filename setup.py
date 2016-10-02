@@ -6,7 +6,6 @@ import sys
 
 # Use the g++ compiler to compile C++ and Fortran90 code.
 os.environ['CXX'] = "g++"
-#os.environ['CC'] = "gcc"
 
 # Initialize the setup kwargs that are independent of Antelope.
 kwargs = {'name': 'seispy',

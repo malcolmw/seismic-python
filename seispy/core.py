@@ -163,7 +163,6 @@ class Gather3C(obspy.core.Stream):
                                             channel_set[1][2],
                                             channel_set[2][2])
         self.stats.channel_set = channel_set
-        self.detections = []
 
     def detectS(self, cov_twin=3.0, k_twin=1.0):
         output = _detectS_cc(self.V.data,
@@ -193,10 +192,15 @@ class Gather3C(obspy.core.Stream):
             chan = self.H2.stats.channel
         else:
             return
-        self.detections += [Detection(self.stats.station,
-                                      self.stats.channel,
-                                      self.stats.starttime + lag,
-                                      'S')]
+        return Detection(self.stats.station,
+                         self.stats.channel,
+                         self.stats.starttime + lag,
+                         'S')
+
+    def filter(self, *args, **kwargs):
+        self.V.filter(*args, **kwargs)
+        self.H1.filter(*args, **kwargs)
+        self.H2.filter(*args, **kwargs)
 
     def plot(self,
              starttime=None,
@@ -421,6 +425,11 @@ class Trace(obspy.core.Trace):
             tr = st[0]
             self.stats = tr.stats
             self.data = tr.data
+
+    def filter(self, *args, **kwargs):
+        self.trim(starttime=self.stats.starttime - 5)
+        super(self.__class__, self).filter(*args, **kwargs)
+        self.trim(starttime=self.stats.starttime + 5)
 
     def plot(self,
              starttime=None,

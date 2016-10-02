@@ -19,12 +19,14 @@ void trigger(vector<double> cft,
     for (i = 0; i < cft.size(); i++) {
         if (state == 1) {
             if (cft[i] < t_off) {
+		std::cout << "trigger off" << std::endl;
                 offs.push_back(i);
                 state = 0;
             }
         }
         else {
             if (cft[i] >= t_on) {
+		std::cout << "trigger on" << std::endl;
                 ons.push_back(i);
                 state = 1;
             }
@@ -37,12 +39,15 @@ void trigger(vector<double> cft,
     vector<double>::iterator idx = cft.begin();
     vector<double>::iterator tmp_peak;
     for (i = 0; i < ons.size(); i++) {
+	std::cout << ons[i] << std::endl;
+	std::cout << offs[i] << std::endl;
         if ((offs[i] - ons[i]) < min_npts) continue;
         tmp_peak = max_element(idx+ons[i], idx+offs[i]);
         if (*tmp_peak > best_peak) {
             best_peak = *tmp_peak;
             start = ons[i];
             stop = offs[i];
+	    std::cout << "saved!!" << std::endl;
         }
     }
     return;
@@ -291,6 +296,9 @@ void ShearPicker::pick(const vector<double> &tr, double &s_pick, double &snr) {
     // First pass STA/LTA on non-polarized trace
     cftS = lstalta(tr, n_sta, n_lta);
     trigger(cftS, t_on, t_off, min_dur, dt, start, stop, snr);
+    std::cout << start << std::endl;
+    std::cout << stop << std::endl;
+    std::cout << snr << std::endl;
     if (start == -1 || stop == -1) {
         s_pick = -1;
         snr = -1;

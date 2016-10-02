@@ -1,6 +1,5 @@
 #!/usr/bin/env python
-import site
-site.addsitedir("/usr/lib64/python2.7/site-packages")
+
 from obspy.core.utcdatetime import UTCDateTime
 
 from gazelle.datascope import Database
@@ -9,15 +8,13 @@ from seispy.core import Arrival, Trace
 db = Database('/home/shake/malcolcw/data/wfs/ramona')
 network = db.parse_network('YN')
 station = network.stations['RA09']
-time= UTCDateTime(year=2015, julday=001, hour=6, minute=9)
-while True:
-    print time
-    gather = db.get_gather3c(station,
-                             station.get_channel_set("HN"),
-                             time,
-                             time + 10)
-    arrival = Arrival('RA09', 'HNZ', time + 5, 'S')
-    gather.plot(arrivals=[arrival], xticklabel_fmt="%H:%M:%S.%f")
-    time += 60
-    exit()
+time= UTCDateTime(year=2015, julday=003, hour=9, minute=49, second=12)
+gather = db.get_gather3c(station,
+                         station.get_channel_set("HN"),
+                         time,
+                         time + 20)
+gather.filter('bandpass', freqmin=3.0, freqmax=20.0)
+detections = gather.detectS()
+print detections
+gather.plot(xticklabel_fmt="%H:%M:%S.%f")
 db.close()

@@ -87,7 +87,8 @@ static PyObject* detectS (PyObject *dummy, PyObject *args) {
     p_pick = std::distance(it, std::max_element(it+start, it+stop));
 
     // Attempt to pick S-waves on both horizontals
-    ShearPicker SPicker(dt, k_len, sta, lta, 5.0, 2.5, 2, p_pick, pol_fltr);
+    ShearPicker SPicker(dt, k_len, sta, lta, 4.0, 2.5, 2, p_pick, pol_fltr);
+    //ShearPicker SPicker(dt, k_len, sta, lta, 5.0, 2.5, 2, p_pick, pol_fltr);
     SPicker.pick(N, s1_pick, snr_s1);
     cftS1 = SPicker.get_cftS();
     cftK1 = SPicker.get_cftK();
