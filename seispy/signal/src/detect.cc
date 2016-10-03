@@ -26,6 +26,47 @@ void PyArrayToVector (PyArrayObject* arr, vector<double>& out, int n) {
     return;
 }
 
+static PyArrayObject* PyArrayFromVector (vector<double> *vec) {
+    npy_intp n = {(long) vec->size()};
+    double *array = &(*vec)[0];
+    PyArrayObject *new_array = (PyArrayObject*) PyArray_SimpleNewFromData(1, &n, NPY_DOUBLE, array);
+    return new_array;
+}
+
+static PyObject* create_polarization_filter (PyObject *self, PyObject *args) {
+
+    double cov_len, dt;
+    vector<double> Z, N, E;
+    vector<double> pol_fltr;
+
+    PyObject *arg1=NULL, *arg2=NULL, *arg3=NULL;
+    PyArrayObject *array=NULL;
+    PyArrayObject *PZ=NULL, *PN=NULL, *PE=NULL;
+
+    if (!PyArg_ParseTuple(args, "OOOdd", &arg1, &arg2, &arg3, &cov_len, &dt)) {
+	return NULL;
+    }
+    PZ = (PyArrayObject*)PyArray_FROM_OTF(arg1, NPY_DOUBLE, NPY_IN_ARRAY);
+    if (PZ == NULL) return NULL;
+    PN = (PyArrayObject*)PyArray_FROM_OTF(arg2, NPY_DOUBLE, NPY_IN_ARRAY);
+    if (PN == NULL) return NULL;
+    PE = (PyArrayObject*)PyArray_FROM_OTF(arg3, NPY_DOUBLE, NPY_IN_ARRAY);
+    if (PE == NULL)return NULL;
+    // Various output related definitions for Python wrapper
+    // Find the number of elements in the spectrum
+    npy_intp *nz = PyArray_DIMS(PZ);
+    npy_intp *nn = PyArray_DIMS(PN);
+    npy_intp *ne = PyArray_DIMS(PE);
+    PyArrayToVector(PZ, Z, *nz);
+    PyArrayToVector(PN, N, *nn);
+    PyArrayToVector(PE, E, *ne);
+    Polarizer polar_fltr(cov_len, dt);
+
+    pol_fltr = polar_fltr.filter(Z, N, E);
+    array = PyArrayFromVector(&pol_fltr);
+    return Py_BuildValue("O", array);
+}
+
 static PyObject* detectS (PyObject *dummy, PyObject *args) {
     int i, p_pick;
     double s1_pick, s2_pick, snr_s1, snr_s2, dt, cov_len, k_len;
@@ -70,7 +111,8 @@ static PyObject* detectS (PyObject *dummy, PyObject *args) {
     int start, stop;
     double peak_snr;
     snr = lstalta(Z, int(sta/dt), int(lta/dt));
-    trigger(snr, 5.0, 2.5, 2.0, dt, start, stop, peak_snr);
+    //trigger(snr, 5.0, 2.5, 2.0, dt, start, stop, peak_snr);
+    trigger(snr, 4.0, 2.5, 2.0, dt, start, stop, peak_snr);
     if (start == -1 || stop == -1) {
         p_pick = -1;
     }
@@ -134,6 +176,7 @@ static PyObject* detectS (PyObject *dummy, PyObject *args) {
 static struct PyMethodDef methods[] =
 {
     {"detectS", detectS, METH_VARARGS, "Polarization filters recursively"},
+    {"create_polarization_filter", create_polarization_filter, METH_VARARGS, "Create polarization filter"},
     {NULL, NULL, 0, NULL}
 };
 

@@ -2,12 +2,14 @@ from copy import deepcopy
 import re
 
 import matplotlib.pyplot as plt
+import numpy as np
 import obspy
 from obspy.core import read,\
                        Stream
 from obspy.core.utcdatetime import UTCDateTime
 
 from seispy.signal.detect import detectS as _detectS_cc
+from seispy.signal.detect import create_polarization_filter
 from seispy.util import validate_time
 from gazelle.datascope import Dbptr,\
                               dbTABLE_NAME
@@ -177,23 +179,23 @@ class Gather3C(obspy.core.Stream):
             if snr1 > snr2:
                 lag = lag1
                 snr = snr1
-                chan = self.H1.stats.channel
+                channel = self.H1.stats.channel
             else:
                 lag = lag2
                 snr = snr2
-                chan = self.H2.stats.channel
+                channel = self.H2.stats.channel
         elif lag1 > 0:
             lag = lag1
             snr = snr1
-            chan = self.H1.stats.channel
+            channel = self.H1.stats.channel
         elif lag2 > 0:
             lag = lag2
             snr = snr2
-            chan = self.H2.stats.channel
+            channel = self.H2.stats.channel
         else:
             return
         return Detection(self.stats.station,
-                         self.stats.channel,
+                         channel,
                          self.stats.starttime + lag,
                          'S')
 
@@ -259,6 +261,16 @@ class Gather3C(obspy.core.Stream):
             plt.show()
         else:
             return fig
+
+    def polarize(self, cov_twin=3.0):
+        fltr = create_polarization_filter(self.V.data,
+                                          self.H1.data,
+                                          self.H2.data,
+                                          cov_twin,
+                                          self.stats.delta)
+        self.H1.data = self.H1.data * fltr
+        self.H2.data = self.H2.data * fltr
+        
 
 class Network:
     """
@@ -427,7 +439,7 @@ class Trace(obspy.core.Trace):
             self.data = tr.data
 
     def filter(self, *args, **kwargs):
-        self.trim(starttime=self.stats.starttime - 5)
+        self.trim(starttime=self.stats.starttime - 5, pad=True, fill_value=self.data.mean())
         super(self.__class__, self).filter(*args, **kwargs)
         self.trim(starttime=self.stats.starttime + 5)
 

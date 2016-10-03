@@ -14,7 +14,8 @@ gather = db.get_gather3c(station,
                          time,
                          time + 20)
 gather.filter('bandpass', freqmin=3.0, freqmax=20.0)
-detections = gather.detectS()
-print detections
-gather.plot(xticklabel_fmt="%H:%M:%S.%f")
+#gather.polarize()
+detections = [gather.detectS()]
+print detections[0].time, detections[0].channel
+gather.plot(detections=detections, xticklabel_fmt="%H:%M:%S.%f")
 db.close()
