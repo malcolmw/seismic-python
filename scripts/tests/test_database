@@ -5,19 +5,22 @@ from obspy.core.utcdatetime import UTCDateTime
 from gazelle.datascope import Database
 from seispy.core import Arrival, Trace
 
-db = Database('/home/shake/malcolcw/data/wfs/ramona')
-network = db.parse_network('YN')
-for i in range(1,10):
-    station = network.stations['RA0%d' % i]
-    time= UTCDateTime(year=2015, julday=003, hour=9, minute=49, second=12)
-    gather = db.get_gather3c(station,
-                             station.get_channel_set("HN"),
-                             time,
-                             time + 20)
-    detections = gather[0].pick_fzhw()
-    print detections
-    if detections:
-        gather[0].plot(detections=detections)
+#db = Database('/home/shake/malcolcw/data/wfs/ramona')
+#network = db.parse_network('YN')
+db = Database('/home/seismech-00/sjfzdb/eq_catalog/2015/SJFZ_2015')
+for origin in db.iterate_origins():
+    print origin
+#for i in range(1,10):
+#    station = network.stations['RA0%d' % i]
+#    time= UTCDateTime(year=2015, julday=003, hour=9, minute=49, second=12)
+#    gather = db.get_gather3c(station,
+#                             station.get_channel_set("HN"),
+#                             time,
+#                             time + 20)
+#    detections = gather[0].pick_fzhw()
+#    print detections
+#    if detections:
+#        gather[0].plot(detections=detections)
 #gather.filter('bandpass', freqmin=3.0, freqmax=20.0)
 #detections = [gather.detectS()]
 #gather.plot(detections=detections, xticklabel_fmt="%H:%M:%S.%f")

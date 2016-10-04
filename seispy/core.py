@@ -20,7 +20,7 @@ class Arrival(object):
     def __init__(self, station, channel, time, phase, arid=-1):
         self.station = station
         self.channel = channel
-        self.time = time
+        self.time = validate_time(time)
         self.phase = phase
         self.arid = arid
 
@@ -293,22 +293,23 @@ class Network:
 
 class Origin(object):
     def __init__(self, lat, lon, depth, time,
-                 arrivals=(),
+                 arrivals=None,
                  orid=-1,
                  evid=-1,
                  sdobs=-1):
         self.lat = lat
         self.lon = lon % 360.
         self.depth = depth
-        self.time = time
+        self.time = validate_time(time)
         self.arrivals = ()
-        self.add_arrivals(arrivals)
+        if arrivals:
+            self.add_arrivals(arrivals)
         self.orid = orid
         self.evid = evid
         self.sdobs = sdobs
 
     def __str__(self):
-        return "origin: %.4f %.4f %.4f %.4f %.2f" % (self.lat,
+        return "origin: %.4f %.4f %.4f %s %.2f" % (self.lat,
                                                      self.lon,
                                                      self.depth,
                                                      self.time,

@@ -4,7 +4,9 @@ if not _ANTELOPE_DEFINED:
 
 from antelope.datascope import *
 
-from seispy.core import Gather3C,\
+from seispy.core import Arrival,\
+                        Gather3C,\
+                        Origin,\
                         Trace
 
 class Database:
@@ -13,6 +15,87 @@ class Database:
 
     def close(self):
         self.ptr.close()
+
+    def iterate_events(self, subset=None):
+        tbl_event = self.ptr.lookup(table="event")
+        ptr = tbl_event.join("origin")
+        _ptr = ptr.subset("orid == prefor")
+        ptr.free()
+        ptr = _ptr
+        if subset:
+            _ptr = ptr.subset(subset)
+            ptr.free()
+            ptr = _ptr
+        for event in ptr.iter_record():
+            orid, evid, lat0, lon0, z0, time0 = event.getv('orid',
+                                                              'evid',
+                                                              'lat',
+                                                              'lon',
+                                                              'depth',
+                                                              'time')
+            view_origin = ptr.subset("orid == %d" % orid)
+            _view = view_origin.join('assoc', outer=True)
+            view_assoc = _view.separate('assoc')
+            _view.free()
+            view_origin.free()
+            _view = view_assoc.join('arrival')
+            view_assoc.free()
+            view_assoc = _view
+            arrivals = ()
+            for record in view_assoc.iter_record():
+                arid, station, channel, time, phase = record.getv('arid',
+                                                                  'sta',
+                                                                  'chan',
+                                                                  'time',
+                                                                  'iphase')
+                arrivals += (Arrival(station, channel, time, phase, arid=arid),)
+            origin = Origin(lat0, lon0, z0, time0,
+                            arrivals=arrivals,
+                            orid=orid,
+                            evid=evid)
+            view_assoc.free()
+            yield origin
+        ptr.free()
+
+    def iterate_origins(self, subset=None):
+        tbl_origin = self.ptr.lookup(table='origin')
+        if subset:
+            ptr = tbl_origin.subset(subset)
+            is_view = True
+        else:
+            ptr = tbl_origin
+            is_view = False
+        for origin_row in ptr.iter_record():
+            orid, evid, lat0, lon0, z0, time0 = origin_row.getv('orid',
+                                                              'evid',
+                                                              'lat',
+                                                              'lon',
+                                                              'depth',
+                                                              'time')
+            view_origin = ptr.subset("orid == %d" % orid)
+            _view = view_origin.join('assoc', outer=True)
+            view_assoc = _view.separate('assoc')
+            _view.free()
+            view_origin.free()
+            _view = view_assoc.join('arrival')
+            view_assoc.free()
+            view_assoc = _view
+            arrivals = ()
+            for record in view_assoc.iter_record():
+                arid, station, channel, time, phase = record.getv('arid',
+                                                                  'sta',
+                                                                  'chan',
+                                                                  'time',
+                                                                  'iphase')
+                arrivals += (Arrival(station, channel, time, phase, arid=arid),)
+            origin = Origin(lat0, lon0, z0, time0,
+                            arrivals=arrivals,
+                            orid=orid,
+                            evid=evid)
+            view_assoc.free()
+            yield origin
+        if is_view:
+            ptr.free()
 
     def parse_network(self, net_code):
         from seispy.core import Network

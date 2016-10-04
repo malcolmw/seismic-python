@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+from argparse import ArgumentParser
+from ConfigParser import RawConfigParser
+import os
+import shutil
+from obspy.core import read
+from gazelle.datascope import Database
+from seispy.util import MultiThreadProcess
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("database", type=str, help="input database")
+    parser.add_argument("cfg_file", type=str, help="configuration file")
+    parser.add_argument("year", type=int, help="year")
+    return parser.parse_args()
+
+def parse_config(args):
+    cfg = {}
+    config = RawConfigParser()
+    config.read(args.cfg_file)
+    cfg["rsync_server"] = config.get("General", "rsync_server")
+    cfg["n_threads"] = config.getint("General", "n_threads")
+    cfg["file_length"] = config.getfloat("General", "file_length")
+    cfg["output_format"] = config.get("General", "output_format")
+    cfg["file_match"] = config.get("General", "file_match")
+    return cfg
+
+def inputter(year):
+    if year % 4 == 0:
+        fday = 367
+    else:
+        fday = 366
+    for day in range(1, fday):
+        yield (year, day)
+
+def main_processor(date, db, cfg):
+    year, day = date
+    jday = "%03d" % day
+    work_root = os.getcwd()
+    if not os.path.exists("%d" % year):
+        os.mkdir("%d" % year)
+    os.chdir("%d" % year)
+    if not os.path.exists("continuous"):
+        os.mkdir("continuous")
+    os.chdir("continuous")
+    if not os.path.exists(jday):
+        os.mkdir(jday)
+    os.chdir(jday)
+    print "Copying data for %d/%s" % (year, jday)
+    cmd = "rsync -aP --whole-file %s/%d/%s/%s ./" % (cfg["rsync_server"], year, jday, cfg["file_match"])
+    os.system(cmd)
+    print "Data retrieved for %d/%s" % (year, jday)
+    os.chdir("../..")
+    for origin in db.iterate_events(subset="time >= _%d%s_ && time < _%d%s_"\
+            % (year, jday, year, "%03d" % (day + 1))):
+        if not os.path.exists("%d" % origin.evid):
+            os.mkdir("%d" % origin.evid)
+        os.chdir("%d" % origin.evid)
+        for wf_file in sorted(os.listdir("../continuous/%s" % jday)):
+            tr = read("../continuous/%s/%s" % (jday, wf_file))[0]
+            print "Writing file %s.%s.%d" % (tr.stats.station, tr.stats.channel, origin.evid)
+            tr.trim(starttime=origin.time, endtime=origin.time + cfg["file_length"])
+            tr.write("%s.%s.%d" % (tr.stats.station,
+                                   tr.stats.channel,
+                                   origin.evid),
+                                   format=cfg["output_format"])
+        os.chdir("..")
+    shutil.rmtree("continuous/%s" % jday)
+    os.chdir(work_root)
+    return None
+
+def outputter(obj):
+    pass
+
+def main():
+    args = parse_args()
+    print args.database
+    cfg = parse_config(args)
+    database = Database(args.database)
+    extra_args = {"input_init_args": (args.year,),
+                  "main_init_args": (database, cfg)}
+    config_params = {"n_threads": cfg["n_threads"]}
+    mtp = MultiThreadProcess(inputter,
+                            main_processor,
+                            outputter,
+                            extra_args=extra_args,
+                            config_params=config_params)
+    mtp.start()
+    database.close()
+
+if __name__ == "__main__":
+    main()
