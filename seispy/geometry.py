@@ -50,6 +50,10 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
+def hypocentral_distance(lat1, lon1, z1, lat2, lon2, z2):
+    return sqrt((gps2DistAzimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
+                + (z1 - z2) ** 2)
+
 def sph2geo(r, theta, phi):
     z = EARTH_RADIUS - r
     lat = 90 - degrees(theta)
