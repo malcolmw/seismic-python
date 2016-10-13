@@ -34,6 +34,7 @@ from math import acos,\
                  sin,\
                  sqrt
 import numpy as np
+from obspy.core.util.geodetics import gps2DistAzimuth
 
 EARTH_RADIUS = 6371.
 
