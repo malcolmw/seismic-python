@@ -1,14 +1,7 @@
 from seispy import _ANTELOPE_DEFINED
+
 if not _ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
-
-from antelope.datascope import *
-
-from seispy.core import Arrival,\
-                        Gather3C,\
-                        Origin,\
-                        Trace
-
 class Database:
     def __init__(self, path, mode='r'):
         self.ptr = dbopen(path, mode)
@@ -16,48 +9,24 @@ class Database:
     def close(self):
         self.ptr.close()
 
-    def iterate_events(self, subset=None):
+    def iterate_events(self, subset=None, parse_arrivals=True, parse_magnitudes=True):
         tbl_event = self.ptr.lookup(table="event")
-        ptr = tbl_event.join("origin")
-        _ptr = ptr.subset("orid == prefor")
-        ptr.free()
-        ptr = _ptr
+        view = tbl_event.join("origin")
         if subset:
-            _ptr = ptr.subset(subset)
-            ptr.free()
-            ptr = _ptr
-        for event in ptr.iter_record():
-            orid, evid, lat0, lon0, z0, time0 = event.getv('orid',
-                                                              'evid',
-                                                              'lat',
-                                                              'lon',
-                                                              'depth',
-                                                              'time')
-            view_origin = ptr.subset("orid == %d" % orid)
-            _view = view_origin.join('assoc', outer=True)
-            view_assoc = _view.separate('assoc')
-            _view.free()
-            view_origin.free()
-            _view = view_assoc.join('arrival')
-            view_assoc.free()
-            view_assoc = _view
-            arrivals = ()
-            for record in view_assoc.iter_record():
-                arid, station, channel, time, phase = record.getv('arid',
-                                                                  'sta',
-                                                                  'chan',
-                                                                  'time',
-                                                                  'iphase')
-                arrivals += (Arrival(station, channel, time, phase, arid=arid),)
-            origin = Origin(lat0, lon0, z0, time0,
-                            arrivals=arrivals,
-                            orid=orid,
-                            evid=evid)
-            view_assoc.free()
-            yield origin
-        ptr.free()
+            _view = view.subset(subset)
+            view.free()
+            view = _view
+        event_view = view.separate("event")
+        view.free()
+        for event in event_view.iter_record():
+            evid = event.getv("evid")[0]
+            yield self.parse_event(evid,
+                                   parse_arrivals=parse_arrivals,
+                                   parse_magnitudes=parse_magnitudes)
+        event_view.free()
 
-    def iterate_origins(self, subset=None):
+
+    def iterate_origins(self, subset=None, parse_arrivals=True, parse_magnitudes=True):
         tbl_origin = self.ptr.lookup(table='origin')
         if subset:
             ptr = tbl_origin.subset(subset)
@@ -72,16 +41,16 @@ class Database:
                                                               'lon',
                                                               'depth',
                                                               'time')
-            view_origin = ptr.subset("orid == %d" % orid)
-            _view = view_origin.join('assoc', outer=True)
-            view_assoc = _view.separate('assoc')
+            origin_view = ptr.subset("orid == %d" % orid)
+            _view = origin_view.join('assoc', outer=True)
+            assoc_view = _view.separate('assoc')
             _view.free()
-            view_origin.free()
-            _view = view_assoc.join('arrival')
-            view_assoc.free()
-            view_assoc = _view
+            origin_view.free()
+            _view = assoc_view.join('arrival')
+            assoc_view.free()
+            assoc_view = _view
             arrivals = ()
-            for record in view_assoc.iter_record():
+            for record in assoc_view.iter_record():
                 arid, station, channel, time, phase = record.getv('arid',
                                                                   'sta',
                                                                   'chan',
@@ -92,10 +61,72 @@ class Database:
                             arrivals=arrivals,
                             orid=orid,
                             evid=evid)
-            view_assoc.free()
+            assoc_view.free()
             yield origin
         if is_view:
             ptr.free()
+
+    def parse_event(self, evid, parse_arrivals=True, parse_magnitudes=True):
+        tbl_event = self.ptr.lookup(table="event")
+        view = tbl_event.subset("evid == %d" % evid)
+        view.record = 0
+        prefor = view.getv("prefor")[0]
+        _view = view.join("origin")
+        view.free()
+        view = _view
+        origins=()
+        for origin in view.iter_record():
+            orid = origin.getv("orid")[0]
+            origins += (self.parse_origin(orid,
+                                          parse_arrivals=parse_arrivals,
+                                          parse_magnitudes=parse_magnitudes), )
+        event = Event(evid, origins=origins, prefor=prefor)
+        view.free()
+        return event
+
+    def parse_origin(self, orid, parse_arrivals=True, parse_magnitudes=True):
+        tbl_origin = self.ptr.lookup(table="origin")
+        origin_view = tbl_origin.subset("orid == %d" % orid)
+        origin_view.record = 0
+        orid, evid, lat0, lon0, z0, time0 = origin_view.getv('orid',
+                                                             'evid',
+                                                             'lat',
+                                                             'lon',
+                                                             'depth',
+                                                             'time')
+        origin = Origin(lat0, lon0, z0, time0,
+                        orid=orid,
+                        evid=evid)
+        if parse_arrivals:
+            _view = origin_view.join('assoc', outer=True)
+            assoc_view = _view.separate('assoc')
+            _view.free()
+            _view = assoc_view.join('arrival')
+            assoc_view.free()
+            assoc_view = _view
+            arrivals = ()
+            for record in assoc_view.iter_record():
+                arid, station, channel, time, phase = record.getv('arid',
+                                                                  'sta',
+                                                                  'chan',
+                                                                  'time',
+                                                                  'iphase')
+                arrivals += (Arrival(station, channel, time, phase, arid=arid),)
+            assoc_view.free()
+            origin.add_arrivals(arrivals)
+        if parse_magnitudes:
+            netmag_view = origin_view.join("netmag", outer=True)
+            _view = netmag_view.separate("netmag")
+            netmag_view.free()
+            netmag_view = _view
+            magnitudes = ()
+            for netmag_row in netmag_view.iter_record():
+                magid, mag, magtype = netmag_row.getv('magid', 'magnitude', 'magtype')
+                magnitudes += (Magnitude(magtype, mag, magid=magid), )
+            netmag_view.free()
+            origin.add_magnitudes(magnitudes)
+        return origin
+        
 
     def parse_network(self, net_code):
         from seispy.core import Network
@@ -115,16 +146,16 @@ class Database:
         from seispy.core import Channel, Station
         tbl_sitechan = self.ptr.lookup(table='sitechan')
         tbl_site = self.ptr.lookup(table='site')
-        view_sitechan = tbl_sitechan.subset("sta =~ /%s/" % code)
-        view_site = tbl_site.subset("sta =~ /%s/" % code)
-        view_site.record = 0
-        lat, lon, elev, ondate, offdate = view_site.getv('lat',
+        sitechan_view = tbl_sitechan.subset("sta =~ /%s/" % code)
+        site_view = tbl_site.subset("sta =~ /%s/" % code)
+        site_view.record = 0
+        lat, lon, elev, ondate, offdate = site_view.getv('lat',
                                                          'lon',
                                                          'elev',
                                                          'ondate',
                                                          'offdate')
         station = Station(code, lon, lat, elev, ondate=ondate, offdate=offdate)
-        for record in view_sitechan.iter_record():
+        for record in sitechan_view.iter_record():
             code, ondate, offdate = record.getv('chan', 'ondate', 'offdate')
             if not code[1] == 'H' and not code[1] == 'N':
                 continue
@@ -153,3 +184,13 @@ class Database:
                              starttime=starttime,
                              endtime=endtime)]
         return Gather3C(traces)
+
+from antelope.datascope import *
+
+from seispy.core import Arrival,\
+                        Event,\
+                        Gather3C,\
+                        Magnitude,\
+                        Origin,\
+                        Trace
+
