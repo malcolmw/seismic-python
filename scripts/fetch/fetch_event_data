@@ -12,6 +12,7 @@ def parse_args():
     parser.add_argument("database", type=str, help="input database")
     parser.add_argument("cfg_file", type=str, help="configuration file")
     parser.add_argument("year", type=int, help="year")
+    parser.add_argument("-s", "--subset", type=str, help="subset expression")
     return parser.parse_args()
 
 def parse_config(args):
@@ -33,7 +34,7 @@ def inputter(year):
     for day in range(1, fday):
         yield (year, day)
 
-def main_processor(date, db, cfg):
+def main_processor(date, db, cfg, args):
     year, day = date
     jday = "%03d" % day
     work_root = os.getcwd()
@@ -51,8 +52,12 @@ def main_processor(date, db, cfg):
     os.system(cmd)
     print "Data retrieved for %d/%s" % (year, jday)
     os.chdir("../..")
-    for origin in db.iterate_events(subset="time >= _%d%s_ && time < _%d%s_"\
-            % (year, jday, year, "%03d" % (day + 1))):
+    subset = "time >= _%d%s_ && time < _%d%s_"\
+            % (year, jday, year, "%03d" % (day + 1))
+    if args.subset:
+        subset += " && " + args.subset
+    for event in db.iterate_events(subset=subset):
+        origin = event.get_prefor()
         if not os.path.exists("%d" % origin.evid):
             os.mkdir("%d" % origin.evid)
         os.chdir("%d" % origin.evid)
@@ -74,11 +79,10 @@ def outputter(obj):
 
 def main():
     args = parse_args()
-    print args.database
     cfg = parse_config(args)
     database = Database(args.database)
     extra_args = {"input_init_args": (args.year,),
-                  "main_init_args": (database, cfg)}
+                  "main_init_args": (database, cfg, args)}
     config_params = {"n_threads": cfg["n_threads"]}
     mtp = MultiThreadProcess(inputter,
                             main_processor,
