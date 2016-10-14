@@ -79,7 +79,7 @@ def outputter(obj):
 def main():
     args = parse_args()
     cfg = parse_config(args)
-    database = Database(args.database)
+    database = Database(os.path.abspath(args.database))
     extra_args = {"input_init_args": (args.year,),
                   "main_init_args": (database, cfg, args)}
     config_params = {"n_threads": cfg["n_threads"]}
