@@ -75,7 +75,8 @@ def main(cfg):
                     for arrivalP in arrivals['P']:
                         if arrival.station == arrivalP.station:
                             _arrivals += [arrival]
-                arrivals['S'] = np.random.choice(_arrivals, size=nSarr)
+                if nSarr > 0:
+                    arrivals['S'] = np.random.choice(_arrivals, size=nSarr)
                 for phase in ('P', 'S'):
                     for arrival in arrivals[phase]:
                         arid = tbl_arrival.nextid("arid")
