@@ -123,7 +123,7 @@ class MultiThreadProcess(object):
             if 'output_q_max_size' not in config_params:
                 config_params['output_q_max_size'] = 100
         else:
-            config_params = {'n_threads': cpu_count(),
+            config_params = {'n_threads': cpu_count() / 2,
                              'input_q_max_size': 100,
                              'output_q_max_size': 100}
         self.extra_args = extra_args

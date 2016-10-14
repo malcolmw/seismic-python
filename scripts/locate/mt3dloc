@@ -8,8 +8,7 @@ from seispy.core import Arrival,\
                         Origin
 from seispy.locate import Locator
 from seispy.util import MultiThreadProcess
-from gazelle.datascope import closing,\
-                               dbopen
+from gazelle.datascope import Database
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -36,33 +35,8 @@ def parse_config(args):
     return cfg
 
 def getter(db):
-    tbl_origin = db.lookup(table="origin")
-    tbl_origin = tbl_origin.sort("time")
-    _tbl_origin = tbl_origin.join("event")
-    tbl_origin.free()
-    tbl_origin = _tbl_origin
-    _tbl_origin = tbl_origin.subset("orid == prefor")
-    tbl_origin.free()
-    tbl_origin = _tbl_origin
-    _tbl_origin = tbl_origin.join("origerr", outer=True)
-    tbl_origin.free()
-    tbl_origin = _tbl_origin
-    for record in tbl_origin.iter_record():
-        orid, evid, lat0, lon0, depth0, t0, sdobs\
-                = record.getv("orid", "evid", "lat", "lon", "depth", "time", "sdobs")
-        view = tbl_origin.subset("orid == %d" % orid)
-        _view = view.join("assoc")
-        view.free()
-        view = _view
-        _view = view.join("arrival")
-        view.free()
-        view = _view
-        arrivals = []
-        for arrival in view.iter_record():
-            sta, arrtime, phase, arid = arrival.getv("sta", "arrival.time", "phase", "arid")
-            arrivals += [Arrival(sta, arrtime, phase, arid=arid)]
-        origin = Origin(lat0, lon0, depth0, t0, arrivals=arrivals, evid=evid, sdobs=sdobs)
-        view.free()
+    #for origin in db.iterate_events(parse_magnitudes=False):
+    for origin in db.iterate_origins(parse_magnitudes=False):
         yield origin
 
 def main_processor(origin, cfg):
@@ -82,41 +56,25 @@ def outputter(origin, db, cfg):
         auth = cfg['author'] + ":reloc"
     elif cfg['mode'] == 'locate':
         auth = cfg['author'] + ":loc"
+    origin.author = auth
     print "writing", origin
-    tbl_origin = db.lookup(table="origin")
-    tbl_assoc = db.lookup(table="assoc")
-    orid = tbl_origin.nextid("orid")
-    tbl_origin.record = tbl_origin.addnull()
-    tbl_origin.putv(("orid", orid),
-                    ("evid", origin.evid),
-                    ("lat", origin.lat),
-                    ("lon", origin.lon),
-                    ("depth", origin.depth),
-                    ("time", origin.time),
-                    ("auth", auth),
-                    ("ndef", len(origin.arrivals)),
-                    ("nass", len(origin.arrivals)))
-    for arrival in origin.arrivals:
-        tbl_assoc.record = tbl_assoc.addnull()
-        tbl_assoc.putv(("sta", arrival.sta),
-                       ("phase", arrival.phase),
-                       ("arid", arrival.arid),
-                       ("orid", orid))
+    db.write_origin(origin)
 
 def main():
-    with closing(dbopen(args.db[0], 'r+')) as db:
-        config_params={'n_threads': cfg['n_threads'],
-                       'input_q_max_size': cfg['input_q_size'],
-                       'output_q_max_size': cfg['output_q_size']}
-        extra_args={'input_init_args': (db,),
-                     'main_init_args': (cfg,),
-                     'output_init_args': (db, cfg)}
-        mtp = MultiThreadProcess(getter,
-                                 main_processor,
-                                 outputter,
-                                 extra_args=extra_args,
-                                 config_params=config_params)
-        mtp.start()
+    db = Database(args.db[0], mode='r+')
+    config_params={'n_threads': cfg['n_threads'],
+                   'input_q_max_size': cfg['input_q_size'],
+                   'output_q_max_size': cfg['output_q_size']}
+    extra_args={'input_init_args': (db,),
+                 'main_init_args': (cfg,),
+                 'output_init_args': (db, cfg)}
+    mtp = MultiThreadProcess(getter,
+                             main_processor,
+                             outputter,
+                             extra_args=extra_args,
+                             config_params=config_params)
+    mtp.start()
+    db.close()
 
 if __name__ == "__main__":
     args = parse_args()

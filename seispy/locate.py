@@ -20,7 +20,7 @@ class Locator(object):
         self.mmttf, self.grid = self._initialize_mmap(origin)
         grid = self.grid
         arrivals = [arrival for arrival in origin.arrivals\
-                            if arrival.sta in self.mmttf]
+                            if arrival.station in self.mmttf]
         if not self.check_nsta(arrivals):
             print "unable to relocate event, not enough stations"
             return None
@@ -45,8 +45,8 @@ class Locator(object):
     def check_nsta(self, arrivals):
         stations = []
         for arrival in arrivals:
-            if arrival.sta not in stations:
-                stations += [arrival.sta]
+            if arrival.station not in stations:
+                stations += [arrival.station]
         if len(stations) >= self.cfg['min_nsta']:
             return True
         else:
@@ -75,7 +75,8 @@ class Locator(object):
         if not (EARTH_RADIUS - grid['mr'] < origin.depth < EARTH_RADIUS - grid['r0'])\
                 or not (grid['lat0'] < origin.lat < grid['mlat'])\
                 or not (grid['lon0'] < origin.lon < grid['mlon']):
-            print "unable to use starting location outside of grid, performing grid search"
+            #print "unable to use starting location outside of grid, performing grid search"
+            print "unable to locate, starting location outside of grid"
             return None
             return self.locate(origin)
         r0 = EARTH_RADIUS - origin.depth
@@ -95,13 +96,13 @@ class Locator(object):
                       sdobs=sdobs0)
 
     def _get_node_tt(self, arrival, ir, itheta, iphi):
-        f = self.mmttf[arrival.sta][arrival.phase]
+        f = self.mmttf[arrival.station][arrival.phase]
         offset = self.byteoffset[ir, itheta, iphi]
         f.seek(int(offset))
         return struct.unpack("f", f.read(4))[0]
 
     def _get_tt(self, arrival, r, theta, phi):
-        f = self.mmttf[arrival.sta][arrival.phase]
+        f = self.mmttf[arrival.station][arrival.phase]
         nr = self.grid['nr']
         ntheta = self.grid['ntheta']
         nphi = self.grid['nphi']
@@ -158,7 +159,7 @@ class Locator(object):
     def _initialize_mmap(self, origin):
         mmttf, grid = {}, None
         for arrival in origin.arrivals:
-            sta = arrival.sta
+            sta = arrival.station
             try:
                 f = open(os.path.abspath(os.path.join(self.cfg['tt_dir'], "%s.%s.tt"\
                         % (sta, arrival.phase))), 'rb')
