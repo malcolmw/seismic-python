@@ -28,7 +28,6 @@ kwargs = {'name': 'seispy',
            'scripts': ['scripts/fetch/fetch_event_data',
                        'scripts/fm3d_ttimes/fm3d_ttimes',
                        'scripts/locate/mt3dloc',
-                       'scripts/synthetics/make_synthetics',
                        'scripts/synthetics/mtsynth',
                        'scripts/synthetics/synthetics2db']}
 
