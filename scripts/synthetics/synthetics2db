@@ -43,7 +43,7 @@ def main(cfg):
             lat0, lon0, z0, t0 = [float(v) for v in srcline.split()]
             for i in range(cfg['niter']):
                 orid = tbl_origin.nextid('orid')
-                print "updating event:", evid, "orid:", orid, i
+                print "updating event:", evid, "orid:", orid, i + 1
                 if i == 0:
                     tbl_event.record = tbl_event.addnull()
                     tbl_event.putv(("evid", evid),
@@ -55,7 +55,7 @@ def main(cfg):
                                 ("lat", lat0),
                                 ("lon", lon0),
                                 ("depth", z0),
-                                ("time", t0),
+                                ("time", float(t0)),
                                 ("auth", cfg['author']))
                                 
                 arrivals = {'P': [], 'S': []}
@@ -66,14 +66,14 @@ def main(cfg):
                         sta = stations[i]
                         i += 1
                         ta = t0 + float(arrline.split()[4])
-                        arrivals[phase] += [Arrival(sta.name, ta, phase)]
+                        arrivals[phase] += [Arrival(sta.name, 'ILSB', ta, phase)]
                 nParr = int(np.random.random(1)[0] * (cfg['maxsta'] - cfg['minsta'])) + cfg['minsta']
                 nSarr = int(np.random.random(1)[0] * nParr)
                 arrivals['P'] = np.random.choice(arrivals['P'], size=nParr)
                 _arrivals = []
                 for arrival in arrivals['S']:
                     for arrivalP in arrivals['P']:
-                        if arrival.sta == arrivalP.sta:
+                        if arrival.station == arrivalP.station:
                             _arrivals += [arrival]
                 arrivals['S'] = np.random.choice(_arrivals, size=nSarr)
                 for phase in ('P', 'S'):
@@ -81,19 +81,18 @@ def main(cfg):
                         arid = tbl_arrival.nextid("arid")
                         tbl_assoc.record = tbl_assoc.addnull()
                         tbl_arrival.record = tbl_arrival.addnull()
-                        #print "updating arrival:", arrival.sta, phase, arrival.time,  arid
+                        #print "updating arrival:", arrival.station, phase, arrival.time,  arid
                         scale = 0.5 if phase == 'P' else 1.0
                         noise = np.random.normal(scale=scale)
                         arrtime = arrival.time + noise
-                        print "adding %.3f seconds of noise to arrival:" % noise, arrival.sta, phase, arid
                         tbl_assoc.putv(("arid", arid),
                                        ("orid", orid),
                                        ("phase", phase),
-                                       ("sta", arrival.sta))
+                                       ("sta", arrival.station))
                         tbl_arrival.putv(("arid", arid),
                                          ("iphase", phase),
-                                         ("sta", arrival.sta),
-                                         ("time", arrtime))
+                                         ("sta", arrival.station),
+                                         ("time", float(arrtime)))
 
 if __name__ == "__main__":
     cfg = parse_config(sys.argv[1])
