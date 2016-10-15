@@ -21,7 +21,8 @@ def parse_config(args):
     config.read(args.cfg_file)
     cfg["rsync_server"] = config.get("General", "rsync_server")
     cfg["n_threads"] = config.getint("General", "n_threads")
-    cfg["file_length"] = config.getfloat("General", "file_length")
+    cfg["start_lead"] = config.getfloat("General", "start_lead")
+    cfg["end_lag"] = config.getfloat("General", "end_lag")
     cfg["output_format"] = config.get("General", "output_format")
     cfg["file_match"] = config.get("General", "file_match")
     return cfg
@@ -63,7 +64,7 @@ def main_processor(date, db, cfg, args):
         for wf_file in sorted(os.listdir("../continuous/%s" % jday)):
             tr = read("../continuous/%s/%s" % (jday, wf_file))[0]
             print "Writing file %s.%s.%d" % (tr.stats.station, tr.stats.channel, origin.evid)
-            tr.trim(starttime=origin.time, endtime=origin.time + cfg["file_length"])
+            tr.trim(starttime=origin.time - cfg["start_lead"], endtime=origin.time + cfg["end_lag"])
             tr.write("%s.%s.%d" % (tr.stats.station,
                                    tr.stats.channel,
                                    origin.evid),
