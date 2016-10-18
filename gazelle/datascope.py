@@ -91,15 +91,19 @@ class Database:
             except DbfindBeginning:
                 raise IOError("orid doesn't exist")
         tbl_origin.record = record
-        orid, evid, lat0, lon0, z0, time0 = tbl_origin.getv('orid',
-                                                            'evid',
-                                                            'lat',
-                                                            'lon',
-                                                            'depth',
-                                                            'time')
+        orid, evid, lat0, lon0, z0, time0, nass, ndef = tbl_origin.getv('orid',
+                                                                        'evid',
+                                                                        'lat',
+                                                                        'lon',
+                                                                        'depth',
+                                                                        'time',
+                                                                        'nass',
+                                                                        'ndef')
         origin = Origin(lat0, lon0, z0, time0,
                         orid=orid,
-                        evid=evid)
+                        evid=evid,
+                        nass=nass,
+                        ndef=ndef)
         if parse_arrivals:
             self.groups["assoc"][0].record =\
                     self.groups["assoc"][0].find("orid == %d" % orid)
