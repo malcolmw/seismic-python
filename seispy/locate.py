@@ -82,7 +82,7 @@ class Locator(object):
         r0 = EARTH_RADIUS - origin.depth
         theta0 = radians(90 - origin.lat)
         phi0 = radians(origin.lon % 360.)
-        t0 = origin.time
+        t0 = float(origin.time)
         soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
         if soln ==  None:
             return None
@@ -143,9 +143,9 @@ class Locator(object):
                 in [(i, j, k) for i in range(nr)\
                               for j in range(ntheta)\
                               for k in range(nphi)]:
-            at = [arr.time for arr in origin.arrivals]
+            at = [float(arr.time) for arr in origin.arrivals]
             tt = [self._get_node_tt(arr, ir, itheta, iphi) for arr in origin.arrivals]
-            ots = [at[i] - tt[i] for i in range(len(at))]
+            ots = [float(at[i] - tt[i]) for i in range(len(at))]
             ot = np.mean(ots)
             misfit = sum([abs((ot + tt[i]) - at[i]) for i in range(len(at))])
             if misfit < best_fit:
@@ -203,7 +203,7 @@ class Locator(object):
         return mmttf, grid
 
     def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals, itern=0):
-        res_start = np.array([arrival.time\
+        res_start = np.array([float(arrival.time)\
                               - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
                               for arrival in arrivals])
         sdobs_start = np.sqrt(np.sum(np.square(res_start))) / (len(res_start) - 4)
@@ -246,7 +246,7 @@ class Locator(object):
             dVdp11 = V111 - V110
             dVdp = np.mean([dVdp00, dVdp10, dVdp01, dVdp11])
             D[i] = [dVdr, dVdt, dVdp, 1]
-            res[i] = arrival.time - (t0 + self._get_tt(arrival, r0, theta0, phi0))
+            res[i] = float(arrival.time) - (t0 + self._get_tt(arrival, r0, theta0, phi0))
         delU, res_, rank, s = np.linalg.lstsq(D, res)
         delr, deltheta, delphi, delt = delU
         r0 += delr * self.grid['dr']
@@ -265,7 +265,7 @@ class Locator(object):
                 or not (gtheta0 - (gntheta - 1) * gdtheta < theta0 < gtheta0)\
                 or not (gphi0 < phi0 < gphi0 + (gnphi - 1) * gdphi):
             return None
-        res0 = np.array([arrival.time - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
+        res0 = np.array([float(arrival.time) - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
                 for arrival in arrivals])
         sdobs0 = np.sqrt(np.sum(np.square(res0))) / (len(res0) - 4)
         arrivals = self.remove_outliers(r0, theta0, phi0, t0, arrivals)
@@ -283,7 +283,7 @@ class Locator(object):
         return r0, theta0, phi0, t0, sdobs0, res0, arrivals
 
     def remove_outliers(self, r0, theta0, phi0, t0, arrivals):
-        res = np.array([arr.time - (t0 + self._get_tt(arr, r0, theta0, phi0))\
+        res = np.array([float(arr.time) - (t0 + self._get_tt(arr, r0, theta0, phi0))\
                     for arr in arrivals])
         new_arrivals = []
         for i in range(len(arrivals)):

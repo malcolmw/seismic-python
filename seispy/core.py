@@ -316,7 +316,9 @@ class Origin(object):
                  magnitudes=None,
                  orid=-1,
                  evid=-1,
-                 sdobs=-1):
+                 sdobs=-1,
+                 nass=-1,
+                 ndef=-1):
         self.lat = lat
         self.lon = lon % 360.
         self.depth = depth
@@ -330,6 +332,8 @@ class Origin(object):
         self.orid = orid
         self.evid = evid
         self.sdobs = sdobs
+        self.nass = nass
+        self.ndef = ndef
 
     def __str__(self):
         return "origin: %.4f %.4f %.4f %s %.2f" % (self.lat,
