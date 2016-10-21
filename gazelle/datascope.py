@@ -132,14 +132,16 @@ class Database:
         return origin
         
 
-    def parse_network(self, net_code):
+    def parse_network(self, net_code=None):
         from seispy.core import Network
         network = Network(net_code)
         tbl_snetsta = self.tables['snetsta']
-        view = tbl_snetsta.subset("snet =~ /%s/" % net_code)
-        _view = view.sort("sta", unique=True)
-        view.free()
-        view = _view
+        if net_code:
+            view = tbl_snetsta.subset("snet =~ /%s/" % net_code)
+            _view = view.sort("sta", unique=True)
+            view.free()
+            view = _view
+        view = tbl_snetsta.sort("snet")
         for record in view.iter_record():
             code = record.getv('sta')[0]
             network.add_station(self.parse_station(code))

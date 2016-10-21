@@ -370,7 +370,7 @@ class TimeSpan(object):
 class Station(object):
     def __init__(self, name, lon, lat, elev, ondate=-1, offdate=-1):
         self.name = name
-        self.lon = lon
+        self.lon = lon % 360.
         self.lat = lat
         self.elev = elev
         self.ondate = validate_time(ondate)

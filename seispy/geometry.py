@@ -94,6 +94,25 @@ def rotation_matrix(axis, theta):
     else:
         raise ValueError("invalid axis")
 
+def quadrant_coverage(source, receivers):
+    q1, q2, q3, q4 = False, False, False, False
+    lon0, lat0 = source.lon, source.lat
+    for rx in receivers:
+        rlon, rlat = rx.lon, rx.lat
+        if lat0 < rlat and lon0 < rlon:
+            q1 = True
+        elif lat0 < rlat and rlon < lon0:
+            q2 = True
+        elif rlat < lat0 and rlon < lon0:
+            q3 = True
+        elif rlat < lat0 and lon0 < rlon:
+            q4 = True
+    coverage = 0.0
+    for q in q1, q2, q3, q4:
+        if q:
+            coverage += 1.0
+    return coverage / 4.0
+
 class Vector(np.ndarray):
 
     def __new__(cls, v):
