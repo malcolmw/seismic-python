@@ -1,3 +1,6 @@
+from seispy.signal.statistics import f90trigger,\
+                                     pai_k,\
+                                     pai_s
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -481,8 +484,3 @@ def _trigger_onset(cft, on, off):
     ons = ons[idx]
     offs = offs[idx]
     return [list(a) for a in zip(ons, offs)] 
-
-from seispy.core import Detection
-from seispy.signal.statistics import f90trigger,\
-                                     pai_k,\
-                                     pai_s

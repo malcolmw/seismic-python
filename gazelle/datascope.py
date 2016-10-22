@@ -11,8 +11,10 @@ from seispy.station import Channel,\
 from seispy.trace import Trace
 if _ANTELOPE_DEFINED:
     from antelope.datascope import *
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
+import numpy as np
 from math import sqrt
 
 if not _ANTELOPE_DEFINED:
@@ -239,7 +241,7 @@ class Database:
         view.free()
         return virtual_network
 
-    def plot_origin(self, origin, **kwargs):
+    def plot_origin(self, origin, topography=None, **kwargs):
         default_kwargs = {"resolution": 'c'}
         _kwargs = {}
         for kw in default_kwargs:
@@ -257,17 +259,32 @@ class Database:
         y0 = (ymax + ymin) / 2
         extent = max([sqrt((X[i] - x0) ** 2
                            + (Y[i] - y0) ** 2)\
-                      for i in range(len(X))]) * 2.1
+                      for i in range(len(X))]) * 1.1
+        extent = max(0.85, extent)
         m = Basemap(llcrnrlon=x0 - extent,
                     llcrnrlat=y0 - extent,
                     urcrnrlon=x0 + extent,
                     urcrnrlat=y0 + extent,
                     **kwargs)
-        m.drawmapboundary()
+#        if isinstance(topography, Surface):
+#            surface = topography
+#            m.pcolormesh(surface.XX,
+#                         surface.YY,
+#                         surface.ZZ, cmap=mpl.cm.terrain)
+#            tX = np.linspace(x0 - extent, x0  + extent, 200)
+#            tY = np.linspace(y0 - extent, y0 + extent, 200)
+#            tXX, tYY = np.meshgrid(tX, tY, indexing='ij')
+#            tZZ = np.empty(shape=tXX.shape)
+#            for i in range(tXX.shape[0]):
+#                for j in range(tXX.shape[1]):
+#                    tZZ[i, j] = geoid(tXX[i, j] - 360., tYY[i, j])
+#            m.pcolormesh(tXX, tYY, tZZ, cmap=mpl.cm.terrain)
+#        else:
         m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
                       service='USA_Topo_Maps')
-        m.drawcoastlines()
-        m.scatter(X, Y, marker="v", color="g")
+        m.drawmapboundary()
+        m.scatter(lon0, lat0, marker="*", color="r", s=100)
+        m.scatter(X, Y, marker="v", color="g", s=50)
         plt.show()
 
     def write_origin(self, origin):

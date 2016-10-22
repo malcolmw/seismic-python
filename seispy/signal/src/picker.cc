@@ -124,7 +124,7 @@ vector<double> kurtosis(vector<double> const &tr, int n_kurt) {
         numer = inv*quad;
         denom = pow(inv*square, 2.0);
         cft[i] = numer/denom - 3.0;
-        if (isnan(cft[i])) {
+        if (std::isnan(cft[i])) {
             cft[i] = 0;
         }
     }
