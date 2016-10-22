@@ -34,7 +34,8 @@ from math import acos,\
                  sin,\
                  sqrt
 import numpy as np
-from obspy.core.util.geodetics import gps2DistAzimuth
+#from obspy.core.util.geodetics import gps2DistAzimuth
+from obspy.geodetics.base import gps2dist_azimuth
 
 EARTH_RADIUS = 6371.
 
@@ -52,7 +53,8 @@ def geo2sph(lat, lon, z):
     return r, theta, phi
 
 def hypocentral_distance(lat1, lon1, z1, lat2, lon2, z2):
-    return sqrt((gps2DistAzimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
+    #return sqrt((gps2DistAzimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
+    return sqrt((gps2dist_azimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
                 + (z1 - z2) ** 2)
 
 def sph2geo(r, theta, phi):

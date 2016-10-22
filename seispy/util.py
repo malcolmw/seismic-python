@@ -127,19 +127,19 @@ class MultiThreadProcess(object):
                              'input_q_max_size': 100,
                              'output_q_max_size': 100}
         self.extra_args = extra_args
-        #initialize the object attributes
+        # initialize the object attributes
         self.config_params = config_params
-        #configure IO and processing threads
+        # configure IO and processing threads
         self.input_q = Queue(self.config_params['input_q_max_size'])
         self.output_q = Queue(self.config_params['output_q_max_size'])
         self.input_process = _InputProcess(inputter,
-                                          self.input_q,
-                                          *extra_args['input_init_args'],
-                                          **extra_args['input_init_kwargs'])
+                                           self.input_q,
+                                           *extra_args['input_init_args'],
+                                           **extra_args['input_init_kwargs'])
         self.output_process = _OutputProcess(outputter,
-                                            self.output_q,
-                                            *extra_args['output_init_args'],
-                                            **extra_args['output_init_kwargs'])
+                                             self.output_q,
+                                             *extra_args['output_init_args'],
+                                             **extra_args['output_init_kwargs'])
         self.main_pool = _MainPool(main_processor, self)
 
     def start(self):
@@ -157,6 +157,7 @@ class MultiThreadProcess(object):
         self.output_process.signal_kill()
         while self.output_process.is_alive():
             sleep(1)
+
 
 class _InputProcess(object):
     """

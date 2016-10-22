@@ -4,6 +4,7 @@ import numpy as np
 import obspy.core
 from obspy.core.utcdatetime import UTCDateTime
 
+
 class Trace(obspy.core.Trace):
     """
     .. todo::

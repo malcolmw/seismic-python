@@ -25,11 +25,11 @@ kwargs = {'name': 'seispy',
                          'seispy.locate',
                          'seispy.util',
                          'seispy.velocity'],
-           'scripts': ['scripts/fetch/fetch_event_data',
-                       'scripts/fm3d_ttimes/fm3d_ttimes',
-                       'scripts/locate/mt3dloc',
-                       'scripts/synthetics/mtsynth',
-                       'scripts/synthetics/synthetics2db']}
+          'scripts': ['scripts/fetch/fetch_event_data',
+                      'scripts/fm3d_ttimes/fm3d_ttimes',
+                      'scripts/locate/mt3dloc',
+                      'scripts/synthetics/mtsynth',
+                      'scripts/synthetics/synthetics2db']}
 
 # Get some information about BLAS and LAPACK libraries.
 blas_opt = get_info('blas', notfound_action=2)
@@ -54,11 +54,11 @@ kwargs['ext_modules'] = [Extension('seispy.signal.statistics',
                                    library_dirs=lib_dirs,
                                    extra_link_args=['-llapack', '-lblas']),
                          Extension('seispy.signal.detect',
-                                    sources=['seispy/signal/src/detect.cc',
-                                             'seispy/signal/src/picker.cc'],
-                                    include_dirs=[np_get_include(),
-                                                  eigen_path],
-                                    extra_compile_args=['-O3'])]
+                                   sources=['seispy/signal/src/detect.cc',
+                                            'seispy/signal/src/picker.cc'],
+                                   include_dirs=[np_get_include(),
+                                                 eigen_path],
+                                   extra_compile_args=['-O3'])]
 
 # If $ANTELOPE environment variable is not initialized, install only the
 # portions of the distribution that will operate independently of
@@ -81,7 +81,8 @@ kwargs['packages'] = ['seispy', 'seispy.signal', 'gazelle']
 kwargs['package_dir'] = {'seispy': 'seispy',
                          'gazelle': 'gazelle'}
 kwargs['ext_modules'] += [Extension("gazelle.response",
-                                    ["gazelle/responsemodule/responsemodule.c"],
+                                    ["gazelle/responsemodule/"
+                                     "responsemodule.c"],
                                     include_dirs=["%s/include" % antelope_dir],
                                     libraries=['coords',
                                                'alk',
