@@ -1,6 +1,8 @@
+from gazelle.datascope import Dbptr
 from seispy.signal.statistics import f90trigger,\
                                      pai_k,\
                                      pai_s
+from seispy.util import validate_time
 import os
 import matplotlib.pyplot as plt
 import numpy as np
@@ -63,7 +65,7 @@ class Trace(obspy.core.Trace):
                                                        kwargs['endtime']))
             if dbptr.record_count == 0:
                 raise IOError("no data found")
-            st = Stream()
+            st = obspy.core.Stream()
             for record in dbptr.iter_record():
                 st += obspy.core.read(record.filename()[1],
                            starttime=starttime,
@@ -74,12 +76,101 @@ class Trace(obspy.core.Trace):
             self.data = tr.data
 
     def filter(self, *args, **kwargs):
-        print self.stats.starttime
-        self.trim(starttime=self.stats.starttime - 10, pad=True, fill_value=self.data.mean())
-        print self.stats.starttime
+        self.trim(starttime=self.stats.starttime - 10,
+                  pad=True,
+                  fill_value=int(self.data.mean()))
         super(self.__class__, self).filter(*args, **kwargs)
         self.trim(starttime=self.stats.starttime + 10)
-        print self.stats.starttime
+        
+    def plot(self,
+             starttime=None,
+             endtime=None,
+             arrivals=None,
+             detections=None,
+             show=True,
+             xticklabel_fmt=None):
+        fig = plt.figure(figsize=(12, 3))
+        ax = fig.add_subplot(1, 1, 1)
+        ax = self.subplot(ax,
+                          starttime=starttime,
+                          endtime=endtime,
+                          arrivals=arrivals,
+                          detections=detections,
+                          xticklabel_fmt=xticklabel_fmt)
+        if show:
+            plt.show()
+        else:
+            return fig
+
+    def subplot(self,
+                ax,
+                starttime=None,
+                endtime=None,
+                arrivals=None,
+                detections=None,
+                xaxis_set_visible=True,
+                xticklabel_fmt=None,
+                set_xlabel=True,
+                set_xticks_label=None,
+                set_ylabel=False,
+                set_yticks_position=None,
+                label=False):
+        if xticklabel_fmt == None:
+            xticklabel_fmt = "%Y%j %H:%M:%S.%f"
+        starttime = float(starttime) if starttime else float(self.stats.starttime)
+        first_sample = int(round((starttime - float(self.stats.starttime)) / self.stats.delta))
+        endtime = float(endtime) if endtime else float(self.stats.endtime)
+        npts = int((endtime - starttime) / self.stats.delta)
+        time = [(starttime + i * self.stats.delta) for i in range(npts)]
+        x_range = endtime - starttime
+        y_range = max(self.data[first_sample:npts]) - min(self.data[first_sample:npts])
+        aspect = (x_range / y_range) * 0.25
+        ax.set_aspect(aspect)
+        ax.plot(time, self.data[first_sample:npts], 'k')
+        # Configure the x-axis.
+        ax.set_xlim([float(self.stats.starttime), float(self.stats.endtime)])
+        if not xaxis_set_visible:
+            ax.xaxis.set_visible(False)
+        if xaxis_set_visible and set_xticks_label:
+            ax.set_xticklabels([UTCDateTime(t).strftime(xticklabel_fmt)\
+                                for t in ax.get_xticks()],
+                               rotation=10,
+                               horizontalalignment='right')
+        if set_xlabel:
+            stime = UTCDateTime(starttime).strftime("%Y%j")
+            etime = UTCDateTime(endtime).strftime("%Y%j")
+            if stime == etime:
+                ax.set_xlabel(stime, fontsize=16)
+            else:
+                ax.set_xlabel("%s - %s" % (stime, etime),
+                              fontsize=16)
+        # Configure the y-axis.
+        if set_ylabel:
+            ax.set_ylabel("%s:%s" % (self.stats.station.name,
+                                     self.stats.channel),
+                          fontsize=16,
+                          rotation="horizontal")
+            ax.yaxis.set_label_position("right")
+        if set_yticks_position:
+            ax.yaxis.set_ticks_position(set_yticks_position)
+        trmax = max([abs(min(self.data)), abs(max(self.data))])
+        ax.set_ylim([-trmax * 1.1, trmax * 1.1])
+        ax.set_yticks([int(round(-trmax / 2.)),
+                       0, 
+                       int(round(trmax / 2.))])
+        if arrivals: [ax.axvline(x=arrival.time,
+                                 ymin=0.1,
+                                 ymax=0.9,
+                                 color='r',
+                                 linewidth=2)\
+                      for arrival in arrivals]
+        if detections: [ax.axvline(x=detection.time,
+                                   ymin=0.1,
+                                   ymax=0.9,
+                                   color='b',
+                                   linewidth=2)\
+                        for detection in detections]
+        return ax
 
     def noise_pad(self, twin, noise_twin=0):
         if noise_twin == 0:
@@ -406,75 +497,6 @@ class Trace(obspy.core.Trace):
             return None, None, None
         s_pick = np.argmax(grad[start:s_pick]) + start - 1
         return s_pick/fs, alt_pick/fs, cft.data
-        
-
-    def plot(self,
-             starttime=None,
-             endtime=None,
-             arrivals=None,
-             detections=None,
-             show=True,
-             xticklabel_fmt=None):
-        fig = plt.figure(figsize=(12, 3))
-        ax = fig.add_subplot(1, 1, 1)
-        ax = self.subplot(ax,
-                          starttime=starttime,
-                          endtime=endtime,
-                          arrivals=arrivals,
-                          detections=detections,
-                          xticklabel_fmt=xticklabel_fmt)
-        if show:
-            plt.show()
-        else:
-            return fig
-
-    def subplot(self,
-                ax,
-                starttime=None,
-                endtime=None,
-                arrivals=None,
-                detections=None,
-                xticklabel_fmt=None,
-                set_xlabel=True):
-        if xticklabel_fmt == None:
-            xticklabel_fmt = "%Y%j %H:%M:%S.%f"
-        starttime = float(starttime) if starttime else float(self.stats.starttime)
-        first_sample = int(round((starttime - float(self.stats.starttime)) / self.stats.delta))
-        endtime = float(endtime) if endtime else float(self.stats.endtime)
-        npts = int((endtime - starttime) / self.stats.delta)
-        time = [(starttime + i * self.stats.delta) for i in range(npts)]
-        x_range = endtime - starttime
-        y_range = max(self.data[first_sample:npts]) - min(self.data[first_sample:npts])
-        aspect = (x_range / y_range) * 0.25
-        ax.set_aspect(aspect)
-        ax.plot(time, self.data[first_sample:npts], 'k')
-        ax.set_xlim([float(self.stats.starttime), float(self.stats.endtime)])
-        ax.set_xticklabels([UTCDateTime(time).strftime(xticklabel_fmt)\
-                            for time in ax.get_xticks()],
-                           rotation=10,
-                           horizontalalignment='right')
-        ax.set_ylabel(self.stats.channel, fontsize=16)
-        if set_xlabel:
-            stime = UTCDateTime(starttime).strftime("%Y%j")
-            etime = UTCDateTime(endtime).strftime("%Y%j")
-            if stime == etime:
-                ax.set_xlabel(stime, fontsize=16)
-            else:
-                ax.set_xlabel("%s - %s" % (stime, etime),
-                              fontsize=16)
-        if arrivals: [ax.axvline(x=arrival.time,
-                                 ymin=0.1,
-                                 ymax=0.9,
-                                 color='r',
-                                 linewidth=2)\
-                      for arrival in arrivals]
-        if detections: [ax.axvline(x=detection.time,
-                                   ymin=0.1,
-                                   ymax=0.9,
-                                   color='b',
-                                   linewidth=2)\
-                        for detection in detections]
-        return ax
 
 def _trigger_onset(cft, on, off):
     res = f90trigger(cft, on, off)

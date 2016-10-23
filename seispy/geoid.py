@@ -1,10 +1,9 @@
-from math import degrees,\
-                 pi,\
+from geometry import EARTH_RADIUS
+from math import pi,\
                  radians
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator
-from geometry import EARTH_RADIUS
 
 class Geoid(np.ndarray):
     def __new__(cls, infile):
@@ -12,7 +11,7 @@ class Geoid(np.ndarray):
         lons, lats, elevs = [], [], []
         for line in infile:
             lon, lat, elev = [float(v) for v in line.split()]
-            lon = lon + 360 if lon < -180 else lon - 360 if lon > 360 else lon
+            lon = lon % 360.
             lons += [lon]
             lats += [lat]
             elevs += [elev]

@@ -147,27 +147,27 @@ class Station(object):
         self.network = network
         self.ondate = validate_time(ondate)
         self.offdate = validate_time(offdate)
-        self.channels = ()
+        self.channels = {}
 
     def __str__(self):
         return "Station: " + self.name
 
     def add_channel(self, channel):
         for channel0 in self.channels:
-            if channel == channel0:
-                channel0.update(channel)
+            if channel == self.channels[channel0]:
+                self.channels[channel0].update(channel)
                 return
-        self.channels += (channel,)
+        self.channels[channel.code] = channel
 
     def get_channels(self, match=None):
         channels = ()
         if match:
             expr = re.compile(match)
             for channel in self.channels:
-                if re.match(expr, channel.code):
-                    channels += (channel,)
+                if re.match(expr, self.channels[channel].code):
+                    channels += (self.channels[channel],)
         else:
-            channels = self.channels
+            channels = [self.channels[channel] for channel in self.channels]
         return channels
 
     def get_channel_set(self, code):

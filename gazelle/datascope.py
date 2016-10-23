@@ -1,4 +1,8 @@
 from seispy import _ANTELOPE_DEFINED
+if _ANTELOPE_DEFINED:
+    from antelope.datascope import *
+if not _ANTELOPE_DEFINED:
+    raise ImportError("Antelope environment not defined")
 from seispy.gather3c import Gather3C
 from seispy.event import Arrival,\
                          Event,\
@@ -9,16 +13,9 @@ from seispy.network import Network,\
 from seispy.station import Channel,\
                            Station
 from seispy.trace import Trace
-if _ANTELOPE_DEFINED:
-    from antelope.datascope import *
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
-import numpy as np
 from math import sqrt
-
-if not _ANTELOPE_DEFINED:
-    raise ImportError("Antelope environment not defined")
 
 
 class Database:
@@ -60,7 +57,16 @@ class Database:
                              starttime=starttime,
                              endtime=endtime)]
         return Gather3C(traces)
-
+        
+    def load_trace(self, station, channel, starttime, endtime):
+        trace = Trace(database_pointer=self.ptr,
+                      station=station.name,
+                      channel=channel.code,
+                      starttime=starttime,
+                      endtime=endtime)
+        trace.stats.station = station
+        return trace
+        
     def iterate_events(self,
                        subset=None,
                        parse_arrivals=True,
@@ -167,6 +173,7 @@ class Database:
                                                                   'time',
                                                                   'iphase')
                 station = self.virtual_network.stations[station]
+                channel = station.channels[channel]
                 arrivals += (Arrival(station,
                                      channel,
                                      time,
@@ -241,16 +248,22 @@ class Database:
         view.free()
         return virtual_network
 
-    def plot_origin(self, origin, topography=None, **kwargs):
-        default_kwargs = {"resolution": 'c'}
-        _kwargs = {}
-        for kw in default_kwargs:
-            if kw in kwargs:
-                _kwargs[kw] = kwargs[kw]
-            else:
-                _kwargs[kw] = default_kwargs[kw]
-        kwargs = _kwargs
-        lat0, lon0, z0, t0 = origin.lat, origin.lon, origin.depth, origin.time
+    def plot_origin(self,
+                    origin,
+                    pre_filter=('highpass', {"freq": 2.0}),
+                    resolution='c',):
+        lat0, lon0 = origin.lat, origin.lon
+        traces = [self.load_trace(arrival.station,
+                                  arrival.channel,
+                                  origin.time,
+                                  origin.time + 20)
+                  for arrival in origin.arrivals]
+        sort_key = lambda tr: sqrt((tr.stats.station.lat - origin.lat) ** 2 +
+                                   (tr.stats.station.lon - origin.lon) ** 2)
+        traces = sorted(traces, key=sort_key)
+        [trace.filter(pre_filter[0], **pre_filter[1]) for trace in traces]
+        [trace.detrend("demean") for trace in traces]
+        ntraces = len(traces)
         X = [arrival.station.lon for arrival in origin.arrivals]
         Y = [arrival.station.lat for arrival in origin.arrivals]
         xmin, xmax = min([lon0] + X), max([lon0] + X)
@@ -261,30 +274,51 @@ class Database:
                            + (Y[i] - y0) ** 2)\
                       for i in range(len(X))]) * 1.1
         extent = max(0.85, extent)
+        plt.figure()
+        ax = plt.subplot2grid((ntraces,2),(0,0), rowspan=ntraces, colspan=1)
         m = Basemap(llcrnrlon=x0 - extent,
                     llcrnrlat=y0 - extent,
                     urcrnrlon=x0 + extent,
                     urcrnrlat=y0 + extent,
-                    **kwargs)
-#        if isinstance(topography, Surface):
-#            surface = topography
-#            m.pcolormesh(surface.XX,
-#                         surface.YY,
-#                         surface.ZZ, cmap=mpl.cm.terrain)
-#            tX = np.linspace(x0 - extent, x0  + extent, 200)
-#            tY = np.linspace(y0 - extent, y0 + extent, 200)
-#            tXX, tYY = np.meshgrid(tX, tY, indexing='ij')
-#            tZZ = np.empty(shape=tXX.shape)
-#            for i in range(tXX.shape[0]):
-#                for j in range(tXX.shape[1]):
-#                    tZZ[i, j] = geoid(tXX[i, j] - 360., tYY[i, j])
-#            m.pcolormesh(tXX, tYY, tZZ, cmap=mpl.cm.terrain)
-#        else:
+                    resolution=resolution)
         m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
                       service='USA_Topo_Maps')
         m.drawmapboundary()
         m.scatter(lon0, lat0, marker="*", color="r", s=100)
         m.scatter(X, Y, marker="v", color="g", s=50)
+        # Plot trace data to the right of map
+        set_xlabel = False
+        set_xticks_label = False
+        xaxis_set_visible = False
+        xticklabel_fmt = None
+        ax0 = plt.subplot2grid((ntraces, 2),
+                               (0, 1),
+                               rowspan=1,
+                               colspan=1)
+        traces[0].subplot(ax0,
+                          xaxis_set_visible=xaxis_set_visible,
+                          set_xlabel=set_xlabel,
+                          set_ylabel=True,
+                          set_yticks_position="right")
+        for i in range(1, len(traces)):
+            if i == len(traces) - 1:
+                xaxis_set_visible = True
+                set_xlabel = True
+                set_xticks_label = True
+                xticklabel_fmt = "%H:%M:%S"
+            ax = plt.subplot2grid((ntraces, 2),
+                                  (i, 1),
+                                  rowspan=1,
+                                  colspan=1,
+                                  sharex=ax0)
+            traces[i].subplot(ax,
+                              set_xlabel=set_xlabel,
+                              set_xticks_label=set_xticks_label,
+                              set_ylabel=True,
+                              set_yticks_position="right",
+                              xaxis_set_visible=xaxis_set_visible,
+                              xticklabel_fmt=xticklabel_fmt)
+        plt.subplots_adjust(wspace=0.0, hspace=0.0)
         plt.show()
 
     def write_origin(self, origin):

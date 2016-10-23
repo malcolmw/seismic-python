@@ -3,6 +3,8 @@ from gazelle.datascope import Database
 db = Database('/Users/malcolcw/products/catalog/SJFZ/2015/SJFZ_2015')
 for origin in db.iterate_origins(parse_magnitudes=False,
                                  subset="auth =~ /malcolcw:reloc/"):
+    for arrival in origin.arrivals:
+        print arrival.station
     db.plot_origin(origin)
     break
 db.close()
