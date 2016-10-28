@@ -1,10 +1,6 @@
 #!/usr/bin/env python
 from gazelle.datascope import Database
-db = Database('/Users/malcolcw/products/catalog/SJFZ/2015/SJFZ_2015')
-for origin in db.iterate_origins(parse_magnitudes=False,
-                                 subset="auth =~ /malcolcw:reloc/"):
-    for arrival in origin.arrivals:
-        print arrival.station
+from seispy.gather3c import Gather
+db = Database("/Users/malcolcw/products/catalog/SJFZ/2013/SJFZ_2013")
+for origin in db.iterate_origins(subset="auth =~ /malcolcw:reloc/ && time >= _2013070_ && time < _2013071_"):
     db.plot_origin(origin)
-    break
-db.close()

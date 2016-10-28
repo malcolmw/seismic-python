@@ -57,7 +57,9 @@ def main_processor(date, db, cfg, args):
             % (year, jday, year, "%03d" % (day + 1))
     if args.subset:
         subset += " && " + args.subset
-    for origin in db.iterate_events(subset=subset, parse_arrivals=False, parse_magnitudes=False):
+    for origin in db.iterate_events(subset=subset,
+                                    parse_arrivals=False,
+                                    parse_magnitudes=False):
         if not os.path.exists("%d" % origin.evid):
             os.mkdir("%d" % origin.evid)
         os.chdir("%d" % origin.evid)

@@ -3,7 +3,8 @@ if _ANTELOPE_DEFINED:
     from antelope.datascope import *
 if not _ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
-from seispy.gather3c import Gather3C
+from seispy.gather3c import Gather,\
+                            Gather3C
 from seispy.event import Arrival,\
                          Event,\
                          Magnitude,\
@@ -13,6 +14,7 @@ from seispy.network import Network,\
 from seispy.station import Channel,\
                            Station
 from seispy.trace import Trace
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from math import sqrt
@@ -60,11 +62,10 @@ class Database:
         
     def load_trace(self, station, channel, starttime, endtime):
         trace = Trace(database_pointer=self.ptr,
-                      station=station.name,
-                      channel=channel.code,
+                      station=station,
+                      channel=channel,
                       starttime=starttime,
                       endtime=endtime)
-        trace.stats.station = station
         return trace
         
     def iterate_events(self,
@@ -92,7 +93,13 @@ class Database:
                         parse_magnitudes=True):
         tbl_origin = self.tables['origin']
         if subset:
-            ptr = tbl_origin.subset(subset)
+            ptr = tbl_origin.join('netmag', outer=True)
+            _ptr = ptr.subset(subset)
+            ptr.free()
+            ptr = _ptr
+            _ptr = ptr.separate('origin')
+            ptr.free()
+            ptr = _ptr
             is_view = True
         else:
             ptr = tbl_origin
@@ -172,8 +179,12 @@ class Database:
                                                                   'chan',
                                                                   'time',
                                                                   'iphase')
+
                 station = self.virtual_network.stations[station]
-                channel = station.channels[channel]
+                try:
+                    channel = station.channels[channel]
+                except KeyError:
+                    print station, channel, origin
                 arrivals += (Arrival(station,
                                      channel,
                                      time,
@@ -181,8 +192,11 @@ class Database:
                                      arid=arid),)
             origin.add_arrivals(arrivals)
         if parse_magnitudes:
-            netmag_view = origin_view.join("netmag", outer=True)
+            netmag_view = tbl_origin.join("netmag", outer=True)
             _view = netmag_view.separate("netmag")
+            netmag_view.free()
+            netmag_view = _view
+            _view = netmag_view.subset("orid == %d" % origin.orid)
             netmag_view.free()
             netmag_view = _view
             magnitudes = ()
@@ -247,17 +261,60 @@ class Database:
             virtual_network.add_subnet(self.parse_network(net_code))
         view.free()
         return virtual_network
-
+        
     def plot_origin(self,
+                    origin,
+                    pre_filter=('highpass', {"freq": 2.0}),
+                    resolution='c'):
+        gather = Gather()
+        for arrival in origin.arrivals:
+            try:
+                gather += self.load_trace(arrival.station,
+                                          arrival.channel,
+                                          origin.time,
+                                          origin.time + 20)
+            except IOError:
+                continue
+        gather.filter(pre_filter[0], **pre_filter[1])
+        fig = plt.figure(figsize=(16.5, 8))
+        #ax1 = fig.add_subplot(1, 2, 1)
+        ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
+        ax1.set_aspect('equal', adjustable='box')
+        origin.plot(subplot_ax=ax1,
+                    show=False,
+                    cmap=mpl.cm.jet)
+        #ax2 = fig.add_subplot(1, 2, 2)
+        ax2 = fig.add_axes([0.5, 0.2, 0.5, 0.5])
+        gather.plot("section",
+                    origin.lat,
+                    origin.lon,
+                    cmap=mpl.cm.jet,
+                    set_yticks_position="right",
+                    show=False,
+                    subplot_ax=ax2)
+        xmin, xmax = ax2.get_xlim()
+        ymax, ymin = ax2.get_ylim()
+        ax2.set_aspect((xmax - xmin) / (ymax - ymin), adjustable='box')
+        cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
+        mpl.colorbar.ColorbarBase(cax,
+                                  cmap=mpl.cm.jet)
+        #plt.subplots_adjust(wspace=0.0)
+        plt.show()
+
+    def plot_origin_dep(self,
                     origin,
                     pre_filter=('highpass', {"freq": 2.0}),
                     resolution='c',):
         lat0, lon0 = origin.lat, origin.lon
-        traces = [self.load_trace(arrival.station,
+        traces = []
+        for arrival in origin.arrivals:
+            try:
+                traces += [self.load_trace(arrival.station,
                                   arrival.channel,
                                   origin.time,
-                                  origin.time + 20)
-                  for arrival in origin.arrivals]
+                                  origin.time + 20)]
+            except IOError:
+                continue
         sort_key = lambda tr: sqrt((tr.stats.station.lat - origin.lat) ** 2 +
                                    (tr.stats.station.lon - origin.lon) ** 2)
         traces = sorted(traces, key=sort_key)
@@ -274,8 +331,11 @@ class Database:
                            + (Y[i] - y0) ** 2)\
                       for i in range(len(X))]) * 1.1
         extent = max(0.85, extent)
-        plt.figure()
-        ax = plt.subplot2grid((ntraces,2),(0,0), rowspan=ntraces, colspan=1)
+        plt.figure(figsize=(16.5, 8))
+        ax = plt.subplot2grid((ntraces, 2),
+                              (0, 0),
+                              rowspan=ntraces,
+                              colspan=1)
         m = Basemap(llcrnrlon=x0 - extent,
                     llcrnrlat=y0 - extent,
                     urcrnrlon=x0 + extent,
@@ -298,7 +358,6 @@ class Database:
         traces[0].subplot(ax0,
                           xaxis_set_visible=xaxis_set_visible,
                           set_xlabel=set_xlabel,
-                          set_ylabel=True,
                           set_yticks_position="right")
         for i in range(1, len(traces)):
             if i == len(traces) - 1:
@@ -314,7 +373,6 @@ class Database:
             traces[i].subplot(ax,
                               set_xlabel=set_xlabel,
                               set_xticks_label=set_xticks_label,
-                              set_ylabel=True,
                               set_yticks_position="right",
                               xaxis_set_visible=xaxis_set_visible,
                               xticklabel_fmt=xticklabel_fmt)

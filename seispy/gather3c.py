@@ -8,9 +8,118 @@ Created on Fri Oct 21 18:04:04 2016
 from seispy.signal.detect import detectS as _detectS_cc
 from seispy.signal.detect import create_polarization_filter
 from copy import deepcopy
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+import numpy as np
 import obspy.core
+from obspy.geodetics import gps2dist_azimuth
 
+class Gather(obspy.core.Stream):     
+    def apply_offsets(self, lat0, lon0):
+        offsets = [gps2dist_azimuth(lat0,
+                                    lon0,
+                                    trace.stats.station.lat,
+                                    trace.stats.station.lon)[0]\
+                   for trace in self.traces]
+        max_offset = max(offsets)
+        offsets = [offset / max_offset for offset in offsets]
+        [self.traces[i].amplitude_offset(offsets[i])\
+                 for i in range(len(self.traces))]
+
+    def azimuths(self, lat0, lon0):
+        return [gps2dist_azimuth(lat0,
+                                 lon0,
+                                 trace.stats.station.lat,
+                                 trace.stats.station.lon)[1]\
+                    for trace in self.traces]
+
+    def detrend(self, *args, **kwargs):
+        [trace.detrend(*args) for trace in self.traces]
+         
+    def distances(self, lat0, lon0):
+        return [gps2dist_azimuth(lat0,
+                                 lon0,
+                                 trace.stats.station.lat,
+                                 trace.stats.station.lon)[0] / 1000.\
+                    for trace in self.traces]
+                    
+    def distance_sort(self, lat0, lon0):
+        if lon0 > 180.:
+            lon0 -= 360.
+        key = lambda trace: gps2dist_azimuth(lat0,
+                                             lon0,
+                                             trace.stats.station.lat,
+                                             trace.stats.station.lon)
+        self.traces = sorted(self.traces, key=key)
+        
+    def normalize(self):
+        for trace in self.traces:
+            max_amp = max(trace.data) * len(self.traces)
+            trace.normalize(max_amp=max_amp)
+            
+    def plot(self, plot_type, *args, **kwargs):
+        if plot_type == "section":
+            self._plot_section(*args, **kwargs)
+        else:
+            return None
+
+    def _plot_section(self,
+                      lat0,
+                      lon0,
+                      cmap=None,
+                      show=True,
+                      subplot_ax=None,
+                      set_xticks_position="top",
+                      set_yticks_position="right"):
+        if subplot_ax:
+            ax = subplot_ax
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+        self.distance_sort(lat0, lon0)
+        self.detrend("demean")
+        self.normalize()
+        self.apply_offsets(lat0, lon0)
+        for trace in self.traces:
+            station = trace.stats.station
+            channel = trace.stats.channel.code
+            if not cmap == None:
+                color= cmap(gps2dist_azimuth(lat0,
+                                             lon0,
+                                             station.lat,
+                                             station.lon)[1] / 360.)
+            else:
+                if channel[2] == "Z":
+                    color, alpha = 'k', 0.5
+                elif channel[2] == "N" or channel[2] == "1":
+                    color, alpha = 'b', 0.5
+                elif channel[2] == "E" or channel[2] == "2":
+                    color, alpha = 'r', 0.5
+            ax.plot(trace.data, trace.times(), color=color)
+        ax.set_ylim(0, max([max(trace.times()) for trace in self.traces]))
+        ax.invert_yaxis()
+        # configure tick labelling / positioning
+        ax.xaxis.set_ticks_position(set_xticks_position)
+        max_offset = max(self.distances(lat0, lon0))
+        if max_offset < 10.:
+            xtick_stride = 2.
+        elif 10. <= max_offset < 25.:
+            xtick_stride = 5.
+        elif 25. <= max_offset < 50.:
+            xtick_stride = 10.
+        else:
+            xtick_stride = 25.
+        xticks = np.arange(0, max_offset + xtick_stride / 2., xtick_stride) / max_offset
+        xtick_labels = [i * xtick_stride for i in range(len(xticks))]
+        ax.set_xticks(xticks)
+        ax.set_xticklabels(xtick_labels)
+        ax.yaxis.set_ticks_position(set_yticks_position)
+        if subplot_ax:
+            return ax
+        elif show:
+            plt.show()
+        return fig
+        
 
 class Gather3C(obspy.core.Stream):
     """

@@ -1,4 +1,6 @@
 from gazelle.datascope import Dbptr
+from seispy.station import Channel,\
+                           Station
 from seispy.signal.statistics import f90trigger,\
                                      pai_k,\
                                      pai_s
@@ -44,9 +46,9 @@ class Trace(obspy.core.Trace):
                     raise ValueError("invalid keyword arguments - specify database")
             starttime = validate_time(kwargs['starttime'])
             endtime = validate_time(kwargs['endtime'])
-            if not isinstance(kwargs['station'], str):
+            if not isinstance(kwargs['station'], Station):
                 raise TypeError("invalid type: %s" % type(kwargs['station']))
-            if not isinstance(kwargs['channel'], str):
+            if not isinstance(kwargs['channel'], Channel):
                 raise TypeError("inavlid type: %s" % type(kwargs['channel']))
             if 'database_path' in kwargs:
                 if not isfile("%s.wfdisc" % kwargs['database_path']):
@@ -59,8 +61,8 @@ class Trace(obspy.core.Trace):
                 raise ValueError("invalid keyword arguments")
             dbptr = dbptr.lookup(table='wfdisc')
             dbptr = dbptr.subset("sta =~ /%s/ && chan =~ /%s/ && "\
-                    "endtime > _%f_ && time < _%f_" % (kwargs['station'],
-                                                       kwargs['channel'],
+                    "endtime > _%f_ && time < _%f_" % (kwargs['station'].name,
+                                                       kwargs['channel'].code,
                                                        kwargs['starttime'],
                                                        kwargs['endtime']))
             if dbptr.record_count == 0:
@@ -73,14 +75,24 @@ class Trace(obspy.core.Trace):
             st.merge()
             tr = st[0]
             self.stats = tr.stats
+            self.stats.station = kwargs['station']
+            self.stats.channel = kwargs['channel']
             self.data = tr.data
 
+    def amplitude_offset(self, offset):
+        self.data = self.data + offset
+        
     def filter(self, *args, **kwargs):
         self.trim(starttime=self.stats.starttime - 10,
                   pad=True,
                   fill_value=int(self.data.mean()))
         super(self.__class__, self).filter(*args, **kwargs)
         self.trim(starttime=self.stats.starttime + 10)
+        
+    def normalize(self, max_amp=None):
+        if max_amp == None:
+            max_amp = max(self.data)
+        self.data = np.array(self.data / float(max_amp))
         
     def plot(self,
              starttime=None,
@@ -112,7 +124,6 @@ class Trace(obspy.core.Trace):
                 xticklabel_fmt=None,
                 set_xlabel=True,
                 set_xticks_label=None,
-                set_ylabel=False,
                 set_yticks_position=None,
                 label=False):
         if xticklabel_fmt == None:
@@ -123,9 +134,8 @@ class Trace(obspy.core.Trace):
         npts = int((endtime - starttime) / self.stats.delta)
         time = [(starttime + i * self.stats.delta) for i in range(npts)]
         x_range = endtime - starttime
-        y_range = max(self.data[first_sample:npts]) - min(self.data[first_sample:npts])
-        aspect = (x_range / y_range) * 0.25
-        ax.set_aspect(aspect)
+        y_range = max(self.data[first_sample:npts]) -\
+                    min(self.data[first_sample:npts])
         ax.plot(time, self.data[first_sample:npts], 'k')
         # Configure the x-axis.
         ax.set_xlim([float(self.stats.starttime), float(self.stats.endtime)])
@@ -145,12 +155,9 @@ class Trace(obspy.core.Trace):
                 ax.set_xlabel("%s - %s" % (stime, etime),
                               fontsize=16)
         # Configure the y-axis.
-        if set_ylabel:
-            ax.set_ylabel("%s:%s" % (self.stats.station.name,
-                                     self.stats.channel),
-                          fontsize=16,
-                          rotation="horizontal")
-            ax.yaxis.set_label_position("right")
+        ax.text(0.5, 0.5,
+                "%s:%s" % (self.stats.station.name,
+                           self.stats.channel.code))
         if set_yticks_position:
             ax.yaxis.set_ticks_position(set_yticks_position)
         trmax = max([abs(min(self.data)), abs(max(self.data))])
