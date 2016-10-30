@@ -60,6 +60,12 @@ class Database:
                              endtime=endtime)]
         return Gather3C(traces)
         
+    def get_prefor(self, evid, **kwargs):
+        tbl_event = self.tables["event"]
+        tbl_event.record = tbl_event.find("evid == %d" % evid)
+        prefor = tbl_event.getv("prefor")[0]
+        return self.parse_origin(prefor, **kwargs)
+
     def load_trace(self, station, channel, starttime, endtime):
         trace = Trace(database_pointer=self.ptr,
                       station=station,
@@ -179,7 +185,6 @@ class Database:
                                                                   'chan',
                                                                   'time',
                                                                   'iphase')
-
                 station = self.virtual_network.stations[station]
                 try:
                     channel = station.channels[channel]
@@ -208,6 +213,17 @@ class Database:
             netmag_view.free()
             origin.add_magnitudes(magnitudes)
         return origin
+
+    def parse_network_dummy(self, net_code):
+        network = Network(net_code)
+        tbl_snetsta = self.tables["snetsta"]
+        view = tbl_snetsta.sort("sta", unique=True)
+        for record in view.iter_record():
+            code, snet = record.getv("sta", "snet")
+            if snet == net_code:
+                network.add_station(self.parse_station(code, net_code))
+        view.free()
+        return network
 
     def parse_network(self, net_code):
         network = Network(net_code)
@@ -258,7 +274,7 @@ class Database:
         view = tbl_snetsta.sort("snet", unique=True)
         for record in view.iter_record():
             net_code = record.getv("snet")[0]
-            virtual_network.add_subnet(self.parse_network(net_code))
+            virtual_network.add_subnet(self.parse_network_dummy(net_code))
         view.free()
         return virtual_network
         
