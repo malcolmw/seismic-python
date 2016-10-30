@@ -24,12 +24,12 @@ class Channel:
         self.components = {'Z': 0, 'N': 1, 'E': 2, '1': 3, '2': 4}
 
     def __str__(self):
-        return "Channel: "
-        + self.code
-        + " "
-        + str(self.ondate)
-        + " "
-        + str(self.offdate)
+        return "Channel: "\
+        + self.code\
+        + " "\
+        + str(self.ondate)\
+        + " "\
+        + str(self.offdate)\
 
     def __lt__(self, other):
         if self.sample_rates[self.code[0]] < self.sample_rates[other.code[0]]:

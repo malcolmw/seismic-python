@@ -48,18 +48,22 @@ def main_processor(date, db, cfg, args):
     if not os.path.exists(jday):
         os.mkdir(jday)
     os.chdir(jday)
-    print "Copying data for %d/%s" % (year, jday)
-    cmd = "rsync -aP --whole-file %s/%d/%s/%s ./" % (cfg["rsync_server"], year, jday, cfg["file_match"])
-    os.system(cmd)
-    print "Data retrieved for %d/%s" % (year, jday)
-    os.chdir("../..")
     subset = "time >= _%d%s_ && time < _%d%s_"\
             % (year, jday, year, "%03d" % (day + 1))
     if args.subset:
         subset += " && " + args.subset
+    copy_flag = True
     for origin in db.iterate_events(subset=subset,
                                     parse_arrivals=False,
                                     parse_magnitudes=False):
+        print origin
+        if copy_flag:
+            copy_flag = False
+            print "Copying data for %d/%s" % (year, jday)
+            cmd = "rsync -aP --whole-file %s/%d/%s/%s ./" % (cfg["rsync_server"], year, jday, cfg["file_match"])
+            os.system(cmd)
+            print "Data retrieved for %d/%s" % (year, jday)
+            os.chdir("../..")
         if not os.path.exists("%d" % origin.evid):
             os.mkdir("%d" % origin.evid)
         os.chdir("%d" % origin.evid)
@@ -71,8 +75,9 @@ def main_processor(date, db, cfg, args):
                                    tr.stats.channel,
                                    origin.evid),
                                    format=cfg["output_format"])
-        os.chdir("..")
-    shutil.rmtree("continuous/%s" % jday)
+    os.chdir(os.path.join(work_root, str(year)))
+    if os.path.exists("continuous/%s" % jday):
+        shutil.rmtree("continuous/%s" % jday)
     os.chdir(work_root)
     return None
 

@@ -184,7 +184,7 @@ class Database:
                 try:
                     channel = station.channels[channel]
                 except KeyError:
-                    print station, channel, origin
+                    channel = Channel(channel, -1, -1)
                 arrivals += (Arrival(station,
                                      channel,
                                      time,
@@ -265,29 +265,44 @@ class Database:
     def plot_origin(self,
                     origin,
                     pre_filter=('highpass', {"freq": 2.0}),
-                    resolution='c'):
+                    resolution='c',
+                    savefig=False,
+                    show=True):
         gather = Gather()
         for arrival in origin.arrivals:
             try:
                 gather += self.load_trace(arrival.station,
                                           arrival.channel,
                                           origin.time,
-                                          origin.time + 20)
+                                          origin.time + 60)
             except IOError:
                 continue
-        gather.filter(pre_filter[0], **pre_filter[1])
-        fig = plt.figure(figsize=(16.5, 8))
-        #ax1 = fig.add_subplot(1, 2, 1)
-        ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
+        if len(gather.traces) == 0:
+            return None
+        try:
+            gather.filter(pre_filter[0], **pre_filter[1])
+        except NotImplementedError:
+            return None
+        fig = plt.figure(figsize=(16.5, 8.5))
+        fig.suptitle("%d: %.2f %.2f %.2f\n%s" % (origin.evid,
+                                                 origin.lat,
+                                                 origin.lon,
+                                                 origin.depth,
+                                                 origin.time),
+                    fontsize=22)
+        ax1 = fig.add_subplot(1, 2, 1)
+        #ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
         ax1.set_aspect('equal', adjustable='box')
         origin.plot(subplot_ax=ax1,
                     show=False,
                     cmap=mpl.cm.jet)
-        #ax2 = fig.add_subplot(1, 2, 2)
-        ax2 = fig.add_axes([0.5, 0.2, 0.5, 0.5])
+        ax2 = fig.add_subplot(1, 2, 2)
+        #ax2 = fig.add_axes([0.5, 0.2, 0.5, 0.5])
         gather.plot("section",
                     origin.lat,
                     origin.lon,
+                    float(origin.time),
+                    arrivals=origin.arrivals,
                     cmap=mpl.cm.jet,
                     set_yticks_position="right",
                     show=False,
@@ -295,11 +310,17 @@ class Database:
         xmin, xmax = ax2.get_xlim()
         ymax, ymin = ax2.get_ylim()
         ax2.set_aspect((xmax - xmin) / (ymax - ymin), adjustable='box')
-        cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
-        mpl.colorbar.ColorbarBase(cax,
-                                  cmap=mpl.cm.jet)
-        #plt.subplots_adjust(wspace=0.0)
-        plt.show()
+        #cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
+        #mpl.colorbar.ColorbarBase(cax,
+        #                          cmap=mpl.cm.jet)
+        plt.subplots_adjust(wspace=0.0)
+        if not savefig == False:
+            print "Saving to: %s" % savefig
+            plt.savefig(savefig, format="png")
+        if show:
+            plt.show()
+        else:
+            return fig
 
     def plot_origin_dep(self,
                     origin,
@@ -312,7 +333,7 @@ class Database:
                 traces += [self.load_trace(arrival.station,
                                   arrival.channel,
                                   origin.time,
-                                  origin.time + 20)]
+                                  origin.time + 60)]
             except IOError:
                 continue
         sort_key = lambda tr: sqrt((tr.stats.station.lat - origin.lat) ** 2 +
