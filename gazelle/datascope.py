@@ -148,7 +148,10 @@ class Database:
                                          first=tbl_origin.record,
                                          reverse=True)
             except DbfindBeginning:
-                raise IOError("orid doesn't exist")
+                try:
+                    record = tbl_origin.find("orid == %d" % orid)
+                except DbfindEnd:
+                    raise IOError("orid %d doesn't exist" % orid)
         tbl_origin.record = record
         orid,\
             evid,\
@@ -214,17 +217,6 @@ class Database:
             origin.add_magnitudes(magnitudes)
         return origin
 
-    def parse_network_dummy(self, net_code):
-        network = Network(net_code)
-        tbl_snetsta = self.tables["snetsta"]
-        view = tbl_snetsta.sort("sta", unique=True)
-        for record in view.iter_record():
-            code, snet = record.getv("sta", "snet")
-            if snet == net_code:
-                network.add_station(self.parse_station(code, net_code))
-        view.free()
-        return network
-
     def parse_network(self, net_code):
         network = Network(net_code)
         tbl_snetsta = self.tables['snetsta']
@@ -274,7 +266,7 @@ class Database:
         view = tbl_snetsta.sort("snet", unique=True)
         for record in view.iter_record():
             net_code = record.getv("snet")[0]
-            virtual_network.add_subnet(self.parse_network_dummy(net_code))
+            virtual_network.add_subnet(self.parse_network(net_code))
         view.free()
         return virtual_network
         
