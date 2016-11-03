@@ -35,8 +35,8 @@ def parse_config(args):
     return cfg
 
 def getter(db):
-    #for origin in db.iterate_events(parse_magnitudes=False):
-    for origin in db.iterate_origins(parse_magnitudes=False):
+    for origin in db.iterate_events(parse_magnitudes=False):
+    #for origin in db.iterate_origins(parse_magnitudes=False):
         yield origin
 
 def main_processor(origin, cfg):

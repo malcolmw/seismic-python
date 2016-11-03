@@ -10,6 +10,8 @@ grid_search(PyObject *self, PyObject *args)
     PyObject* origin;
     PyObject* grid;
     PyObject* arrivals;
+    PyObject* temp1;
+    PyObject* temp2;
     int ir0 = -1;
     int itheta0 = -1;
     int iphi0 = -1;
@@ -42,16 +44,11 @@ grid_search(PyObject *self, PyObject *args)
     arrivals = PyObject_GetAttrString(origin, "arrivals");
     narr = (int) PyTuple_Size(arrivals);
     for (iarr = 0; iarr < narr; iarr++){
-        arrival_times.push_back(
-           PyFloat_AsDouble(
-              PyObject_GetAttrString(
-                 PyObject_GetAttrString(
-                    PyTuple_GetItem(arrivals, iarr),
-                    "time"),
-                 "timestamp"
-              )
-           )
-        );
+ 	temp1 = PyObject_GetAttrString(PyTuple_GetItem(arrivals, iarr), "time");
+	temp2 = PyObject_GetAttrString(temp1, "timestamp");
+        arrival_times.push_back(PyFloat_AsDouble(temp2));
+	Py_DECREF(temp1);
+	Py_DECREF(temp2);
     }
     r_lb = 0;
     r_ub = nr;
@@ -70,16 +67,15 @@ grid_search(PyObject *self, PyObject *args)
                     origin_times.clear();
                     residuals.clear();
                     for (iarr = 0; iarr < narr; iarr++){
-                        tt = PyFloat_AsDouble(
-                                PyObject_CallMethod(locator,
-                                                    "_get_node_tt",
-                                                    "Oiii",
-                                                    PyTuple_GetItem(arrivals, iarr),
-                                                    ir,
-                                                    itheta,
-                                                    iphi
-                                )
-                             );
+			temp1 = PyObject_CallMethod(locator,
+					    	    "_get_node_tt",
+					    	    "Oiii",
+					    	    PyTuple_GetItem(arrivals, iarr),
+					    	    ir,
+					    	    itheta,
+					    	    iphi);
+                        tt = PyFloat_AsDouble(temp1);
+			Py_DECREF(temp1);
                         travel_times.push_back(tt);
                         origin_times.push_back(arrival_times[iarr] - tt);
                     }
@@ -87,9 +83,9 @@ grid_search(PyObject *self, PyObject *args)
                     for (i = 0; i < (int) origin_times.size(); i++){
                         ot += origin_times[i];
                     }
-                    ot /= origin_times.size();
+                    ot /= (double) origin_times.size();
                     for (i = 0; i < (int) narr; i++){
-                        r = arrival_times[i] -(ot + travel_times[i]);
+                        r = arrival_times[i] - (ot + travel_times[i]);
                         r = (r > 0) ? r : -r;
                         residuals.push_back(r);
                     }
@@ -131,6 +127,7 @@ grid_search(PyObject *self, PyObject *args)
         phi_ub = (nphi < (iphi0 + phi_range)) ? nphi : (iphi0 + phi_range);
     }
     Py_DECREF(grid);
+    Py_DECREF(arrivals);
     return Py_BuildValue("iiif", ir0, itheta0, iphi0, t0);
 }
 
