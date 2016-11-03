@@ -1,16 +1,17 @@
-from math import radians, degrees
+from math import radians
 import mmap
 import os.path
 import struct
-import time
 
 import numpy as np
 
-from seispy.core import Origin
+from seispy.hypocenter import accelerate
+from seispy.event import Origin
 from seispy.geometry import EARTH_RADIUS,\
                             sph2geo
 
 HDR_OFST = 36
+
 
 class Locator(object):
     def __init__(self, cfg):
@@ -19,18 +20,18 @@ class Locator(object):
     def _locate_init(self, origin):
         self.mmttf, self.grid = self._initialize_mmap(origin)
         grid = self.grid
-        arrivals = [arrival for arrival in origin.arrivals\
-                            if arrival.station in self.mmttf]
+        arrivals = [arrival for arrival in origin.arrivals
+                    if arrival.station.name in self.mmttf]
         if not self.check_nsta(arrivals):
             print "unable to relocate event, not enough stations"
             return None
         origin.clear_arrivals()
         origin.add_arrivals(arrivals)
         r = [grid['r0'] + grid['dr'] * ir for ir in range(grid['nr'])]
-        theta = [radians(90. - grid['lat0'] - grid['dlat'] * ilat)\
-                for ilat in range(grid['nlat'])]
-        phi = [radians((grid['lon0'] + grid['dlon'] * ilon) % 360.)\
-                for ilon in range(grid['nlon'])]
+        theta = [radians(90. - grid['lat0'] - grid['dlat'] * ilat)
+                 for ilat in range(grid['nlat'])]
+        phi = [radians((grid['lon0'] + grid['dlon'] * ilon) % 360.)
+               for ilon in range(grid['nlon'])]
         R, T, P = np.meshgrid(r, theta, phi, indexing='ij')
         self.nodes = {'r': R, 'theta': T, 'phi': P}
         self.byteoffset = np.ndarray(shape=self.nodes['r'].shape)
@@ -45,8 +46,8 @@ class Locator(object):
     def check_nsta(self, arrivals):
         stations = []
         for arrival in arrivals:
-            if arrival.station not in stations:
-                stations += [arrival.station]
+            if arrival.station.name not in stations:
+                stations += [arrival.station.name]
         if len(stations) >= self.cfg['min_nsta']:
             return True
         else:
@@ -57,12 +58,11 @@ class Locator(object):
             return None
         r0, theta0, phi0, t0 = self._grid_search(origin)
         soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
-        if soln ==  None:
+        if soln is None:
             return None
         else:
             r0, theta0, phi0, t0, sdobs0, res0, arrivals = soln
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        #lon0 -= 360.
         return Origin(lat0, lon0, z0, t0,
                       arrivals=arrivals,
                       evid=origin.evid,
@@ -72,10 +72,10 @@ class Locator(object):
         if not self._locate_init(origin):
             return None
         grid = self.grid
-        if not (EARTH_RADIUS - grid['mr'] < origin.depth < EARTH_RADIUS - grid['r0'])\
+        if not (EARTH_RADIUS - grid['mr'] < origin.depth <
+                EARTH_RADIUS - grid['r0'])\
                 or not (grid['lat0'] < origin.lat < grid['mlat'])\
                 or not (grid['lon0'] < origin.lon < grid['mlon']):
-            #print "unable to use starting location outside of grid, performing grid search"
             print "unable to locate, starting location outside of grid"
             return None
             return self.locate(origin)
@@ -84,25 +84,23 @@ class Locator(object):
         phi0 = radians(origin.lon % 360.)
         t0 = float(origin.time)
         soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
-        if soln ==  None:
+        if soln is None:
             return None
         else:
             r0, theta0, phi0, t0, sdobs0, res0, arrivals = soln
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        #lon0 -= 360.
         return Origin(lat0, lon0, z0, t0,
                       arrivals=arrivals,
                       evid=origin.evid,
                       sdobs=sdobs0)
 
     def _get_node_tt(self, arrival, ir, itheta, iphi):
-        f = self.mmttf[arrival.station][arrival.phase]
+        f = self.mmttf[arrival.station.name][arrival.phase]
         offset = self.byteoffset[ir, itheta, iphi]
         f.seek(int(offset))
         return struct.unpack("f", f.read(4))[0]
 
     def _get_tt(self, arrival, r, theta, phi):
-        f = self.mmttf[arrival.station][arrival.phase]
         nr = self.grid['nr']
         ntheta = self.grid['ntheta']
         nphi = self.grid['nphi']
@@ -135,33 +133,46 @@ class Locator(object):
 
     def _grid_search(self, origin):
         print "grid searching for", origin
+        ir0, itheta0, iphi0, t0 = accelerate.grid_search(self, origin)
+        return self.nodes['r'][ir0, itheta0, iphi0],\
+            self.nodes['theta'][ir0, itheta0, iphi0],\
+            self.nodes['phi'][ir0, itheta0, iphi0],\
+            t0
+
+    def _grid_search_dep(self, origin):
+        print "grid searching for", origin
         nr = self.grid['nr']
         ntheta = self.grid['ntheta']
         nphi = self.grid['nphi']
         best_fit = float('inf')
         for (ir, itheta, iphi)\
-                in [(i, j, k) for i in range(nr)\
-                              for j in range(ntheta)\
-                              for k in range(nphi)]:
+                in [(i, j, k) for i in range(nr)
+                    for j in range(ntheta)
+                    for k in range(nphi)]:
+            if not ir == 16 and not ir == 21 and not itheta == 106 and not iphi == 158 and not iphi == 159:
+                continue
             at = [float(arr.time) for arr in origin.arrivals]
-            tt = [self._get_node_tt(arr, ir, itheta, iphi) for arr in origin.arrivals]
+            tt = [self._get_node_tt(arr, ir, itheta, iphi)
+                  for arr in origin.arrivals]
             ots = [float(at[i] - tt[i]) for i in range(len(at))]
             ot = np.mean(ots)
             misfit = sum([abs((ot + tt[i]) - at[i]) for i in range(len(at))])
             if misfit < best_fit:
                 best_fit = misfit
                 ir0, itheta0, iphi0, t0 = ir, itheta, iphi, ot
+        return ir0, itheta0, iphi0, best_fit
         return self.nodes['r'][ir0, itheta0, iphi0],\
-               self.nodes['theta'][ir0, itheta0, iphi0],\
-               self.nodes['phi'][ir0, itheta0, iphi0],\
-               t0
-            
+            self.nodes['theta'][ir0, itheta0, iphi0],\
+            self.nodes['phi'][ir0, itheta0, iphi0],\
+            t0
+
     def _initialize_mmap(self, origin):
         mmttf, grid = {}, None
         for arrival in origin.arrivals:
-            sta = arrival.station
+            sta = arrival.station.name
             try:
-                f = open(os.path.abspath(os.path.join(self.cfg['tt_dir'], "%s.%s.tt"\
+                f = open(os.path.abspath(os.path.join(self.cfg['tt_dir'],
+                                                      "%s.%s.tt"
                         % (sta, arrival.phase))), 'rb')
             except IOError:
                 print "no %s-wave travel-time file for %s" % (arrival.phase, sta)
@@ -278,7 +289,7 @@ class Locator(object):
                                     arrivals,
                                     itern=itern + 1)
         elif itern >= self.cfg['max_iterations']:
-            print "soultion did not converge after %d iterations" % itern
+            print "solution did not converge after %d iterations" % itern
             return None
         return r0, theta0, phi0, t0, sdobs0, res0, arrivals
 

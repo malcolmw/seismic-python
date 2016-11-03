@@ -3,8 +3,8 @@ if _ANTELOPE_DEFINED:
     from antelope.datascope import *
 if not _ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
-from seispy.gather3c import Gather,\
-                            Gather3C
+from seispy.gather import Gather,\
+                          Gather3C
 from seispy.event import Arrival,\
                          Event,\
                          Magnitude,\
@@ -426,5 +426,5 @@ class Database:
             tbl_assoc.record = tbl_assoc.addnull()
             tbl_assoc.putv(('orid', orid),
                            ('arid', arrival.arid),
-                           ('sta', arrival.station),
+                           ('sta', arrival.station.name),
                            ('phase', arrival.phase))

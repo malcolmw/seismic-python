@@ -58,8 +58,11 @@ kwargs['ext_modules'] = [Extension('seispy.signal.statistics',
                                             'seispy/signal/src/picker.cc'],
                                    include_dirs=[np_get_include(),
                                                  eigen_path],
-                                   extra_compile_args=['-O3'])]
-
+                                   extra_compile_args=['-O3']),
+                         Extension('seispy.hypocenter.accelerate',
+                                   sources=['seispy/hypocenter/accelerate.cc'])]
+kwargs['packages'] = ['seispy', 'seispy.signal', 'seispy.hypocenter']
+kwargs['package_dir'] = {'seispy': 'seispy'}
 # If $ANTELOPE environment variable is not initialized, install only the
 # portions of the distribution that will operate independently of
 # Antelope.
@@ -68,8 +71,6 @@ try:
 except KeyError:
     print "INFO:: $ANTELOPE environment variable not detected."
     print "INFO:: Installing Antelope independent components only."
-    kwargs['packages'] = ['seispy', 'seispy.signal']
-    kwargs['package_dir'] = {'seispy': 'seispy'}
     setup(**kwargs)
     exit()
 
@@ -77,9 +78,8 @@ except KeyError:
 # the distribution that depend on Antelope.
 print "INFO:: $ANTELOPE environment variable detected (%s)" % antelope_dir
 print "INFO:: Installing all components."
-kwargs['packages'] = ['seispy', 'seispy.signal', 'gazelle']
-kwargs['package_dir'] = {'seispy': 'seispy',
-                         'gazelle': 'gazelle'}
+kwargs['packages'] += ['gazelle']
+kwargs['package_dir']['gazelle'] = 'gazelle'
 kwargs['ext_modules'] += [Extension("gazelle.response",
                                     ["gazelle/responsemodule/"
                                      "responsemodule.c"],
