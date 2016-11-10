@@ -10,12 +10,19 @@ class Arrival(object):
     """
     This is a container object to store data pertaining to phase arrivals.
     """
-    def __init__(self, station, channel, time, phase, arid=-1):
+    def __init__(self,
+                 station,
+                 channel,
+                 time,
+                 phase,
+                 arid=-1,
+                 timeres=-999.000):
         self.station = station
         self.channel = channel
         self.time = validate_time(time)
         self.phase = phase
         self.arid = arid
+        self.timeres = timeres
 
 
 class Detection(object):

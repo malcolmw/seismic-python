@@ -278,6 +278,8 @@ class Locator(object):
             return None
         res0 = np.array([float(arrival.time) - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
                 for arrival in arrivals])
+        for i in range(len(arrivals)):
+            arrivals[i].timeres = res0[i]
         sdobs0 = np.sqrt(np.sum(np.square(res0))) / (len(res0) - 4)
         arrivals = self.remove_outliers(r0, theta0, phi0, t0, arrivals)
         if not self.check_nsta(arrivals):
