@@ -1,9 +1,11 @@
-from math import radians
+from math import radians,\
+                 sqrt
 import mmap
 import os.path
 import struct
 
 import numpy as np
+from obspy.geodetics import gps2dist_azimuth
 
 from seispy.hypocenter import accelerate
 from seispy.event import Origin
@@ -56,17 +58,29 @@ class Locator(object):
     def locate(self, origin):
         if not self._locate_init(origin):
             return None
+        Parrivals = tuple([a for a in origin.arrivals if a.phase == "P"])
         r0, theta0, phi0, t0 = self._grid_search(origin)
-        soln = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
-        if soln is None:
+        soln0 = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
+        if soln0 is None:
             return None
         else:
-            r0, theta0, phi0, t0, sdobs0, res0, arrivals = soln
+            r0, theta0, phi0, t0, sdobs0, res0, arrivals0 = soln0
+        origin.clear_arrivals()
+        origin.add_arrivals(Parrivals)
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        return Origin(lat0, lon0, z0, t0,
-                      arrivals=arrivals,
-                      evid=origin.evid,
-                      sdobs=sdobs0)
+        r1, theta1, phi1, t1 = self._grid_search(origin)
+        soln1 = self._subgrid_inversion(r1, theta1, phi1, t1, Parrivals)
+        if soln1 is None:
+            return None
+        else:
+            r1, theta1, phi1, t1, sdobs1, res1, arrivals1 = soln1
+        lat1, lon1, z1 = sph2geo(r1, theta1, phi1)
+        print sqrt((gps2dist_azimuth(lat0, lon0, lat1, lon0)[0] / 1000.) ** 2 +
+            (z1 - z0) ** 2), z0, z1
+        origin = Origin(lat0, lon0, z0, t0,
+                        arrivals=arrivals0,
+                        evid=origin.evid,
+                        sdobs=sdobs0)
 
     def relocate(self, origin):
         if not self._locate_init(origin):
@@ -77,7 +91,6 @@ class Locator(object):
                 or not (grid['lat0'] < origin.lat < grid['mlat'])\
                 or not (grid['lon0'] < origin.lon < grid['mlon']):
             print "unable to locate, starting location outside of grid"
-            return None
             return self.locate(origin)
         r0 = EARTH_RADIUS - origin.depth
         theta0 = radians(90 - origin.lat)
@@ -214,7 +227,7 @@ class Locator(object):
         return mmttf, grid
 
     def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals, itern=0):
-        res_start = np.array([float(arrival.time)\
+        res_start = np.array([arrival.time.timestamp\
                               - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
                               for arrival in arrivals])
         sdobs_start = np.sqrt(np.sum(np.square(res_start))) / (len(res_start) - 4)
@@ -257,7 +270,10 @@ class Locator(object):
             dVdp11 = V111 - V110
             dVdp = np.mean([dVdp00, dVdp10, dVdp01, dVdp11])
             D[i] = [dVdr, dVdt, dVdp, 1]
-            res[i] = float(arrival.time) - (t0 + self._get_tt(arrival, r0, theta0, phi0))
+            res[i] = float(arrival.time) - (t0 + self._get_tt(arrival,
+                                                              r0,
+                                                              theta0,
+                                                              phi0))
         delU, res_, rank, s = np.linalg.lstsq(D, res)
         delr, deltheta, delphi, delt = delU
         r0 += delr * self.grid['dr']
@@ -265,9 +281,15 @@ class Locator(object):
         phi0 += delphi * self.grid['dphi']
         t0 += delt
         #if solution does not converge within grid, return None
-        gr0, gtheta0, gphi0 = self.grid['r0'], self.grid['theta0'], self.grid['phi0']
-        gnr, gntheta, gnphi = self.grid['nr'], self.grid['ntheta'], self.grid['nphi']
-        gdr, gdtheta, gdphi = self.grid['dr'], self.grid['dtheta'], self.grid['dphi']
+        gr0 = self.grid['r0']
+        gtheta0 = self.grid['theta0']
+        gphi0 = self.grid['phi0']
+        gnr = self.grid['nr']
+        gntheta = self.grid['ntheta']
+        gnphi = self.grid['nphi']
+        gdr = self.grid['dr']
+        gdtheta = self.grid['dtheta']
+        gdphi = self.grid['dphi']
         #if solution is above propagation grid, fix depth to surface
         #if r0 > gr0 + gdr * (gnr - 1):
         #    r0 = gr0 + gdr * (gnr - 1)

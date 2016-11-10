@@ -40,7 +40,7 @@ def getter(db):
         yield origin
 
 def main_processor(origin, cfg):
-    print "processing", origin
+    #print "processing", origin
     locator = Locator(cfg)
     if cfg['mode'] == 'relocate':
         return locator.relocate(origin)
@@ -57,7 +57,7 @@ def outputter(origin, db, cfg):
     elif cfg['mode'] == 'locate':
         auth = cfg['author'] + ":loc"
     origin.author = auth
-    print "writing", origin
+    #print "writing", origin
     db.write_origin(origin)
 
 def main():
