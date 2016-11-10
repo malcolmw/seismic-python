@@ -7,13 +7,17 @@ from obspy.core import read
 from gazelle.datascope import Database
 from seispy.util import MultiThreadProcess
 
+
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("database", type=str, help="input database")
     parser.add_argument("cfg_file", type=str, help="configuration file")
-    parser.add_argument("year", type=int, help="year")
     parser.add_argument("-s", "--subset", type=str, help="subset expression")
+    parser.add_argument("-d", "--detection_mode",
+                        action="store_true",
+                        help="detection mode")
     return parser.parse_args()
+
 
 def parse_config(args):
     cfg = {}
@@ -27,13 +31,86 @@ def parse_config(args):
     cfg["file_match"] = config.get("General", "file_match")
     return cfg
 
-def inputter(year):
-    if year % 4 == 0:
-        fday = 367
+def inputter(args):
+    if args.detection_mode:
+        starttime, endtime = args.database.time_range("detection")
     else:
-        fday = 366
-    for day in range(1, fday):
-        yield (year, day)
+        starttime, endtime = args.database.time_range("origin")
+    time = starttime
+    time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
+    while time <= endtime:
+        yield time
+
+def main_processor_detection_mode(time, args, cfg):
+    db = args.database
+    work_root = os.getcwd()
+    stryear, strjulday = str(time.year), "%03d" % time.julday
+    if not os.path.exists(stryear):
+        os.mkdir(stryear)
+    os.chdir(stryear)
+    if not os.path.exists("continuous"):
+        os.mkdir("continuous")
+    os.chdir("continuous")
+    if not os.path.exists(strjulday):
+        os.mkdir(strjulday)
+    os.chdir("..")
+    detections = db.group_detections(subset=args.subset,
+                                     starttime=time,
+                                     endtime=time + 86400)
+    for detection in detections:
+        os.chdir("continuous/%s" % strjulday)
+        dirname = "%s-%s" % (detection.station.name, detection.channel.code)
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        os.chdir(dirname)
+        print "Copying data for %s/%s %s:%s" % (stryear,
+                                                strjulday,
+                                                detection.station.name,
+                                                detection.channel.code)
+        cmd = "rsync -aP --whole-file %s/%s/%s/*%s.%s[ZNE12]%s* ./"\
+            % (cfg["rsync_server"],
+               stryear,
+               strjulday,
+               detection.station.name,
+               detection.channel.code[:2],
+               detection.channel.code[3:])
+        print cmd
+        os.system(cmd)
+        print "Data retrieved for %s/%s" % (stryear, strjulday)
+        os.chdir("../../..")
+        if not os.path.exists(strjulday):
+            os.mkdir(strjulday)
+        os.chdir(strjulday)
+        for wf_file in sorted(os.listdir("../continuous/%s/%s"
+                                         % (strjulday,
+                                            dirname))):
+            tr = read("../continuous/%s/%s/%s" % (strjulday,
+                                                  dirname,
+                                                  wf_file))[0]
+            starttime = detection.time - cfg["start_lead"]
+            endtime = detection.time + cfg["end_lag"]
+            file_length = int(float(endtime) - float(starttime))
+            file_name = "%s.%s.%s.%s.%02d.%02d.%02d.%06d+%d"\
+                % (tr.stats.station,
+                   tr.stats.channel,
+                   stryear,
+                   strjulday,
+                   starttime.hour,
+                   starttime.minute,
+                   starttime.second,
+                   starttime.microsecond,
+                   file_length)
+            print "Writing file %s" % file_name
+            tr.trim(starttime=starttime,
+                    endtime=endtime)
+            tr.write(file_name, format=cfg["output_format"])
+        os.chdir("..")
+    
+    os.chdir(os.path.join(work_root, stryear))
+    if os.path.exists("continuous/%s" % strjulday):
+        shutil.rmtree("continuous/%s" % strjulday)
+    os.chdir(work_root)
+    return None
 
 def main_processor(date, db, cfg, args):
     year, day = date
@@ -87,10 +164,12 @@ def outputter(obj):
 def main():
     args = parse_args()
     cfg = parse_config(args)
-    database = Database(os.path.abspath(args.database))
-    extra_args = {"input_init_args": (args.year,),
-                  "main_init_args": (database, cfg, args)}
+    args.database = Database(os.path.abspath(args.database))
+    extra_args = {"input_init_args": (args,),
+                  "main_init_args": (args, cfg)}
     config_params = {"n_threads": cfg["n_threads"]}
+    if args.detection_mode:
+        main_processor = main_processor_detection_mode
     mtp = MultiThreadProcess(inputter,
                             main_processor,
                             outputter,

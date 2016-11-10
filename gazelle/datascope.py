@@ -6,6 +6,7 @@ if not _ANTELOPE_DEFINED:
 from seispy.gather import Gather,\
                           Gather3C
 from seispy.event import Arrival,\
+                         Detection,\
                          Event,\
                          Magnitude,\
                          Origin
@@ -14,6 +15,7 @@ from seispy.network import Network,\
 from seispy.station import Channel,\
                            Station
 from seispy.trace import Trace
+from seispy.util import validate_time
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
@@ -24,10 +26,11 @@ class Database:
     def __init__(self, path, mode='r'):
         self.ptr = dbopen(path, mode)
         self.tables = {}
-        for table in ("event",
-                      "origin",
+        for table in ("arrival",
                       "assoc",
-                      "arrival",
+                      "detection",
+                      "event",
+                      "origin",
                       "site",
                       "sitechan",
                       "snetsta"):
@@ -59,7 +62,7 @@ class Database:
                              starttime=starttime,
                              endtime=endtime)]
         return Gather3C(traces)
-        
+
     def get_prefor(self, evid, **kwargs):
         tbl_event = self.tables["event"]
         tbl_event.record = tbl_event.find("evid == %d" % evid)
@@ -73,13 +76,51 @@ class Database:
                       starttime=starttime,
                       endtime=endtime)
         return trace
-        
+
+    def group_detections(self,
+                         subset=None,
+                         starttime=None,
+                         endtime=None):
+        detections = []
+        if starttime is None and endtime is None:
+            raise ValueError("starttime or endtime not provided")
+        view = self.tables["detection"].subset("time >= _%f_ && time < _%f_"
+            % (starttime.timestamp, endtime.timestamp))
+        if subset is not None:
+            _view = view.subset(subset)
+            view.free()
+            view = _view
+        _view = view.sort("time")
+        view.free()
+        view = _view
+        for record in view.iter_record():
+            station, channel, time, label = record.getv("sta",
+                                                        "chan",
+                                                        "time",
+                                                        "state")
+            station = self.virtual_network.stations[station]
+            channel = station.channels[channel]
+            detections += [Detection(station, channel, time, label)]
+        return detections
+
     def iterate_events(self,
                        subset=None,
+                       starttime=None,
+                       endtime=None,
                        parse_arrivals=True,
                        parse_magnitudes=True):
         tbl_event = self.tables["event"]
         view = tbl_event.join("origin")
+        if starttime is not None:
+            starttime = validate_time(starttime)
+            _view = view.subset("time >= _%f_" % starttime.timestamp)
+            view.free()
+            view = _view
+        if endtime is not None:
+            endtime = validate_time(endtime)
+            _view = view.subset("endtime < _%f_" % endtime.timestamp)
+            view.free()
+            view = _view
         if subset:
             _view = view.subset(subset)
             view.free()
@@ -408,6 +449,16 @@ class Database:
         plt.subplots_adjust(wspace=0.0, hspace=0.0)
         plt.show()
 
+    def time_range(self, table):
+        table = self.tables[table]
+        view = table.sort("time")
+        view.record = 0
+        time = view.getv("time")[0]
+        starttime = validate_time(time)
+        view.record = view.record_count - 1
+        endtime = validate_time(time)
+        return starttime, endtime
+
     def write_origin(self, origin):
         tbl_origin = self.tables['origin']
         tbl_assoc = self.tables['assoc']
@@ -427,4 +478,5 @@ class Database:
             tbl_assoc.putv(('orid', orid),
                            ('arid', arrival.arid),
                            ('sta', arrival.station.name),
-                           ('phase', arrival.phase))
+                           ('phase', arrival.phase),
+                           ('timeres', arrival.timeres))
