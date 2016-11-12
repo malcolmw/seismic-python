@@ -55,32 +55,26 @@ class Locator(object):
         else:
             return False
 
-    def locate(self, origin):
+    def locate(self, origin, P_only=False):
         if not self._locate_init(origin):
             return None
-        Parrivals = tuple([a for a in origin.arrivals if a.phase == "P"])
-        r0, theta0, phi0, t0 = self._grid_search(origin)
-        soln0 = self._subgrid_inversion(r0, theta0, phi0, t0, origin.arrivals)
-        if soln0 is None:
+        arrivals = origin.arrivals
+        if P_only:
+            arrivals = tuple([arr for arr in arrivals if arr.phase == 'P'])
+            print "locating with %d P-wave observations" % len(arrivals)
+        else:
+            print "locating with %d combined P-wave and S-wave observations" % len(arrivals)
+        r0, theta0, phi0, t0 = self._grid_search(arrivals)
+        soln = self._subgrid_inversion(r0, theta0, phi0, t0, arrivals)
+        if soln is None:
             return None
         else:
-            r0, theta0, phi0, t0, sdobs0, res0, arrivals0 = soln0
-        origin.clear_arrivals()
-        origin.add_arrivals(Parrivals)
+            r0, theta0, phi0, t0, sdobs0, res0, arrivals0 = soln
         lat0, lon0, z0 = sph2geo(r0, theta0, phi0)
-        r1, theta1, phi1, t1 = self._grid_search(origin)
-        soln1 = self._subgrid_inversion(r1, theta1, phi1, t1, Parrivals)
-        if soln1 is None:
-            return None
-        else:
-            r1, theta1, phi1, t1, sdobs1, res1, arrivals1 = soln1
-        lat1, lon1, z1 = sph2geo(r1, theta1, phi1)
-        print sqrt((gps2dist_azimuth(lat0, lon0, lat1, lon0)[0] / 1000.) ** 2 +
-            (z1 - z0) ** 2), z0, z1
-        origin = Origin(lat0, lon0, z0, t0,
-                        arrivals=arrivals0,
-                        evid=origin.evid,
-                        sdobs=sdobs0)
+        return Origin(lat0, lon0, z0, t0,
+                      arrivals=arrivals0,
+                      evid=origin.evid,
+                      sdobs=sdobs0)
 
     def relocate(self, origin):
         if not self._locate_init(origin):
@@ -107,13 +101,13 @@ class Locator(object):
                       evid=origin.evid,
                       sdobs=sdobs0)
 
-    def _get_node_tt(self, arrival, ir, itheta, iphi):
-        f = self.mmttf[arrival.station.name][arrival.phase]
+    def _get_node_tt(self, station, phase, ir, itheta, iphi):
+        f = self.mmttf[station][phase]
         offset = self.byteoffset[ir, itheta, iphi]
         f.seek(int(offset))
         return struct.unpack("f", f.read(4))[0]
 
-    def _get_tt(self, arrival, r, theta, phi):
+    def _get_tt(self, station, phase, r, theta, phi):
         nr = self.grid['nr']
         ntheta = self.grid['ntheta']
         nphi = self.grid['nphi']
@@ -128,14 +122,14 @@ class Locator(object):
         ir1 = ir0 if ir0 == nr - 1 else ir0 + 1
         itheta1 = itheta0 if itheta0 == ntheta - 1 else itheta0 + 1
         iphi1 = iphi0 if iphi0 == nphi - 1 else iphi0 + 1
-        V000 = self._get_node_tt(arrival, ir0, itheta0, iphi0)
-        V100 = self._get_node_tt(arrival, ir1, itheta0, iphi0)
-        V010 = self._get_node_tt(arrival, ir0, itheta1, iphi0)
-        V110 = self._get_node_tt(arrival, ir1, itheta1, iphi0)
-        V001 = self._get_node_tt(arrival, ir0, itheta0, iphi1)
-        V101 = self._get_node_tt(arrival, ir1, itheta0, iphi1)
-        V011 = self._get_node_tt(arrival, ir0, itheta1, iphi1)
-        V111 = self._get_node_tt(arrival, ir1, itheta1, iphi1)
+        V000 = self._get_node_tt(station, phase, ir0, itheta0, iphi0)
+        V100 = self._get_node_tt(station, phase, ir1, itheta0, iphi0)
+        V010 = self._get_node_tt(station, phase, ir0, itheta1, iphi0)
+        V110 = self._get_node_tt(station, phase, ir1, itheta1, iphi0)
+        V001 = self._get_node_tt(station, phase, ir0, itheta0, iphi1)
+        V101 = self._get_node_tt(station, phase, ir1, itheta0, iphi1)
+        V011 = self._get_node_tt(station, phase, ir0, itheta1, iphi1)
+        V111 = self._get_node_tt(station, phase, ir1, itheta1, iphi1)
         V00 = V000 + (V100 - V000) * delr
         V10 = V010 + (V110 - V010) * delr
         V01 = V001 + (V101 - V001) * delr
@@ -144,36 +138,9 @@ class Locator(object):
         V1 = V01 + (V11 - V01) * deltheta
         return V0 + (V1 - V0) * delphi
 
-    def _grid_search(self, origin):
-        print "grid searching for", origin
-        ir0, itheta0, iphi0, t0 = accelerate.grid_search(self, origin)
-        return self.nodes['r'][ir0, itheta0, iphi0],\
-            self.nodes['theta'][ir0, itheta0, iphi0],\
-            self.nodes['phi'][ir0, itheta0, iphi0],\
-            t0
-
-    def _grid_search_dep(self, origin):
-        print "grid searching for", origin
-        nr = self.grid['nr']
-        ntheta = self.grid['ntheta']
-        nphi = self.grid['nphi']
-        best_fit = float('inf')
-        for (ir, itheta, iphi)\
-                in [(i, j, k) for i in range(nr)
-                    for j in range(ntheta)
-                    for k in range(nphi)]:
-            if not ir == 16 and not ir == 21 and not itheta == 106 and not iphi == 158 and not iphi == 159:
-                continue
-            at = [float(arr.time) for arr in origin.arrivals]
-            tt = [self._get_node_tt(arr, ir, itheta, iphi)
-                  for arr in origin.arrivals]
-            ots = [float(at[i] - tt[i]) for i in range(len(at))]
-            ot = np.mean(ots)
-            misfit = sum([abs((ot + tt[i]) - at[i]) for i in range(len(at))])
-            if misfit < best_fit:
-                best_fit = misfit
-                ir0, itheta0, iphi0, t0 = ir, itheta, iphi, ot
-        return ir0, itheta0, iphi0, best_fit
+    def _grid_search(self, arrivals):
+        # print "grid searching for", origin
+        ir0, itheta0, iphi0, t0 = accelerate.grid_search(self, arrivals)
         return self.nodes['r'][ir0, itheta0, iphi0],\
             self.nodes['theta'][ir0, itheta0, iphi0],\
             self.nodes['phi'][ir0, itheta0, iphi0],\
@@ -186,9 +153,10 @@ class Locator(object):
             try:
                 f = open(os.path.abspath(os.path.join(self.cfg['tt_dir'],
                                                       "%s.%s.tt"
-                        % (sta, arrival.phase))), 'rb')
+                         % (sta, arrival.phase))), 'rb')
             except IOError:
-                print "no %s-wave travel-time file for %s" % (arrival.phase, sta)
+                print "no %s-wave travel-time file for %s"\
+                    % (arrival.phase, sta)
                 continue
             mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             if sta not in mmttf:
@@ -197,11 +165,11 @@ class Locator(object):
             if not grid:
                 grid = {}
                 grid['nr'], grid['nlat'], grid['nlon']\
-                        = struct.unpack("3i", mm.read(12))
+                    = struct.unpack("3i", mm.read(12))
                 grid['dr'], grid['dlat'], grid['dlon']\
-                        = struct.unpack("3f", mm.read(12))
+                    = struct.unpack("3f", mm.read(12))
                 grid['r0'], grid['lat0'], grid['lon0']\
-                        = struct.unpack("3f", mm.read(12))
+                    = struct.unpack("3f", mm.read(12))
                 grid['mr'] = grid['r0'] + (grid['nr'] - 1) * grid['dr']
                 grid['mlat'] = grid['lat0'] + (grid['nlat'] - 1) * grid['dlat']
                 grid['mlon'] = grid['lon0'] + (grid['nlon'] - 1) * grid['dlon']
@@ -227,33 +195,40 @@ class Locator(object):
         return mmttf, grid
 
     def _subgrid_inversion(self, r0, theta0, phi0, t0, arrivals, itern=0):
-        res_start = np.array([arrival.time.timestamp\
-                              - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
+        res_start = np.array([arrival.time.timestamp -
+                              (t0 + self._get_tt(arrival.station.name,
+                                                 arrival.phase,
+                                                 r0,
+                                                 theta0,
+                                                 phi0))
                               for arrival in arrivals])
-        sdobs_start = np.sqrt(np.sum(np.square(res_start))) / (len(res_start) - 4)
+        sdobs_start = np.sqrt(np.sum(np.square(res_start))) /\
+            (len(res_start) - 4)
         ir0 = (r0 - self.grid['r0']) / self.grid['dr']
         itheta0 = (self.grid['theta0'] - theta0)\
-                / self.grid['dtheta']
+            / self.grid['dtheta']
         iphi0 = (phi0 - self.grid['phi0']) / self.grid['dphi']
         delr = ir0 % 1
         deltheta = itheta0 % 1
         delphi = iphi0 % 1
         ir0, itheta0, iphi0 = int(ir0), int(itheta0), int(iphi0)
         ir1 = ir0 if ir0 == self.grid['nr'] - 1 else ir0 + 1
-        itheta1 = itheta0 if itheta0 == self.grid['ntheta'] - 1 else itheta0 + 1
+        itheta1 = itheta0 if itheta0 == self.grid['ntheta'] - 1\
+            else itheta0 + 1
         iphi1 = iphi0 if iphi0 == self.grid['nphi'] - 1 else iphi0 + 1
         D = np.empty(shape=(len(arrivals), 4))
         res = np.empty(shape=(len(arrivals),))
-        for i  in range(len(arrivals)):
+        for i in range(len(arrivals)):
             arrival = arrivals[i]
-            V000 = self._get_node_tt(arrival, ir0, itheta0, iphi0)
-            V100 = self._get_node_tt(arrival, ir1, itheta0, iphi0)
-            V010 = self._get_node_tt(arrival, ir0, itheta1, iphi0)
-            V110 = self._get_node_tt(arrival, ir1, itheta1, iphi0)
-            V001 = self._get_node_tt(arrival, ir0, itheta0, iphi1)
-            V101 = self._get_node_tt(arrival, ir1, itheta0, iphi1)
-            V011 = self._get_node_tt(arrival, ir0, itheta1, iphi1)
-            V111 = self._get_node_tt(arrival, ir1, itheta1, iphi1)
+            station, phase = arrival.station.name, arrival.phase
+            V000 = self._get_node_tt(station, phase, ir0, itheta0, iphi0)
+            V100 = self._get_node_tt(station, phase, ir1, itheta0, iphi0)
+            V010 = self._get_node_tt(station, phase, ir0, itheta1, iphi0)
+            V110 = self._get_node_tt(station, phase, ir1, itheta1, iphi0)
+            V001 = self._get_node_tt(station, phase, ir0, itheta0, iphi1)
+            V101 = self._get_node_tt(station, phase, ir1, itheta0, iphi1)
+            V011 = self._get_node_tt(station, phase, ir0, itheta1, iphi1)
+            V111 = self._get_node_tt(station, phase, ir1, itheta1, iphi1)
             dVdr00 = V100 - V000
             dVdr10 = V110 - V010
             dVdr01 = V101 - V001
@@ -270,7 +245,8 @@ class Locator(object):
             dVdp11 = V111 - V110
             dVdp = np.mean([dVdp00, dVdp10, dVdp01, dVdp11])
             D[i] = [dVdr, dVdt, dVdp, 1]
-            res[i] = float(arrival.time) - (t0 + self._get_tt(arrival,
+            res[i] = float(arrival.time) - (t0 + self._get_tt(station,
+                                                              phase,
                                                               r0,
                                                               theta0,
                                                               phi0))
@@ -280,7 +256,7 @@ class Locator(object):
         theta0 += deltheta * self.grid['dtheta']
         phi0 += delphi * self.grid['dphi']
         t0 += delt
-        #if solution does not converge within grid, return None
+        # if solution does not converge within grid, return None
         gr0 = self.grid['r0']
         gtheta0 = self.grid['theta0']
         gphi0 = self.grid['phi0']
@@ -290,16 +266,21 @@ class Locator(object):
         gdr = self.grid['dr']
         gdtheta = self.grid['dtheta']
         gdphi = self.grid['dphi']
-        #if solution is above propagation grid, fix depth to surface
-        #if r0 > gr0 + gdr * (gnr - 1):
+        # if solution is above propagation grid, fix depth to surface
+        # if r0 > gr0 + gdr * (gnr - 1):
         #    r0 = gr0 + gdr * (gnr - 1)
         #    #fix_depth = True
         if not gr0 < r0 < gr0 + gdr * (gnr - 1)\
                 or not (gtheta0 - (gntheta - 1) * gdtheta < theta0 < gtheta0)\
                 or not (gphi0 < phi0 < gphi0 + (gnphi - 1) * gdphi):
             return None
-        res0 = np.array([float(arrival.time) - (t0 + self._get_tt(arrival, r0, theta0, phi0))\
-                for arrival in arrivals])
+        res0 = np.array([float(arrival.time) -
+                         (t0 + self._get_tt(arrival.station.name,
+                                            arrival.phase,
+                                            r0,
+                                            theta0,
+                                            phi0))
+            for arrival in arrivals])
         for i in range(len(arrivals)):
             arrivals[i].timeres = res0[i]
         sdobs0 = np.sqrt(np.sum(np.square(res0))) / (len(res0) - 4)
@@ -318,17 +299,22 @@ class Locator(object):
         return r0, theta0, phi0, t0, sdobs0, res0, arrivals
 
     def remove_outliers(self, r0, theta0, phi0, t0, arrivals):
-        res = np.array([float(arr.time) - (t0 + self._get_tt(arr, r0, theta0, phi0))\
-                    for arr in arrivals])
+        res = np.array([float(arrival.time) -
+                        (t0 + self._get_tt(arrival.station.name,
+                                           arrival.phase,
+                                           r0,
+                                           theta0,
+                                           phi0))
+                        for arrival in arrivals])
         new_arrivals = []
         for i in range(len(arrivals)):
-            arr = arrivals[i]
+            arrival = arrivals[i]
             r = res[i]
             tol = self.cfg['P_residual_tolerance']\
-                  if  arr.phase == 'P'\
-                  else self.cfg['S_residual_tolerance']
-            if abs(r) < tol: new_arrivals += [arr]
-        print "removing %d/%d arrivals"\
-                % ((len(arrivals) - len(new_arrivals)), len(arrivals))
+                if arrival.phase == 'P'\
+                else self.cfg['S_residual_tolerance']
+            if abs(r) < tol:
+                new_arrivals += [arrival]
+        # print "removing %d/%d arrivals"\
+        #    % ((len(arrivals) - len(new_arrivals)), len(arrivals))
         return new_arrivals
-

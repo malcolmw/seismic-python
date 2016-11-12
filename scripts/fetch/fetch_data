@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 from ConfigParser import RawConfigParser
 import os
 import shutil
+from time import sleep
 from obspy.core import read
 from gazelle.datascope import Database
 from seispy.util import MultiThreadProcess
@@ -33,40 +34,52 @@ def parse_config(args):
 
 def inputter(args):
     if args.detection_mode:
-        starttime, endtime = args.database.time_range("detection")
+        starttime, endtime = args.database.time_range("detection",
+                                                      subset=args.subset)
     else:
-        starttime, endtime = args.database.time_range("origin")
+        starttime, endtime = args.database.time_range("origin",
+                                                      subset=args.subset)
     time = starttime
     time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
+    root = os.getcwd()
     while time <= endtime:
         yield time
+        time += 86400
+        sleep(1)
 
 def main_processor_detection_mode(time, args, cfg):
     db = args.database
-    work_root = os.getcwd()
+    root = os.getcwd()
     stryear, strjulday = str(time.year), "%03d" % time.julday
-    if not os.path.exists(stryear):
-        os.mkdir(stryear)
-    os.chdir(stryear)
-    if not os.path.exists("continuous"):
-        os.mkdir("continuous")
-    os.chdir("continuous")
-    if not os.path.exists(strjulday):
-        os.mkdir(strjulday)
-    os.chdir("..")
+    wdir = os.path.join(root, stryear)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(wdir, "continuous")
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(wdir, strjulday)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(root, stryear,strjulday)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
     detections = db.group_detections(subset=args.subset,
                                      starttime=time,
                                      endtime=time + 86400)
     for detection in detections:
-        os.chdir("continuous/%s" % strjulday)
-        dirname = "%s-%s" % (detection.station.name, detection.channel.code)
+        dirname = os.path.join(root,
+                               stryear,
+                               "continuous",
+                               strjulday,
+                               "%s-%s" % (detection.station.name,
+                                          detection.channel.code))
         if not os.path.exists(dirname):
             os.mkdir(dirname)
         os.chdir(dirname)
-        print "Copying data for %s/%s %s:%s" % (stryear,
-                                                strjulday,
-                                                detection.station.name,
-                                                detection.channel.code)
+        #print "Copying data for %s/%s %s:%s" % (stryear,
+        #                                        strjulday,
+        #                                        detection.station.name,
+        #                                        detection.channel.code)
         cmd = "rsync -aP --whole-file %s/%s/%s/*%s.%s[ZNE12]%s* ./"\
             % (cfg["rsync_server"],
                stryear,
@@ -74,19 +87,20 @@ def main_processor_detection_mode(time, args, cfg):
                detection.station.name,
                detection.channel.code[:2],
                detection.channel.code[3:])
-        print cmd
+        #print cmd
         os.system(cmd)
-        print "Data retrieved for %s/%s" % (stryear, strjulday)
-        os.chdir("../../..")
-        if not os.path.exists(strjulday):
-            os.mkdir(strjulday)
-        os.chdir(strjulday)
-        for wf_file in sorted(os.listdir("../continuous/%s/%s"
-                                         % (strjulday,
-                                            dirname))):
-            tr = read("../continuous/%s/%s/%s" % (strjulday,
-                                                  dirname,
-                                                  wf_file))[0]
+        os.chdir(os.path.join(root, stryear, strjulday))
+        for wf_file in sorted(os.listdir(os.path.join(root,
+                                                      stryear,
+                                                      "continuous",
+                                                      strjulday,
+                                                      dirname))):
+            tr = read(os.path.join(root,
+                                   stryear,
+                                   "continuous",
+                                   strjulday,
+                                   dirname,
+                                   wf_file))[0]
             starttime = detection.time - cfg["start_lead"]
             endtime = detection.time + cfg["end_lag"]
             file_length = int(float(endtime) - float(starttime))
@@ -104,12 +118,8 @@ def main_processor_detection_mode(time, args, cfg):
             tr.trim(starttime=starttime,
                     endtime=endtime)
             tr.write(file_name, format=cfg["output_format"])
-        os.chdir("..")
-    
-    os.chdir(os.path.join(work_root, stryear))
-    if os.path.exists("continuous/%s" % strjulday):
-        shutil.rmtree("continuous/%s" % strjulday)
-    os.chdir(work_root)
+    if os.path.exists(os.path.join(root, stryear, "continuous", strjulday)):
+        shutil.rmtree(os.path.join(root, stryear, "continuous", strjulday))
     return None
 
 def main_processor(date, db, cfg, args):
@@ -167,7 +177,8 @@ def main():
     args.database = Database(os.path.abspath(args.database))
     extra_args = {"input_init_args": (args,),
                   "main_init_args": (args, cfg)}
-    config_params = {"n_threads": cfg["n_threads"]}
+    config_params = {"n_threads": cfg["n_threads"],
+                     "input_q_max_size": cfg["n_threads"]}
     if args.detection_mode:
         main_processor = main_processor_detection_mode
     mtp = MultiThreadProcess(inputter,
@@ -176,7 +187,7 @@ def main():
                             extra_args=extra_args,
                             config_params=config_params)
     mtp.start()
-    database.close()
+    args.database.close()
 
 if __name__ == "__main__":
     main()

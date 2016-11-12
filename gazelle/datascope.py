@@ -84,8 +84,10 @@ class Database:
         detections = []
         if starttime is None and endtime is None:
             raise ValueError("starttime or endtime not provided")
+        starttime, endtime = validate_time(starttime), validate_time(endtime)
         view = self.tables["detection"].subset("time >= _%f_ && time < _%f_"
-            % (starttime.timestamp, endtime.timestamp))
+                                               % (starttime.timestamp,
+                                                  endtime.timestamp))
         if subset is not None:
             _view = view.subset(subset)
             view.free()
@@ -338,15 +340,15 @@ class Database:
                                                  origin.lon,
                                                  origin.depth,
                                                  origin.time),
-                    fontsize=22)
+                     fontsize=22)
         ax1 = fig.add_subplot(1, 2, 1)
-        #ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
+        # ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
         ax1.set_aspect('equal', adjustable='box')
         origin.plot(subplot_ax=ax1,
                     show=False,
                     cmap=mpl.cm.jet)
         ax2 = fig.add_subplot(1, 2, 2)
-        #ax2 = fig.add_axes([0.5, 0.2, 0.5, 0.5])
+        # ax2 = fig.add_axes([0.5, 0.2, 0.5, 0.5])
         gather.plot("section",
                     origin.lat,
                     origin.lon,
@@ -359,11 +361,11 @@ class Database:
         xmin, xmax = ax2.get_xlim()
         ymax, ymin = ax2.get_ylim()
         ax2.set_aspect((xmax - xmin) / (ymax - ymin), adjustable='box')
-        #cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
-        #mpl.colorbar.ColorbarBase(cax,
+        # cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
+        # mpl.colorbar.ColorbarBase(cax,
         #                          cmap=mpl.cm.jet)
         plt.subplots_adjust(wspace=0.0)
-        if not savefig == False:
+        if savefig:
             print "Saving to: %s" % savefig
             plt.savefig(savefig, format="png")
         if show:
@@ -371,91 +373,20 @@ class Database:
         else:
             return fig
 
-    def plot_origin_dep(self,
-                    origin,
-                    pre_filter=('highpass', {"freq": 2.0}),
-                    resolution='c',):
-        lat0, lon0 = origin.lat, origin.lon
-        traces = []
-        for arrival in origin.arrivals:
-            try:
-                traces += [self.load_trace(arrival.station,
-                                  arrival.channel,
-                                  origin.time,
-                                  origin.time + 60)]
-            except IOError:
-                continue
-        sort_key = lambda tr: sqrt((tr.stats.station.lat - origin.lat) ** 2 +
-                                   (tr.stats.station.lon - origin.lon) ** 2)
-        traces = sorted(traces, key=sort_key)
-        [trace.filter(pre_filter[0], **pre_filter[1]) for trace in traces]
-        [trace.detrend("demean") for trace in traces]
-        ntraces = len(traces)
-        X = [arrival.station.lon for arrival in origin.arrivals]
-        Y = [arrival.station.lat for arrival in origin.arrivals]
-        xmin, xmax = min([lon0] + X), max([lon0] + X)
-        ymin, ymax = min([lat0] + Y), max([lat0] + Y)
-        x0 = (xmax + xmin) / 2
-        y0 = (ymax + ymin) / 2
-        extent = max([sqrt((X[i] - x0) ** 2
-                           + (Y[i] - y0) ** 2)\
-                      for i in range(len(X))]) * 1.1
-        extent = max(0.85, extent)
-        plt.figure(figsize=(16.5, 8))
-        ax = plt.subplot2grid((ntraces, 2),
-                              (0, 0),
-                              rowspan=ntraces,
-                              colspan=1)
-        m = Basemap(llcrnrlon=x0 - extent,
-                    llcrnrlat=y0 - extent,
-                    urcrnrlon=x0 + extent,
-                    urcrnrlat=y0 + extent,
-                    resolution=resolution)
-        m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
-                      service='USA_Topo_Maps')
-        m.drawmapboundary()
-        m.scatter(lon0, lat0, marker="*", color="r", s=100)
-        m.scatter(X, Y, marker="v", color="g", s=50)
-        # Plot trace data to the right of map
-        set_xlabel = False
-        set_xticks_label = False
-        xaxis_set_visible = False
-        xticklabel_fmt = None
-        ax0 = plt.subplot2grid((ntraces, 2),
-                               (0, 1),
-                               rowspan=1,
-                               colspan=1)
-        traces[0].subplot(ax0,
-                          xaxis_set_visible=xaxis_set_visible,
-                          set_xlabel=set_xlabel,
-                          set_yticks_position="right")
-        for i in range(1, len(traces)):
-            if i == len(traces) - 1:
-                xaxis_set_visible = True
-                set_xlabel = True
-                set_xticks_label = True
-                xticklabel_fmt = "%H:%M:%S"
-            ax = plt.subplot2grid((ntraces, 2),
-                                  (i, 1),
-                                  rowspan=1,
-                                  colspan=1,
-                                  sharex=ax0)
-            traces[i].subplot(ax,
-                              set_xlabel=set_xlabel,
-                              set_xticks_label=set_xticks_label,
-                              set_yticks_position="right",
-                              xaxis_set_visible=xaxis_set_visible,
-                              xticklabel_fmt=xticklabel_fmt)
-        plt.subplots_adjust(wspace=0.0, hspace=0.0)
-        plt.show()
-
-    def time_range(self, table):
+    def time_range(self, table, subset=None):
         table = self.tables[table]
-        view = table.sort("time")
+        if subset:
+            view = table.subset(subset)
+            _view = view.sort("time")
+            view.free()
+            view = _view
+        else:
+            view = table.sort("time")
         view.record = 0
         time = view.getv("time")[0]
         starttime = validate_time(time)
         view.record = view.record_count - 1
+        time = view.getv("time")[0]
         endtime = validate_time(time)
         return starttime, endtime
 

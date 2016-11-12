@@ -391,7 +391,7 @@ def validate_time(time):
         raise TypeError("invalid type: %s" % type(time))
     if not isinstance(time, UTCDateTime):
         if isinstance(time, str):
-            time = float(time)
+            time = UTCDateTime(time)
         if isinstance(time, int) and 1000000 <= time <= 9999999:
             time = UTCDateTime(year=time / 1000, julday=time % 1000)
         elif isinstance(time, float) and time == -1.0:

@@ -6,6 +6,7 @@ from mpl_toolkits.basemap import Basemap
 import numpy as np
 from obspy.geodetics import gps2dist_azimuth
 
+
 class Arrival(object):
     """
     This is a container object to store data pertaining to phase arrivals.
@@ -23,6 +24,12 @@ class Arrival(object):
         self.phase = phase
         self.arid = arid
         self.timeres = timeres
+
+    def __str__(self):
+        return "%s:%s %s %s" % (self.station.name,
+                                self.channel.code,
+                                self.phase,
+                                str(self.time))
 
 
 class Detection(object):
@@ -62,7 +69,7 @@ class Magnitude(object):
         self.magtype = magtype
         self.value = magnitude
         self.magid = magid
-        
+
     def __str__(self):
         return "%s: %.2f" % (self.magtype, self.value)
 
@@ -115,7 +122,7 @@ class Origin(object):
             if not isinstance(magnitude, Magnitude):
                 raise TypeError("not an Arrival object")
             self.magnitudes += (magnitude, )
-            
+
     def get_magnitude(self, magtype=None):
         """
         This should return the preferred magnitude based on some order
@@ -129,7 +136,7 @@ class Origin(object):
 
     def clear_magnitudes(self):
         self.magnitudes = ()
-        
+
     def plot(self,
              cmap=None,
              label_positions=[1, 0, 1, 0],
@@ -141,8 +148,8 @@ class Origin(object):
         lat0, lon0 = self.lat, self.lon
         X = [arrival.station.lon for arrival in self.arrivals]
         Y = [arrival.station.lat for arrival in self.arrivals]
-        if not cmap == None:
-            colors = [cmap(gps2dist_azimuth(lat0, lon0, Y[i], X[i])[1] / 360.)\
+        if cmap is not None:
+            colors = [cmap(gps2dist_azimuth(lat0, lon0, Y[i], X[i])[1] / 360.)
                       for i in range(len(X))]
         else:
             colors = ["g" for i in range(len(X))]
@@ -150,8 +157,7 @@ class Origin(object):
         ymin, ymax = min([lat0] + Y), max([lat0] + Y)
         x0 = (xmax + xmin) / 2
         y0 = (ymax + ymin) / 2
-        extent = max([sqrt((X[i] - x0) ** 2
-                           + (Y[i] - y0) ** 2)\
+        extent = max([sqrt((X[i] - x0) ** 2 + (Y[i] - y0) ** 2)
                       for i in range(len(X))]) * 1.1
         extent = max(0.85, extent)
         if subplot_ax:
@@ -182,18 +188,18 @@ class Origin(object):
         else:
             meridian_mark_stride = 1.0
         m.drawparallels(np.arange(ymin - ymin % parallel_mark_stride,
-                        ymax - ymax % parallel_mark_stride +\
-                            parallel_mark_stride,
-                            parallel_mark_stride),
+                        ymax - ymax % parallel_mark_stride +
+                        parallel_mark_stride,
+                        parallel_mark_stride),
                         labels=label_positions)
         m.drawmeridians(np.arange(xmin - xmin % meridian_mark_stride,
-                        xmax - xmax % meridian_mark_stride +\
-                            meridian_mark_stride,
-                            meridian_mark_stride),
+                        xmax - xmax % meridian_mark_stride +
+                        meridian_mark_stride,
+                        meridian_mark_stride),
                         labels=label_positions)
         m.scatter(lon0, lat0, marker="*", color="r", s=100)
-        [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)\
-                 for i in range(len(X))]
+        [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
+            for i in range(len(X))]
         if subplot_ax:
             return ax
         elif show:
