@@ -35,35 +35,33 @@ def parse_config(args):
 
 
 def getter(db):
+    print "INITIALIZE REAP THREAD"
     for origin in db.iterate_events(parse_magnitudes=False):
         yield origin
 
 
 def main_processor(origin, db, cfg):
-    # print "processing", origin
     locator = Locator(cfg)
     if cfg['mode'] == 'relocate':
         return locator.relocate(origin)
     elif cfg['mode'] == 'locate':
-        return locator.locate(origin, P_only=True), locator.locate(origin)
+        return locator.locate(origin)
     else:
         print "invalid mode: %s" % cfg['mode']
         exit()
 
 
-def outputter(origins, db, cfg):
-    if origins is None:
+def outputter(origin, db, cfg):
+    if origin is None:
         return
-    for origin in origins:
-        if origin is None:
-            return
     if cfg['mode'] == 'relocate':
         auth = cfg['author'] + ":reloc"
     elif cfg['mode'] == 'locate':
         auth = cfg['author'] + ":loc"
-    for origin in origins:
-        origin.author = auth
-        db.write_origin(origin)
+    origin.author = auth
+    print origin.check_network_geometry(), origin.check_azimuthal_gap(), origin
+    origin.plot_special()
+    # db.write_origin(origin)
 
 
 def main():

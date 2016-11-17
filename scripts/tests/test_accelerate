@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+from gazelle.datascope import Database
+from seispy.hypocenter.accelerate import grid_search
+from seispy.locate import Locator
+import ConfigParser
+from time import time
+
+
+def parse_config():
+    cfg = {}
+    config = ConfigParser.RawConfigParser()
+    config.read("/home/shake/malcolcw/src/SeismicPython/scripts/locate/mt3dloc.cfg")
+    cfg["tt_dir"] = config.get("General", "tt_dir")
+    cfg["mode"] = config.get("General", "mode")
+    cfg["author"] = config.get("General", "author")
+    cfg["n_threads"] = config.getint("General", "n_threads")
+    cfg["min_nsta"] = config.getint("General", "min_nsta")
+    cfg["P_residual_tolerance"] = config.getfloat("General", "P_residual_tolerance")
+    cfg["S_residual_tolerance"] = config.getfloat("General", "S_residual_tolerance")
+    cfg["convergance_threshold"] = config.getfloat("General", "convergance_threshold")
+    cfg["max_iterations"] = config.getint("General", "max_iterations")
+    cfg["input_q_size"] = config.getint("General", "input_q_size")
+    cfg["output_q_size"] = config.getint("General", "output_q_size")
+    return cfg
+
+def main():
+    cfg = parse_config()
+    db = Database("/home/shake/malcolcw/products/catalog/SJFZ/2015/SJFZ_2015")
+    for origin in db.iterate_events(parse_magnitudes=False):
+        if len(origin.arrivals) > cfg["min_nsta"]:
+            locator = Locator(cfg)
+            locator._locate_init(origin)
+            ts = time()
+            print grid_search(locator, origin)
+            print "accelerate took: %.3f s" % (time() - ts)
+#            ts = time()
+#            print locator._grid_search(origin)
+#            print "locate took: %.3f s" % (time() - ts)
+    
+if __name__ == "__main__":
+    main()
