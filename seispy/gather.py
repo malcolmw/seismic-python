@@ -5,61 +5,66 @@ Created on Fri Oct 21 18:04:04 2016
 
 @author: malcolcw
 """
+from seispy.event import Detection
 from seispy.signal.detect import detectS as _detectS_cc
 from seispy.signal.detect import create_polarization_filter
 from copy import deepcopy
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import numpy as np
 import obspy.core
 from obspy.geodetics import gps2dist_azimuth
 
-class Gather(obspy.core.Stream):     
+
+class Gather(obspy.core.Stream):
     def apply_offsets(self, lat0, lon0):
         offsets = [gps2dist_azimuth(lat0,
                                     lon0,
                                     trace.stats.station.lat,
-                                    trace.stats.station.lon)[0]\
+                                    trace.stats.station.lon)[0]
                    for trace in self.traces]
         max_offset = max(offsets)
         offsets = [offset / max_offset for offset in offsets]
-        [self.traces[i].amplitude_offset(offsets[i])\
-                 for i in range(len(self.traces))]
+        [self.traces[i].amplitude_offset(offsets[i])
+            for i in range(len(self.traces))]
 
     def azimuths(self, lat0, lon0):
         return [gps2dist_azimuth(lat0,
                                  lon0,
                                  trace.stats.station.lat,
-                                 trace.stats.station.lon)[1]\
-                    for trace in self.traces]
+                                 trace.stats.station.lon)[1]
+                for trace in self.traces]
 
     def detrend(self, *args, **kwargs):
         [trace.detrend(*args) for trace in self.traces]
-         
+
     def distances(self, lat0, lon0):
         return [gps2dist_azimuth(lat0,
                                  lon0,
                                  trace.stats.station.lat,
-                                 trace.stats.station.lon)[0] / 1000.\
-                    for trace in self.traces]
-                    
+                                 trace.stats.station.lon)[0] / 1000.
+                for trace in self.traces]
+
     def distance_sort(self, lat0, lon0):
         if lon0 > 180.:
             lon0 -= 360.
-        key = lambda trace: gps2dist_azimuth(lat0,
-                                             lon0,
-                                             trace.stats.station.lat,
-                                             trace.stats.station.lon)
+
+        def key(trace):
+            return gps2dist_azimuth(lat0,
+                                    lon0,
+                                    trace.stats.station.lat,
+                                    trace.stats.station.lon)
         self.traces = sorted(self.traces, key=key)
-        
+
     def normalize(self):
         for trace in self.traces:
             max_amp = max(trace.data) * len(self.traces)
             trace.normalize(max_amp=max_amp)
-            
-    def plot(self, plot_type, *args, **kwargs):
+
+    def plot(self, plot_type=None, *args, **kwargs):
         if plot_type == "section":
             self._plot_section(*args, **kwargs)
+        elif plot_type is None:
+            super(self.__class__, self).plot()
         else:
             return None
 
@@ -182,7 +187,10 @@ class Gather3C(obspy.core.Stream):
                              self.stats.delta,
                              k_twin)
         lag1, lag2, snr1, snr2, pol_fltr, S1, S2, K1, K2 = output
+        #print self.stats.starttime.timestamp + lag1,\
+        #    self.stats.starttime.timestamp + lag2, snr1, snr2
         # Checking for the various possible pick results
+        #print lag1, lag2, snr1, snr2
         if lag1 > 0 and lag2 > 0:
             if snr1 > snr2:
                 lag = lag1
@@ -217,6 +225,7 @@ class Gather3C(obspy.core.Stream):
              endtime=None,
              arrivals=None,
              detections=None,
+             save=False,
              show=True,
              xticklabel_fmt=None):
         fig, axs = plt.subplots(nrows=3, sharex=True, figsize=(12, 9))
@@ -265,6 +274,8 @@ class Gather3C(obspy.core.Stream):
                                arrivals=arrivals_H2,
                                detections=detections_H2,
                                xticklabel_fmt=xticklabel_fmt)
+        if save:
+            plt.savefig(save, format="png")
         if show:
             plt.show()
         else:

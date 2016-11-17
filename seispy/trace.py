@@ -1,4 +1,4 @@
-from gazelle.datascope import Dbptr
+# from gazelle.datascope import Dbptr
 from seispy.station import Channel,\
                            Station
 from seispy.signal.statistics import f90trigger,\
@@ -155,9 +155,16 @@ class Trace(obspy.core.Trace):
                 ax.set_xlabel("%s - %s" % (stime, etime),
                               fontsize=16)
         # Configure the y-axis.
+        if hasattr(self.stats.station, "name"):
+            station = self.stats.station.name
+        else:
+            station = self.stats.station
+        if hasattr(self.stats.channel, "code"):
+            channel = self.stats.channel.code
+        else:
+            channel = self.stats.channel
         ax.text(0.5, 0.5,
-                "%s:%s" % (self.stats.station.name,
-                           self.stats.channel.code))
+                "%s:%s" % (station, channel))
         if set_yticks_position:
             ax.yaxis.set_ticks_position(set_yticks_position)
         trmax = max([abs(min(self.data)), abs(max(self.data))])
@@ -175,7 +182,8 @@ class Trace(obspy.core.Trace):
                                    ymin=0.1,
                                    ymax=0.9,
                                    color='b',
-                                   linewidth=2)\
+                                   linewidth=2,
+                                   linestyle="--")\
                         for detection in detections]
         return ax
 

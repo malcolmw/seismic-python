@@ -70,11 +70,13 @@ def sph2xyz(r, theta, phi):
     z = r * cos(theta)
     return x, y, z
 
+
 def xyz2sph(x, y, z):
     r = sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = acos(z / r)
     phi = atan2(y, x)
     return r, theta, phi
+
 
 def rotation_matrix(axis, theta):
     """
@@ -96,6 +98,7 @@ def rotation_matrix(axis, theta):
     else:
         raise ValueError("invalid axis")
 
+
 def quadrant_coverage(source, receivers):
     q1, q2, q3, q4 = False, False, False, False
     lon0, lat0 = source.lon, source.lat
@@ -114,6 +117,7 @@ def quadrant_coverage(source, receivers):
         if q:
             coverage += 1.0
     return coverage / 4.0
+
 
 class Vector(np.ndarray):
 

@@ -63,7 +63,11 @@ class Locator(object):
             arrivals = tuple([arr for arr in arrivals if arr.phase == 'P'])
             print "locating with %d P-wave observations" % len(arrivals)
         else:
-            print "locating with %d combined P-wave and S-wave observations" % len(arrivals)
+            print "locating with %d combined P-wave and S-wave observations"\
+                % len(arrivals)
+        if not self.check_nsta(arrivals):
+            print "not enough stations"
+            return None
         r0, theta0, phi0, t0 = self._grid_search(arrivals)
         soln = self._subgrid_inversion(r0, theta0, phi0, t0, arrivals)
         if soln is None:

@@ -1,10 +1,12 @@
 # -*- coding: utf-8 -*-
-from math import sqrt
+from math import sqrt, pi
 from seispy.util import validate_time
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 import numpy as np
 from obspy.geodetics import gps2dist_azimuth
+
+from matplotlib.patches import Circle
 
 
 class Arrival(object):
@@ -116,6 +118,7 @@ class Origin(object):
             self.arrivals += (arrival, )
         self.nass = len(self.arrivals)
         self.ndef = len(self.arrivals)
+        self._update_max_azimuthal_gap()
 
     def add_magnitudes(self, magnitudes):
         for magnitude in magnitudes:
@@ -131,11 +134,49 @@ class Origin(object):
         """
         return None if len(self.magnitudes) == 0 else self.magnitudes[0]
 
+    def check_azimuthal_gap(self):
+        self._update_max_azimuthal_gap()
+        return self.max_azimuthal_gap
+
+    def check_network_geometry(self):
+        stations = {}
+        for arrival in self.arrivals:
+            if arrival.station.name not in stations:
+                stations[arrival.station.name] = arrival.station
+        coordinates = np.asarray([[stations[key].lat,
+                                   stations[key].lon] for key in stations])
+        centroid = coordinates.mean(axis=0)
+        median_dist = np.median(np.asarray([sqrt((centroid[0] - stations[key].lat) ** 2 +
+                                     (centroid[1] - stations[key].lon) ** 2)
+                                for key in stations]))
+        distances = []
+        for key in stations:
+            distance = sqrt((stations[key].lat - self.lat) ** 2 +
+                            (stations[key].lon - self.lon) ** 2)
+            distances += [distance]
+        return (len([key for key in stations]) / (pi * median_dist ** 2),
+                "%f:%f" % (min(distances), median_dist))
+
     def clear_arrivals(self):
         self.arrivals = ()
 
     def clear_magnitudes(self):
         self.magnitudes = ()
+
+    def _update_max_azimuthal_gap(self):
+        azimuths, gaps = [], []
+        for arrival in self.arrivals:
+            d, abaz, baaz = gps2dist_azimuth(self.lat,
+                                             self.lon,
+                                             arrival.station.lat,
+                                             arrival.station.lon)
+            if abaz not in azimuths:
+                azimuths += [abaz]
+        azimuths = sorted(azimuths)
+        for i in range(len(azimuths) - 1):
+            gaps +=[azimuths[i + 1] - azimuths[i]]
+        gaps += [360. - azimuths[-1] + azimuths[0]]
+        self.max_azimuthal_gap = max(gaps)
 
     def plot(self,
              cmap=None,
@@ -200,6 +241,92 @@ class Origin(object):
         m.scatter(lon0, lat0, marker="*", color="r", s=100)
         [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
             for i in range(len(X))]
+        if subplot_ax:
+            return ax
+        elif show:
+            plt.show()
+            
+    def plot_special(self,
+             cmap=None,
+             label_positions=[1, 0, 1, 0],
+             meridian_mark_stride=0.5,
+             parallel_mark_stride=0.5,
+             resolution='c',
+             show=True,
+             subplot_ax=None):
+        lat0, lon0 = self.lat, self.lon
+        X = [arrival.station.lon for arrival in self.arrivals]
+        Y = [arrival.station.lat for arrival in self.arrivals]
+        if cmap is not None:
+            colors = [cmap(gps2dist_azimuth(lat0, lon0, Y[i], X[i])[1] / 360.)
+                      for i in range(len(X))]
+        else:
+            colors = ["g" for i in range(len(X))]
+        xmin, xmax = min([lon0] + X), max([lon0] + X)
+        ymin, ymax = min([lat0] + Y), max([lat0] + Y)
+        x0 = (xmax + xmin) / 2
+        y0 = (ymax + ymin) / 2
+        extent = max([sqrt((X[i] - x0) ** 2 + (Y[i] - y0) ** 2)
+                      for i in range(len(X))]) * 1.1
+        extent = max(0.85, extent)
+        if subplot_ax:
+            ax = subplot_ax
+        else:
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+        m = Basemap(llcrnrlon=x0 - extent,
+                    llcrnrlat=y0 - extent,
+                    urcrnrlon=x0 + extent,
+                    urcrnrlat=y0 + extent,
+                    resolution=resolution)
+        m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
+                      service='USA_Topo_Maps')
+        m.drawmapboundary()
+        xmin, xmax = ax.get_xlim()
+        ymin, ymax = ax.get_ylim()
+        if ymax - ymin < 1.0:
+            parallel_mark_stride = 0.2
+        elif 1.0 <= ymax - ymin < 2.5:
+            parallel_mark_stride = 0.5
+        else:
+            parallel_mark_stride = 1.0
+        if xmax - xmin < 1.0:
+            meridian_mark_stride = 0.2
+        elif 1.0 <= xmax - xmin < 2.5:
+            meridian_mark_stride = 0.5
+        else:
+            meridian_mark_stride = 1.0
+        m.drawparallels(np.arange(ymin - ymin % parallel_mark_stride,
+                        ymax - ymax % parallel_mark_stride +
+                        parallel_mark_stride,
+                        parallel_mark_stride),
+                        labels=label_positions)
+        m.drawmeridians(np.arange(xmin - xmin % meridian_mark_stride,
+                        xmax - xmax % meridian_mark_stride +
+                        meridian_mark_stride,
+                        meridian_mark_stride),
+                        labels=label_positions)
+        m.scatter(lon0, lat0, marker="*", color="r", s=100)
+        [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
+            for i in range(len(X))]
+        stations = {}
+        for arrival in self.arrivals:
+            if arrival.station.name not in stations:
+                stations[arrival.station.name] = arrival.station
+        coordinates = np.asarray([[stations[key].lat,
+                                   stations[key].lon] for key in stations])
+        centroid = coordinates.mean(axis=0)
+        median_dist = np.median(np.asarray([sqrt((centroid[0] - stations[key].lat) ** 2 +
+                                     (centroid[1] - stations[key].lon) ** 2)
+                                for key in stations]))
+        ax = plt.gca()
+        [ax.add_patch(Circle((X[i], Y[i]),
+                             median_dist,
+                             fill=False)) for i in range(len(X))]
+        density = len([key for key in stations]) / (pi * median_dist ** 2)
+        ax.add_patch(Circle((centroid[1], centroid[0]),
+                            median_dist * (density / 100.),
+                            alpha=0.25))
         if subplot_ax:
             return ax
         elif show:

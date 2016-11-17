@@ -1,8 +1,3 @@
-from seispy import _ANTELOPE_DEFINED
-if _ANTELOPE_DEFINED:
-    from antelope.datascope import *
-if not _ANTELOPE_DEFINED:
-    raise ImportError("Antelope environment not defined")
 from seispy.gather import Gather,\
                           Gather3C
 from seispy.event import Arrival,\
@@ -16,10 +11,13 @@ from seispy.station import Channel,\
                            Station
 from seispy.trace import Trace
 from seispy.util import validate_time
+from seispy import _ANTELOPE_DEFINED
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from mpl_toolkits.basemap import Basemap
-from math import sqrt
+if _ANTELOPE_DEFINED:
+    from antelope.datascope import *
+if not _ANTELOPE_DEFINED:
+    raise ImportError("Antelope environment not defined")
 
 
 class Database:
