@@ -1,5 +1,5 @@
 #! /usr/bin/env python
-from seispy.locate import Locator
+from seispy.locate_dummy import Locator
 from seispy.util import MultiThreadProcess
 from gazelle.datascope import Database
 import argparse
@@ -10,6 +10,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("db", type=str, nargs=1)
     parser.add_argument("config", type=str, nargs=1)
+    parser.add_argument("-s", "--subset", type=str)
     return parser.parse_args()
 
 
@@ -34,13 +35,14 @@ def parse_config(args):
     return cfg
 
 
-def getter(db):
+def getter(args):
     print "INITIALIZE REAP THREAD"
-    for origin in db.iterate_events(parse_magnitudes=False):
+    for origin in args.db.iterate_events(subset=args.subset,
+                                         parse_magnitudes=False):
         yield origin
 
 
-def main_processor(origin, db, cfg):
+def main_processor(origin, cfg):
     locator = Locator(cfg)
     if cfg['mode'] == 'relocate':
         return locator.relocate(origin)
@@ -51,7 +53,7 @@ def main_processor(origin, db, cfg):
         exit()
 
 
-def outputter(origin, db, cfg):
+def outputter(origin, args, cfg):
     if origin is None:
         return
     if cfg['mode'] == 'relocate':
@@ -59,26 +61,26 @@ def outputter(origin, db, cfg):
     elif cfg['mode'] == 'locate':
         auth = cfg['author'] + ":loc"
     origin.author = auth
-    print origin.check_network_geometry(), origin.check_azimuthal_gap(), origin
+    print origin.quality
     origin.plot_special()
-    # db.write_origin(origin)
+    #args.db.write_origin(origin)
 
 
 def main():
-    db = Database(args.db[0], mode='r+')
+    args.db = Database(args.db[0], mode='r+')
     config_params = {'n_threads': cfg['n_threads'],
                      'input_q_max_size': cfg['input_q_size'],
                      'output_q_max_size': cfg['output_q_size']}
-    extra_args = {'input_init_args': (db,),
-                  'main_init_args': (db, cfg),
-                  'output_init_args': (db, cfg)}
+    extra_args = {'input_init_args': (args,),
+                  'main_init_args': (cfg,),
+                  'output_init_args': (args, cfg)}
     mtp = MultiThreadProcess(getter,
                              main_processor,
                              outputter,
                              extra_args=extra_args,
                              config_params=config_params)
     mtp.start()
-    db.close()
+    args.db.close()
 
 if __name__ == "__main__":
     args = parse_args()
