@@ -19,7 +19,8 @@ kwargs = {'name': 'seispy',
           'download_url': 'https://github.com/malcolmw/SeismicPython',
           'platforms': ['linux'],
           'requires': ['obspy', 'basemap'],
-          'py_modules': ['seispy.event',
+          'py_modules': ['seispy.burrow',
+                         'seispy.event',
                          'seispy.gather',
                          'seispy.geoid',
                          'seispy.geometry',
@@ -29,11 +30,12 @@ kwargs = {'name': 'seispy',
                          'seispy.trace',
                          'seispy.util',
                          'seispy.velocity'],
-          'scripts': ['scripts/fetch_data.py',
-                      'scripts/fm3d_ttimes.py',
-                      'scripts/mt3dloc.py',
-                      'scripts/mtsynth.py',
-                      'scripts/synthetics2db.py']}
+          'scripts': ['scripts/fetch_data',
+                      'scripts/fm3d_ttimes',
+                      'scripts/mt3dloc',
+                      'scripts/mtsynth',
+                      'scripts/plot_events',
+                      'scripts/synthetics2db']}
 
 # Get some information about BLAS and LAPACK libraries.
 blas_opt = get_info('blas', notfound_action=2)
