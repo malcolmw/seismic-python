@@ -92,6 +92,7 @@ class Origin(object):
         self.time = validate_time(time)
         self.arrivals = ()
         self.magnitudes = ()
+        self.stations = {}
         if arrivals:
             self.add_arrivals(arrivals)
         if magnitudes:
@@ -103,6 +104,12 @@ class Origin(object):
         self.ndef = ndef
         self.author = author
 
+    def __getattr__(self, attr):
+        if attr == "quality":
+            return self._quality()
+        else:
+            raise AttributeError
+
     def __str__(self):
         return "origin: %d %.4f %.4f %.4f %s %s" % (self.orid,
                                                     self.lat,
@@ -111,14 +118,24 @@ class Origin(object):
                                                     self.time,
                                                     self.author)
 
+    def _quality(self):
+        if self.is_in_neighbourhood_A():
+            return "A"
+        elif self.is_in_neighbourhood_B() and\
+                self.azimuthal_distribution_coefficient() > 1 / 3.:
+            return "B"
+        else:
+            return "C"
+
     def add_arrivals(self, arrivals):
         for arrival in arrivals:
             if not isinstance(arrival, Arrival):
                 raise TypeError("not an Arrival object")
             self.arrivals += (arrival, )
+            if arrival.station.name not in self.stations:
+                self.stations[arrival.station.name] = arrival.station
         self.nass = len(self.arrivals)
         self.ndef = len(self.arrivals)
-        self._update_max_azimuthal_gap()
 
     def add_magnitudes(self, magnitudes):
         for magnitude in magnitudes:
@@ -134,37 +151,43 @@ class Origin(object):
         """
         return None if len(self.magnitudes) == 0 else self.magnitudes[0]
 
-    def check_azimuthal_gap(self):
-        self._update_max_azimuthal_gap()
-        return self.max_azimuthal_gap
-
-    def check_network_geometry(self):
-        stations = {}
-        for arrival in self.arrivals:
-            if arrival.station.name not in stations:
-                stations[arrival.station.name] = arrival.station
-        coordinates = np.asarray([[stations[key].lat,
-                                   stations[key].lon] for key in stations])
+    def is_in_neighbourhood_A(self):
+        coordinates = np.asarray([[self.stations[key].lon,
+                                   self.stations[key].lat]
+                                  for key in self.stations])
         centroid = coordinates.mean(axis=0)
-        median_dist = np.median(np.asarray([sqrt((centroid[0] - stations[key].lat) ** 2 +
-                                     (centroid[1] - stations[key].lon) ** 2)
-                                for key in stations]))
-        distances = []
-        for key in stations:
-            distance = sqrt((stations[key].lat - self.lat) ** 2 +
-                            (stations[key].lon - self.lon) ** 2)
-            distances += [distance]
-        return (len([key for key in stations]) / (pi * median_dist ** 2),
-                "%f:%f" % (min(distances), median_dist))
+        median_dist = np.median(np.asarray([sqrt((centroid[0] -
+                                                  self.stations[key].lon) ** 2 +
+                                                 (centroid[1] -
+                                                  self.stations[key].lat) ** 2)
+                                            for key in self.stations]))
+        density = len(self.stations) / (pi * median_dist ** 2)
+        # radius of Quality A neighbourhood
+        RA = 0.01 * median_dist * density
+        for key in self.stations:
+            distance = sqrt((centroid[0] - self.lon) ** 2 +
+                            (centroid[1] - self.lat) ** 2)
+            if distance < RA:
+                return True
+        return False
 
-    def clear_arrivals(self):
-        self.arrivals = ()
+    def is_in_neighbourhood_B(self):
+        coordinates = np.asarray([[self.stations[key].lon,
+                                   self.stations[key].lat] for key in self.stations])
+        centroid = coordinates.mean(axis=0)
+        median_dist = np.median(np.asarray([sqrt((centroid[0] -
+                                                  self.stations[key].lon) ** 2 +
+                                                 (centroid[1] -
+                                                  self.stations[key].lat) ** 2)
+                                            for key in self.stations]))
+        for key in self.stations:
+            distance = sqrt((self.stations[key].lat - self.lat) ** 2 +
+                            (self.stations[key].lon - self.lon) ** 2)
+            if distance < median_dist:
+                return True
 
-    def clear_magnitudes(self):
-        self.magnitudes = ()
-
-    def _update_max_azimuthal_gap(self):
-        azimuths, gaps = [], []
+    def azimuthal_distribution_coefficient(self):
+        azimuths = []
         for arrival in self.arrivals:
             d, abaz, baaz = gps2dist_azimuth(self.lat,
                                              self.lon,
@@ -172,11 +195,18 @@ class Origin(object):
                                              arrival.station.lon)
             if abaz not in azimuths:
                 azimuths += [abaz]
-        azimuths = sorted(azimuths)
-        for i in range(len(azimuths) - 1):
-            gaps +=[azimuths[i + 1] - azimuths[i]]
-        gaps += [360. - azimuths[-1] + azimuths[0]]
-        self.max_azimuthal_gap = max(gaps)
+        hist = np.histogram(azimuths,
+                            bins=18,
+                            range=(0., 360.))
+        return sum([1 for count in hist[0] if count > 0]) /\
+               float(len(hist[1]) - 1)
+
+    def clear_arrivals(self):
+        self.arrivals = ()
+        self.stations = {}
+
+    def clear_magnitudes(self):
+        self.magnitudes = ()
 
     def plot(self,
              cmap=None,
@@ -184,6 +214,7 @@ class Origin(object):
              meridian_mark_stride=0.5,
              parallel_mark_stride=0.5,
              resolution='c',
+             save=False,
              show=True,
              subplot_ax=None):
         lat0, lon0 = self.lat, self.lon
@@ -241,9 +272,32 @@ class Origin(object):
         m.scatter(lon0, lat0, marker="*", color="r", s=100)
         [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
             for i in range(len(X))]
+        bbox_props = {"boxstyle": "round", "facecolor": "white", "alpha": 0.5}
+        plt.figtext(0.95, 0.90,
+                    "{:>7s}: {:>6s}\n"\
+                    "{:>7s}: {:>6.2f}\n"\
+                    "{:>7s}: {:>6.2f}\n"\
+                    "{:>7s}: {:>6.2f}\n"\
+                    "{:>7s}: {:>6d}".format("quality",
+                                          self.quality,
+                                          "lat",
+                                          self.lat,
+                                          "lon",
+                                          self.lon,
+                                          "depth",
+                                          self.depth,
+                                          "orid",
+                                          self.orid),
+                    bbox=bbox_props,
+                    horizontalalignment="right",
+                    verticalalignment="top",
+                    family="monospace")
+        plt.subplots_adjust(right=0.75)
         if subplot_ax:
             return ax
-        elif show:
+        if save:
+            plt.savefig(save + ".png", format="png")
+        if show:
             plt.show()
             
     def plot_special(self,

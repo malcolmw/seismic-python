@@ -187,6 +187,7 @@ class Gather3C(obspy.core.Stream):
                              self.stats.delta,
                              k_twin)
         lag1, lag2, snr1, snr2, pol_fltr, S1, S2, K1, K2 = output
+        return pol_fltr
         #print self.stats.starttime.timestamp + lag1,\
         #    self.stats.starttime.timestamp + lag2, snr1, snr2
         # Checking for the various possible pick results

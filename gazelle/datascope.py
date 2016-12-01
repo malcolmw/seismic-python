@@ -401,7 +401,8 @@ class Database:
                         ('time', float(origin.time)),
                         ('auth', origin.author),
                         ('nass', len(origin.arrivals)),
-                        ('ndef', len(origin.arrivals)))
+                        ('ndef', len(origin.arrivals)),
+                        ('review', origin.quality))
         for arrival in origin.arrivals:
             tbl_assoc.record = tbl_assoc.addnull()
             tbl_assoc.putv(('orid', orid),
