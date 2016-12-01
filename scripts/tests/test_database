@@ -1,8 +1,0 @@
-#!/usr/bin/env python
-from gazelle.datascope import Database
-from seispy.gather import Gather
-import matplotlib.pyplot as plt
-db = Database("/home/shake/malcolcw/projects/SJFZ/dbs/deep_test/deep_test")
-for origin in db.iterate_events(parse_magnitudes=False):
-    #print origin
-    pass

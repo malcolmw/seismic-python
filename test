@@ -1,0 +1,2 @@
+python setup.py install --install-lib=~/anaconda2/lib/python2.7/site-packages;
+./tests/detect
