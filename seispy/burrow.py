@@ -1,9 +1,9 @@
 from gazelle.datascope import closing,\
                               dbopen
-import seispy
-from seispy.gather import Gather
+import seispy.station
 from seispy.util import validate_time
-from obspy.core import read
+from obspy.core import read,\
+                       Stream
 import os
 import shutil
 import subprocess
@@ -23,7 +23,6 @@ class Groundhog:
         for year in self.dbs:
             self.dbs[year].close()
         shutil.rmtree(self.temp_dir)
-        print self.temp_dir, "REMOVED"
 
     def fetch(self, station, channel, starttime, endtime):
         """
@@ -44,7 +43,7 @@ class Groundhog:
                                                      starttime.timestamp,
                                                      endtime.timestamp))
         view_unique = view.sort(("sta", "chan"), unique=True)
-        gather = Gather()
+        st = Stream()
         for control_record in view_unique.iter_record():
             sta, chan = control_record.getv("sta", "chan")
             view_data = view.subset("sta =~ /%s/ && chan =~ /%s/ && endtime"
@@ -65,7 +64,7 @@ class Groundhog:
                                                    dfile),
                                      self.temp_dir],
                                      stdout=FNULL)
-                gather += read(os.path.join(self.temp_dir, dfile))
+                st += read(os.path.join(self.temp_dir, dfile))
                 os.remove(os.path.join(self.temp_dir, dfile))
-        gather.trim(starttime, endtime)
-        return gather
+        st.trim(starttime, endtime)
+        return st
