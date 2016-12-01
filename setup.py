@@ -18,18 +18,24 @@ kwargs = {'name': 'seispy',
           'description': 'Seismic data analysis tools',
           'download_url': 'https://github.com/malcolmw/SeismicPython',
           'platforms': ['linux'],
-          'requires': ['obspy'],
-          'py_modules': ['seispy.core',
+          'requires': ['obspy', 'basemap'],
+          'py_modules': ['seispy.burrow',
+                         'seispy.event',
+                         'seispy.gather',
                          'seispy.geoid',
                          'seispy.geometry',
                          'seispy.locate',
+                         'seispy.network',
+                         'seispy.station',
+                         'seispy.trace',
                          'seispy.util',
                          'seispy.velocity'],
-           'scripts': ['scripts/fetch/fetch_event_data',
-                       'scripts/fm3d_ttimes/fm3d_ttimes',
-                       'scripts/locate/mt3dloc',
-                       'scripts/synthetics/mtsynth',
-                       'scripts/synthetics/synthetics2db']}
+          'scripts': ['scripts/fetch_data',
+                      'scripts/fm3d_ttimes',
+                      'scripts/mt3dloc',
+                      'scripts/mtsynth',
+                      'scripts/plot_events',
+                      'scripts/synthetics2db']}
 
 # Get some information about BLAS and LAPACK libraries.
 blas_opt = get_info('blas', notfound_action=2)
@@ -54,12 +60,15 @@ kwargs['ext_modules'] = [Extension('seispy.signal.statistics',
                                    library_dirs=lib_dirs,
                                    extra_link_args=['-llapack', '-lblas']),
                          Extension('seispy.signal.detect',
-                                    sources=['seispy/signal/src/detect.cc',
-                                             'seispy/signal/src/picker.cc'],
-                                    include_dirs=[np_get_include(),
-                                                  eigen_path],
-                                    extra_compile_args=['-O3'])]
-
+                                   sources=['seispy/signal/src/detect.cc',
+                                            'seispy/signal/src/picker.cc'],
+                                   include_dirs=[np_get_include(),
+                                                 eigen_path],
+                                   extra_compile_args=['-O3']),
+                         Extension('seispy.hypocenter.accelerate',
+                                   sources=['seispy/hypocenter/accelerate.cc'])]
+kwargs['packages'] = ['seispy', 'seispy.signal', 'seispy.hypocenter']
+kwargs['package_dir'] = {'seispy': 'seispy'}
 # If $ANTELOPE environment variable is not initialized, install only the
 # portions of the distribution that will operate independently of
 # Antelope.
@@ -68,8 +77,6 @@ try:
 except KeyError:
     print "INFO:: $ANTELOPE environment variable not detected."
     print "INFO:: Installing Antelope independent components only."
-    kwargs['packages'] = ['seispy', 'seispy.signal']
-    kwargs['package_dir'] = {'seispy': 'seispy'}
     setup(**kwargs)
     exit()
 
@@ -77,11 +84,11 @@ except KeyError:
 # the distribution that depend on Antelope.
 print "INFO:: $ANTELOPE environment variable detected (%s)" % antelope_dir
 print "INFO:: Installing all components."
-kwargs['packages'] = ['seispy', 'seispy.signal', 'gazelle']
-kwargs['package_dir'] = {'seispy': 'seispy',
-                         'gazelle': 'gazelle'}
+kwargs['packages'] += ['gazelle']
+kwargs['package_dir']['gazelle'] = 'gazelle'
 kwargs['ext_modules'] += [Extension("gazelle.response",
-                                    ["gazelle/responsemodule/responsemodule.c"],
+                                    ["gazelle/responsemodule/"
+                                     "responsemodule.c"],
                                     include_dirs=["%s/include" % antelope_dir],
                                     libraries=['coords',
                                                'alk',

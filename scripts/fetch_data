@@ -1,0 +1,193 @@
+#!/usr/bin/env python
+from argparse import ArgumentParser
+from ConfigParser import RawConfigParser
+import os
+import shutil
+from time import sleep
+from obspy.core import read
+from gazelle.datascope import Database
+from seispy.util import MultiThreadProcess
+
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("database", type=str, help="input database")
+    parser.add_argument("cfg_file", type=str, help="configuration file")
+    parser.add_argument("-s", "--subset", type=str, help="subset expression")
+    parser.add_argument("-d", "--detection_mode",
+                        action="store_true",
+                        help="detection mode")
+    return parser.parse_args()
+
+
+def parse_config(args):
+    cfg = {}
+    config = RawConfigParser()
+    config.read(args.cfg_file)
+    cfg["rsync_server"] = config.get("General", "rsync_server")
+    cfg["n_threads"] = config.getint("General", "n_threads")
+    cfg["start_lead"] = config.getfloat("General", "start_lead")
+    cfg["end_lag"] = config.getfloat("General", "end_lag")
+    cfg["output_format"] = config.get("General", "output_format")
+    cfg["file_match"] = config.get("General", "file_match")
+    return cfg
+
+def inputter(args):
+    if args.detection_mode:
+        starttime, endtime = args.database.time_range("detection",
+                                                      subset=args.subset)
+    else:
+        starttime, endtime = args.database.time_range("origin",
+                                                      subset=args.subset)
+    time = starttime
+    time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
+    root = os.getcwd()
+    while time <= endtime:
+        yield time
+        time += 86400
+        sleep(1)
+
+def main_processor_detection_mode(time, args, cfg):
+    db = args.database
+    root = os.getcwd()
+    stryear, strjulday = str(time.year), "%03d" % time.julday
+    wdir = os.path.join(root, stryear)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(wdir, "continuous")
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(wdir, strjulday)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    wdir = os.path.join(root, stryear,strjulday)
+    if not os.path.exists(wdir):
+        os.mkdir(wdir)
+    detections = db.group_detections(subset=args.subset,
+                                     starttime=time,
+                                     endtime=time + 86400)
+    for detection in detections:
+        dirname = os.path.join(root,
+                               stryear,
+                               "continuous",
+                               strjulday,
+                               "%s-%s" % (detection.station.name,
+                                          detection.channel.code))
+        if not os.path.exists(dirname):
+            os.mkdir(dirname)
+        os.chdir(dirname)
+        #print "Copying data for %s/%s %s:%s" % (stryear,
+        #                                        strjulday,
+        #                                        detection.station.name,
+        #                                        detection.channel.code)
+        cmd = "rsync -aP --whole-file %s/%s/%s/*%s.%s[ZNE12]%s* ./"\
+            % (cfg["rsync_server"],
+               stryear,
+               strjulday,
+               detection.station.name,
+               detection.channel.code[:2],
+               detection.channel.code[3:])
+        #print cmd
+        os.system(cmd)
+        os.chdir(os.path.join(root, stryear, strjulday))
+        for wf_file in sorted(os.listdir(os.path.join(root,
+                                                      stryear,
+                                                      "continuous",
+                                                      strjulday,
+                                                      dirname))):
+            tr = read(os.path.join(root,
+                                   stryear,
+                                   "continuous",
+                                   strjulday,
+                                   dirname,
+                                   wf_file))[0]
+            starttime = detection.time - cfg["start_lead"]
+            endtime = detection.time + cfg["end_lag"]
+            file_length = int(float(endtime) - float(starttime))
+            file_name = "%s.%s.%s.%s.%02d.%02d.%02d.%06d+%d"\
+                % (tr.stats.station,
+                   tr.stats.channel,
+                   stryear,
+                   strjulday,
+                   starttime.hour,
+                   starttime.minute,
+                   starttime.second,
+                   starttime.microsecond,
+                   file_length)
+            print "Writing file %s" % file_name
+            tr.trim(starttime=starttime,
+                    endtime=endtime)
+            tr.write(file_name, format=cfg["output_format"])
+    if os.path.exists(os.path.join(root, stryear, "continuous", strjulday)):
+        shutil.rmtree(os.path.join(root, stryear, "continuous", strjulday))
+    return None
+
+def main_processor(date, db, cfg, args):
+    year, day = date
+    jday = "%03d" % day
+    work_root = os.getcwd()
+    if not os.path.exists("%d" % year):
+        os.mkdir("%d" % year)
+    os.chdir("%d" % year)
+    if not os.path.exists("continuous"):
+        os.mkdir("continuous")
+    os.chdir("continuous")
+    if not os.path.exists(jday):
+        os.mkdir(jday)
+    os.chdir(jday)
+    subset = "time >= _%d%s_ && time < _%d%s_"\
+            % (year, jday, year, "%03d" % (day + 1))
+    if args.subset:
+        subset += " && " + args.subset
+    copy_flag = True
+    for origin in db.iterate_events(subset=subset,
+                                    parse_arrivals=False,
+                                    parse_magnitudes=False):
+        print origin
+        if copy_flag:
+            copy_flag = False
+            print "Copying data for %d/%s" % (year, jday)
+            cmd = "rsync -aP --whole-file %s/%d/%s/%s ./" % (cfg["rsync_server"], year, jday, cfg["file_match"])
+            os.system(cmd)
+            print "Data retrieved for %d/%s" % (year, jday)
+            os.chdir("../..")
+        if not os.path.exists("%d" % origin.evid):
+            os.mkdir("%d" % origin.evid)
+        os.chdir("%d" % origin.evid)
+        for wf_file in sorted(os.listdir("../continuous/%s" % jday)):
+            tr = read("../continuous/%s/%s" % (jday, wf_file))[0]
+            print "Writing file %s.%s.%d" % (tr.stats.station, tr.stats.channel, origin.evid)
+            tr.trim(starttime=origin.time - cfg["start_lead"], endtime=origin.time + cfg["end_lag"])
+            tr.write("%s.%s.%d" % (tr.stats.station,
+                                   tr.stats.channel,
+                                   origin.evid),
+                                   format=cfg["output_format"])
+    os.chdir(os.path.join(work_root, str(year)))
+    if os.path.exists("continuous/%s" % jday):
+        shutil.rmtree("continuous/%s" % jday)
+    os.chdir(work_root)
+    return None
+
+def outputter(obj):
+    pass
+
+def main():
+    args = parse_args()
+    cfg = parse_config(args)
+    args.database = Database(os.path.abspath(args.database))
+    extra_args = {"input_init_args": (args,),
+                  "main_init_args": (args, cfg)}
+    config_params = {"n_threads": cfg["n_threads"],
+                     "input_q_max_size": cfg["n_threads"]}
+    if args.detection_mode:
+        main_processor = main_processor_detection_mode
+    mtp = MultiThreadProcess(inputter,
+                            main_processor,
+                            outputter,
+                            extra_args=extra_args,
+                            config_params=config_params)
+    mtp.start()
+    args.database.close()
+
+if __name__ == "__main__":
+    main()

@@ -1,21 +1,18 @@
 #! /usr/bin/env python
-import argparse
-import ConfigParser
-import os
-import sys
-sys.path.append('%s/data/python' % os.environ['ANTELOPE'])
-from seispy.core import Arrival,\
-                        Origin
 from seispy.locate import Locator
 from seispy.util import MultiThreadProcess
 from gazelle.datascope import Database
+import argparse
+import ConfigParser
+
 
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("db", type=str, nargs=1)
     parser.add_argument("config", type=str, nargs=1)
+    parser.add_argument("-s", "--subset", type=str)
     return parser.parse_args()
-    
+
 
 def parse_config(args):
     cfg = {}
@@ -26,21 +23,26 @@ def parse_config(args):
     cfg["author"] = config.get("General", "author")
     cfg["n_threads"] = config.getint("General", "n_threads")
     cfg["min_nsta"] = config.getint("General", "min_nsta")
-    cfg["P_residual_tolerance"] = config.getfloat("General", "P_residual_tolerance")
-    cfg["S_residual_tolerance"] = config.getfloat("General", "S_residual_tolerance")
-    cfg["convergance_threshold"] = config.getfloat("General", "convergance_threshold")
+    cfg["P_residual_tolerance"] = config.getfloat("General",
+                                                  "P_residual_tolerance")
+    cfg["S_residual_tolerance"] = config.getfloat("General",
+                                                  "S_residual_tolerance")
+    cfg["convergance_threshold"] = config.getfloat("General",
+                                                   "convergance_threshold")
     cfg["max_iterations"] = config.getint("General", "max_iterations")
     cfg["input_q_size"] = config.getint("General", "input_q_size")
     cfg["output_q_size"] = config.getint("General", "output_q_size")
     return cfg
 
-def getter(db):
-    #for origin in db.iterate_events(parse_magnitudes=False):
-    for origin in db.iterate_origins(parse_magnitudes=False):
+
+def getter(args):
+    print "INITIALIZE REAP THREAD"
+    for origin in args.db.iterate_events(subset=args.subset,
+                                         parse_magnitudes=False):
         yield origin
 
+
 def main_processor(origin, cfg):
-    print "processing", origin
     locator = Locator(cfg)
     if cfg['mode'] == 'relocate':
         return locator.relocate(origin)
@@ -50,31 +52,33 @@ def main_processor(origin, cfg):
         print "invalid mode: %s" % cfg['mode']
         exit()
 
-def outputter(origin, db, cfg):
-    if origin == None: return
+
+def outputter(origin, args, cfg):
+    if origin is None:
+        return
     if cfg['mode'] == 'relocate':
         auth = cfg['author'] + ":reloc"
     elif cfg['mode'] == 'locate':
         auth = cfg['author'] + ":loc"
     origin.author = auth
-    print "writing", origin
-    db.write_origin(origin)
+    args.db.write_origin(origin)
+
 
 def main():
-    db = Database(args.db[0], mode='r+')
-    config_params={'n_threads': cfg['n_threads'],
-                   'input_q_max_size': cfg['input_q_size'],
-                   'output_q_max_size': cfg['output_q_size']}
-    extra_args={'input_init_args': (db,),
-                 'main_init_args': (cfg,),
-                 'output_init_args': (db, cfg)}
+    args.db = Database(args.db[0], mode='r+')
+    config_params = {'n_threads': cfg['n_threads'],
+                     'input_q_max_size': cfg['input_q_size'],
+                     'output_q_max_size': cfg['output_q_size']}
+    extra_args = {'input_init_args': (args,),
+                  'main_init_args': (cfg,),
+                  'output_init_args': (args, cfg)}
     mtp = MultiThreadProcess(getter,
                              main_processor,
                              outputter,
                              extra_args=extra_args,
                              config_params=config_params)
     mtp.start()
-    db.close()
+    args.db.close()
 
 if __name__ == "__main__":
     args = parse_args()

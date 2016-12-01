@@ -1,0 +1,61 @@
+#!/usr/bin/env python
+import seispy.burrow
+from seispy.gather import Gather3C
+import matplotlib.pyplot as plt
+import numpy as np
+from obspy.core import read
+from obspy.core.utcdatetime import UTCDateTime
+
+def independent():
+    willy = seispy.burrow.Groundhog("rsync://eqinfo.ucsd.edu/ANZA_waveforms")
+    ts = UTCDateTime("2015-12-18T12:45:38.748400Z")
+    te = UTCDateTime("2015-12-18T12:49:38.748400Z")
+    for sta in ("PFO", "KNW", "LLS", "SMER"):
+        try:
+            trZ = willy.fetch(sta, "HHZ", ts, te)[0]
+            trN = willy.fetch(sta, "HHN", ts, te)[0]
+            trE = willy.fetch(sta, "HHE", ts, te)[0]
+        except IndexError:
+            continue
+        trZ.filter("highpass", freq=3.0)
+        trZ_copy = trZ.copy()
+        cft = trZ_copy.trigger("classicstalta", sta=1.0, lta=10.0)
+        try:
+            p_pick = trZ.stats.starttime + np.where(cft.data > 5.0)[0][0] * trZ.stats.delta
+        except IndexError:
+            print sta
+        gather = Gather3C([trZ, trN, trE])
+        gather.filter("bandpass", freqmin=3.0, freqmax=10.0)
+        gather.detrend("linear")
+        detection = gather.detectS(p_pick)
+        if detection is not None:
+            fig = gather.plot(handle=True)
+            if detection.channel[2] == "N" or detection.channel[2] == "1":
+                ax = fig.axes[1]
+            else:
+                ax = fig.axes[2]
+            ax.axvline(detection.time.toordinal() + detection.time._get_hours_after_midnight() / 24.)
+            plt.show()
+        else:
+            gather.plot()
+
+def vs_zach():
+    infile = open("/home/shake/malcolcw/sandbox/events.dat")
+    root = "/home/shake/malcolcw/sandbox"
+    for line in infile:
+        evid, sta, fN, fE, fZ = line.split()
+        trZ = read("%s/%s" % (root, fZ))[0]
+        trN = read("%s/%s" % (root, fN))[0]
+        trE = read("%s/%s" % (root, fE))[0]
+        gather = Gather3C([trZ, trN, trE])
+        gather.filter("bandpass", freqmin=3.0, freqmax=10.0)
+        gather.detrend("linear")
+        trZ_copy = trZ.copy()
+        cft = trZ_copy.trigger("classicstalta", sta=1.0, lta=10.0)
+        p_pick = trZ.stats.starttime + np.where(cft.data > 5.0)[0][0] * trZ.stats.delta
+        output = gather.detect_swave(p_pick)
+        lag1, lag2, snr1, snr2, S1, S2, K1, K2 = output
+        print evid, sta, "-", lag1, lag2, "-", snr1, snr2
+
+if __name__ == "__main__":
+    vs_zach()

@@ -124,7 +124,7 @@ vector<double> kurtosis(vector<double> const &tr, int n_kurt) {
         numer = inv*quad;
         denom = pow(inv*square, 2.0);
         cft[i] = numer/denom - 3.0;
-        if (isnan(cft[i])) {
+        if (std::isnan(cft[i])) {
             cft[i] = 0;
         }
     }
@@ -233,10 +233,13 @@ vector<double> Polarizer::filter (const vector<double> &Z,
 
 vector<double> Polarizer::moving_cov (const vector<double> &X,
                                       const vector<double> &Y) {
-    vector<double> C(X.size(), 0);
+    vector<double> C(X.size(), 0.0);
     vector<double>::iterator i;
     int j(w_len);
     C[w_len-1] = inner_product(X.begin(), X.begin()+w_len, Y.begin(), 0.0);
+    //for (int i = w_len; i < X.size(); i++) {
+    //    C[i] = C[i-1] + X[i]*Y[i] - X[i-w_len]*Y[i-w_len];
+    //}
     for (i = C.begin() + w_len; i != C.end(); i++) {
         *i = *(i-1) + X[j]*Y[j] - X[j-w_len]*Y[j-w_len];
         j++;
@@ -308,13 +311,13 @@ void ShearPicker::pick(const vector<double> &tr, double &s_pick, double &snr) {
 
     // Calculate window duration using several criteria
     t_sp = 1.5;
-    if (p_pick != -1) {
+    if (p_pick > 0) {
         if (p_pick < idx) {
             t_sp = (idx - p_pick)*dt;
         }
     }
     if (t_sp < 1.5) t_sp = 1.5;
-    if (t_sp > 6.0) t_sp = 6.0;
+    //if (t_sp > 6.0) t_sp = 6.0;
 
     // Window around trial S-pick to refine through k-rate
     start = idx - int(0.5*t_sp/dt);
@@ -343,6 +346,7 @@ void ShearPicker::pick(const vector<double> &tr, double &s_pick, double &snr) {
     start = idx - int(0.25/dt);
     it = kurt.begin() + start;
     it = max_element(it, it+int(0.5/dt));
+    snr = *it;
 
     return;
 
