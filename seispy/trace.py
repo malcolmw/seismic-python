@@ -1,6 +1,5 @@
-# from gazelle.datascope import Dbptr
-from seispy.station import Channel,\
-                           Station
+import gazelle
+import seispy as sp
 from seispy.signal.statistics import f90trigger,\
                                      pai_k,\
                                      pai_s
@@ -24,7 +23,7 @@ class Trace(obspy.core.Trace):
                 self.stats = tr.stats
                 self.data = tr.data
             else:
-                if isinstance(args[0], Dbptr):
+                if isinstance(args[0], gazelle.datascope.Dbptr):
                     dbptr = args[0]
                     if dbptr.query(dbTABLE_NAME) == 'wfdisc':
                         if dbptr.record >= 0 and dbptr.record < dbptr.record_count:
@@ -46,16 +45,16 @@ class Trace(obspy.core.Trace):
                     raise ValueError("invalid keyword arguments - specify database")
             starttime = validate_time(kwargs['starttime'])
             endtime = validate_time(kwargs['endtime'])
-            if not isinstance(kwargs['station'], Station):
+            if not isinstance(kwargs['station'], sp.station.Station):
                 raise TypeError("invalid type: %s" % type(kwargs['station']))
-            if not isinstance(kwargs['channel'], Channel):
+            if not isinstance(kwargs['channel'], sp.station.Channel):
                 raise TypeError("inavlid type: %s" % type(kwargs['channel']))
             if 'database_path' in kwargs:
                 if not isfile("%s.wfdisc" % kwargs['database_path']):
                     raise IOError("file not found: %s" % kwargs['database_path'])
                 dbptr = dbopen(kwargs['database_path'], 'r')
             elif 'database_pointer' in kwargs and\
-                    isinstance(kwargs['database_pointer'], Dbptr):
+                    isinstance(kwargs['database_pointer'], gazelle.datascope.Dbptr):
                 dbptr = kwargs['database_pointer']
             else:
                 raise ValueError("invalid keyword arguments")
