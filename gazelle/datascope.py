@@ -1,22 +1,14 @@
-from seispy.gather import Gather,\
-                          Gather3C
-from seispy.event import Arrival,\
-                         Detection,\
-                         Event,\
-                         Magnitude,\
-                         Origin
-from seispy.network import Network,\
-                           VirtualNetwork
-from seispy.station import Channel,\
-                           Station
-from seispy.trace import Trace
+import seispy as sp
+import seispy.event
+import seispy.gather
+import seispy.network
+import seispy.station
 from seispy.util import validate_time
-from seispy import _ANTELOPE_DEFINED
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-if _ANTELOPE_DEFINED:
+if sp._ANTELOPE_DEFINED:
     from antelope.datascope import *
-if not _ANTELOPE_DEFINED:
+if not sp._ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
 
 
@@ -54,12 +46,12 @@ class Database:
     def get_gather3c(self, station, channel_set, starttime, endtime):
         traces = []
         for channel in channel_set:
-            traces += [Trace(database_pointer=self.ptr,
+            traces += [seispy.trace.Trace(database_pointer=self.ptr,
                              station=station.name,
                              channel=channel.code,
                              starttime=starttime,
                              endtime=endtime)]
-        return Gather3C(traces)
+        return seispy.gather.Gather3C(traces)
 
     def get_prefor(self, evid, **kwargs):
         tbl_event = self.tables["event"]
@@ -68,7 +60,7 @@ class Database:
         return self.parse_origin(prefor, **kwargs)
 
     def load_trace(self, station, channel, starttime, endtime):
-        trace = Trace(database_pointer=self.ptr,
+        trace = seispy.trace.Trace(database_pointer=self.ptr,
                       station=station,
                       channel=channel,
                       starttime=starttime,
@@ -100,7 +92,7 @@ class Database:
                                                         "state")
             station = self.virtual_network.stations[station]
             channel = station.channels[channel]
-            detections += [Detection(station, channel, time, label)]
+            detections += [seispy.event.Detection(station, channel, time, label)]
         return detections
 
     def iterate_events(self,
@@ -174,7 +166,7 @@ class Database:
             origins += (self.parse_origin(orid,
                                           parse_arrivals=parse_arrivals,
                                           parse_magnitudes=parse_magnitudes), )
-        event = Event(evid, origins=origins, prefor=prefor)
+        event = seispy.event.Event(evid, origins=origins, prefor=prefor)
         view.free()
         return event
 
@@ -211,7 +203,7 @@ class Database:
                                      'nass',
                                      'ndef',
                                      'auth')
-        origin = Origin(lat0, lon0, z0, time0,
+        origin = seispy.event.Origin(lat0, lon0, z0, time0,
                         orid=orid,
                         evid=evid,
                         nass=nass,
@@ -233,8 +225,8 @@ class Database:
                 try:
                     channel = station.channels[channel]
                 except KeyError:
-                    channel = Channel(channel, -1, -1)
-                arrivals += (Arrival(station,
+                    channel = seispy.station.Channel(channel, -1, -1)
+                arrivals += (seispy.event.Arrival(station,
                                      channel,
                                      time,
                                      phase,
@@ -253,13 +245,13 @@ class Database:
                 magid, mag, magtype = netmag_row.getv('magid',
                                                       'magnitude',
                                                       'magtype')
-                magnitudes += (Magnitude(magtype, mag, magid=magid), )
+                magnitudes += (seispy.event.Magnitude(magtype, mag, magid=magid), )
             netmag_view.free()
             origin.add_magnitudes(magnitudes)
         return origin
 
     def parse_network(self, net_code):
-        network = Network(net_code)
+        network = seispy.network.Network(net_code)
         tbl_snetsta = self.tables['snetsta']
         view = tbl_snetsta.subset("snet =~ /%s/" % net_code)
         _view = view.sort("sta", unique=True)
@@ -286,7 +278,7 @@ class Database:
                                                          'elev',
                                                          'ondate',
                                                          'offdate')
-        station = Station(name,
+        station = seispy.station.Station(name,
                           lon,
                           lat,
                           elev,
@@ -297,12 +289,12 @@ class Database:
             code, ondate, offdate = record.getv('chan', 'ondate', 'offdate')
             if not code[1] == 'H' and not code[1] == 'N':
                 continue
-            channel = Channel(code, ondate, offdate)
+            channel = seispy.station.Channel(code, ondate, offdate)
             station.add_channel(channel)
         return station
 
     def parse_virtual_network(self):
-        virtual_network = VirtualNetwork("ZZ")
+        virtual_network = seispy.network.VirtualNetwork("ZZ")
         tbl_snetsta = self.tables['snetsta']
         view = tbl_snetsta.sort("snet", unique=True)
         for record in view.iter_record():
@@ -317,7 +309,7 @@ class Database:
                     resolution='c',
                     savefig=False,
                     show=True):
-        gather = Gather()
+        gather = seispy.gather.Gather()
         for arrival in origin.arrivals:
             try:
                 gather += self.load_trace(arrival.station,

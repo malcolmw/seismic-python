@@ -6,16 +6,20 @@ Created on Fri Oct 21 18:04:04 2016
 @author: malcolcw
 """
 from seispy.event import Detection
-from seispy.signal.detect import detectS as _detectS_cc
-from seispy.signal.detect import create_polarization_filter
+from seispy.signal.detect import detect_swave_cc
+#from seispy.signal.detect import create_polarization_filter
 from copy import deepcopy
 import matplotlib.pyplot as plt
 import numpy as np
 import obspy.core
 from obspy.geodetics import gps2dist_azimuth
-
+import warnings
 
 class Gather(obspy.core.Stream):
+    def __init__(self, *args, **kwargs):
+        warnings.warn("deprecated class Gather", DeprecationWarning)
+        super(self.__class__, self).__init__(*args, **kwargs)
+
     def apply_offsets(self, lat0, lon0):
         offsets = [gps2dist_azimuth(lat0,
                                     lon0,
@@ -60,7 +64,7 @@ class Gather(obspy.core.Stream):
             max_amp = max(trace.data) * len(self.traces)
             trace.normalize(max_amp=max_amp)
 
-    def plot(self, plot_type=None, *args, **kwargs):
+    def _plot(self, plot_type=None, *args, **kwargs):
         if plot_type == "section":
             self._plot_section(*args, **kwargs)
         elif plot_type is None:
@@ -179,19 +183,24 @@ class Gather3C(obspy.core.Stream):
                                             channel_set[2][2])
         self.stats.channel_set = channel_set
 
-    def detectS(self, cov_twin=3.0, k_twin=1.0):
-        output = _detectS_cc(self.V.data,
-                             self.H1.data,
-                             self.H2.data,
-                             cov_twin,
-                             self.stats.delta,
-                             k_twin)
-        lag1, lag2, snr1, snr2, pol_fltr, S1, S2, K1, K2 = output
-        return pol_fltr
-        #print self.stats.starttime.timestamp + lag1,\
-        #    self.stats.starttime.timestamp + lag2, snr1, snr2
-        # Checking for the various possible pick results
-        #print lag1, lag2, snr1, snr2
+    def detect_swave(self,
+                detection_p,
+                covariance_twin=3.0,
+                kurtosis_twin=1.0,
+                lta_twin=5.0,
+                sta_twin=1.0):
+        ppick_dbl = detection_p.timestamp - self.stats.starttime.timestamp
+        output = detect_swave_cc(self.V.data,
+                                  self.H1.data,
+                                  self.H2.data,
+                                  self.stats.delta,
+                                  covariance_twin,
+                                  kurtosis_twin,
+                                  sta_twin,
+                                  lta_twin,
+                                  ppick_dbl)
+        lag1, lag2, snr1, snr2, S1, S2, K1, K2 = output
+        return output
         if lag1 > 0 and lag2 > 0:
             if snr1 > snr2:
                 lag = lag1
@@ -211,6 +220,7 @@ class Gather3C(obspy.core.Stream):
             channel = self.H2.stats.channel
         else:
             return
+        print type(self.stats.station)
         return Detection(self.stats.station,
                          channel,
                          self.stats.starttime + lag,
@@ -221,7 +231,7 @@ class Gather3C(obspy.core.Stream):
         self.H1.filter(*args, **kwargs)
         self.H2.filter(*args, **kwargs)
 
-    def plot(self,
+    def _plot(self,
              starttime=None,
              endtime=None,
              arrivals=None,
