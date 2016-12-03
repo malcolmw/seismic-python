@@ -1,9 +1,14 @@
 # -*- coding: utf-8 -*-
 from math import sqrt, pi
+import seispy.burrow
 from seispy.util import validate_time
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
+from matplotlib.gridspec import GridSpec
+from matplotlib.transforms import Bbox
 from mpl_toolkits.basemap import Basemap
 import numpy as np
+from obspy.core import Stream
 from obspy.geodetics import gps2dist_azimuth
 
 from matplotlib.patches import Circle
@@ -19,12 +24,14 @@ class Arrival(object):
                  time,
                  phase,
                  arid=-1,
+                 snr=-1,
                  timeres=-999.000):
         self.station = station
         self.channel = channel
         self.time = validate_time(time)
         self.phase = phase
         self.arid = arid
+        self.snr = snr
         self.timeres = timeres
 
     def __str__(self):
@@ -152,19 +159,20 @@ class Origin(object):
         return None if len(self.magnitudes) == 0 else self.magnitudes[0]
 
     def is_in_neighbourhood_A(self):
-        coordinates = np.asarray([[self.stations[key].lon,
-                                   self.stations[key].lat]
-                                  for key in self.stations])
+        stations = self.stations
+        coordinates = np.asarray([[stations[key].lon,
+                                   stations[key].lat]
+                                  for key in stations])
         centroid = coordinates.mean(axis=0)
         median_dist = np.median(np.asarray([sqrt((centroid[0] -
-                                                  self.stations[key].lon) ** 2 +
+                                                  stations[key].lon) ** 2 +
                                                  (centroid[1] -
-                                                  self.stations[key].lat) ** 2)
-                                            for key in self.stations]))
-        density = len(self.stations) / (pi * median_dist ** 2)
+                                                  stations[key].lat) ** 2)
+                                            for key in stations]))
+        density = len(stations) / (pi * median_dist ** 2)
         # radius of Quality A neighbourhood
         RA = 0.01 * median_dist * density
-        for key in self.stations:
+        for key in stations:
             distance = sqrt((centroid[0] - self.lon) ** 2 +
                             (centroid[1] - self.lat) ** 2)
             if distance < RA:
@@ -172,17 +180,18 @@ class Origin(object):
         return False
 
     def is_in_neighbourhood_B(self):
-        coordinates = np.asarray([[self.stations[key].lon,
-                                   self.stations[key].lat] for key in self.stations])
+        stations = self.stations
+        coordinates = np.asarray([[stations[key].lon,
+                                   stations[key].lat] for key in stations])
         centroid = coordinates.mean(axis=0)
         median_dist = np.median(np.asarray([sqrt((centroid[0] -
-                                                  self.stations[key].lon) ** 2 +
+                                                  stations[key].lon) ** 2 +
                                                  (centroid[1] -
-                                                  self.stations[key].lat) ** 2)
-                                            for key in self.stations]))
-        for key in self.stations:
-            distance = sqrt((self.stations[key].lat - self.lat) ** 2 +
-                            (self.stations[key].lon - self.lon) ** 2)
+                                                  stations[key].lat) ** 2)
+                                            for key in stations]))
+        for key in stations:
+            distance = sqrt((stations[key].lat - self.lat) ** 2 +
+                            (stations[key].lon - self.lon) ** 2)
             if distance < median_dist:
                 return True
 
@@ -199,7 +208,7 @@ class Origin(object):
                             bins=18,
                             range=(0., 360.))
         return sum([1 for count in hist[0] if count > 0]) /\
-               float(len(hist[1]) - 1)
+            float(len(hist[1]) - 1)
 
     def clear_arrivals(self):
         self.arrivals = ()
@@ -209,179 +218,127 @@ class Origin(object):
         self.magnitudes = ()
 
     def plot(self,
-             cmap=None,
-             label_positions=[1, 0, 1, 0],
-             meridian_mark_stride=0.5,
-             parallel_mark_stride=0.5,
-             resolution='c',
-             save=False,
-             show=True,
-             subplot_ax=None):
-        lat0, lon0 = self.lat, self.lon
+             filter=None):
+        st = Stream()
+        willy = seispy.burrow.Groundhog()
+        distance = sorted([gps2dist_azimuth(self.lat,
+                                            self.lon,
+                                            arrival.station.lat,
+                                            arrival.station.lon)[0]
+                           for arrival in self.arrivals])
+        dmin, dmax = min(distance), max(distance)
+        startlag = dmin / 6000. - 5
+        endlag = dmax / 2000. + 5
+        for arrival in self.arrivals:
+            st += willy.fetch(arrival.station.name,
+                              arrival.channel.code,
+                              starttime=self.time + startlag,
+                              endtime=self.time + endlag)
+        arrivals = sorted(self.arrivals,
+                          key=lambda arrival: (arrival.station.network,
+                                               arrival.station.name,
+                                               arrival.channel))
+        if filter is not None:
+            st.filter(*filter[0], **filter[1])
+        st.trim(starttime=self.time + startlag + 1.)
+        st.normalize()
+        MAX_TRACES = 9
+        ncol = len(st) / MAX_TRACES + 2
+        if len(st) % MAX_TRACES == 0:
+            ncol -= 1
+        nrow = min((len(st), MAX_TRACES))
+        gs = GridSpec(nrow, ncol)
+        gs.update(hspace=0, wspace=0)
+        fig = st.plot(size=(1600, 600),
+                      handle=True)
+        row, col = 0, 0
+        for i in range(len(fig.axes)):
+            ax = fig.axes[i]
+            arrival = arrivals[i]
+            color = "r" if arrival.phase == "P"\
+                else "g" if arrival.phase == "S" else "b"
+            ax.axvline(arrival.time.toordinal() +
+                       arrival.time._get_hours_after_midnight() / 24.,
+                       color=color,
+                       linewidth=2,
+                       alpha=0.75)
+            if row % (nrow - 1) == 0:
+                ax.get_xaxis().set_visible(True)
+            if row % nrow == 0:
+                col += 1
+                row = 0
+            position = gs[row, col].get_position(fig)
+            ax.set_position(position)
+            ax.get_yaxis().set_visible(False)
+            row += 1
+        gs.update(wspace=0.2)
+        postl = gs[0].get_position(fig)
+        posbl = gs[ncol * (nrow - 1)].get_position(fig)
+        bbox_map = Bbox(((posbl.x0, posbl.y0), (posbl.x1, postl.y1)))
+        ax = fig.add_axes(bbox_map)
+        self.plot_map(ax=ax)
+        fig.suptitle("EVENT #12345")
+        plt.show()
+
+    def plot_map(self,
+                 ax=None):
         X = [arrival.station.lon for arrival in self.arrivals]
         Y = [arrival.station.lat for arrival in self.arrivals]
-        if cmap is not None:
-            colors = [cmap(gps2dist_azimuth(lat0, lon0, Y[i], X[i])[1] / 360.)
-                      for i in range(len(X))]
-        else:
-            colors = ["g" for i in range(len(X))]
-        xmin, xmax = min([lon0] + X), max([lon0] + X)
-        ymin, ymax = min([lat0] + Y), max([lat0] + Y)
-        x0 = (xmax + xmin) / 2
-        y0 = (ymax + ymin) / 2
-        extent = max([sqrt((X[i] - x0) ** 2 + (Y[i] - y0) ** 2)
+        extent = max([sqrt((X[i] - self.lon) ** 2 + (Y[i] - self.lat) ** 2)
                       for i in range(len(X))]) * 1.1
         extent = max(0.85, extent)
-        if subplot_ax:
-            ax = subplot_ax
-        else:
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-        m = Basemap(llcrnrlon=x0 - extent,
-                    llcrnrlat=y0 - extent,
-                    urcrnrlon=x0 + extent,
-                    urcrnrlat=y0 + extent,
-                    resolution=resolution)
+        m = Basemap(llcrnrlon=self.lon - extent,
+                    llcrnrlat=self.lat - extent,
+                    urcrnrlon=self.lon + extent,
+                    urcrnrlat=self.lat + extent,
+                    resolution='i',
+                    ax=ax)
+        if ax is None:
+            ax = plt.gca()
         m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
                       service='USA_Topo_Maps')
         m.drawmapboundary()
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        if ymax - ymin < 1.0:
-            parallel_mark_stride = 0.2
-        elif 1.0 <= ymax - ymin < 2.5:
-            parallel_mark_stride = 0.5
-        else:
-            parallel_mark_stride = 1.0
-        if xmax - xmin < 1.0:
-            meridian_mark_stride = 0.2
-        elif 1.0 <= xmax - xmin < 2.5:
-            meridian_mark_stride = 0.5
-        else:
-            meridian_mark_stride = 1.0
-        m.drawparallels(np.arange(ymin - ymin % parallel_mark_stride,
-                        ymax - ymax % parallel_mark_stride +
-                        parallel_mark_stride,
-                        parallel_mark_stride),
-                        labels=label_positions)
-        m.drawmeridians(np.arange(xmin - xmin % meridian_mark_stride,
-                        xmax - xmax % meridian_mark_stride +
-                        meridian_mark_stride,
-                        meridian_mark_stride),
-                        labels=label_positions)
-        m.scatter(lon0, lat0, marker="*", color="r", s=100)
-        [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
-            for i in range(len(X))]
+        m.drawmeridians(np.arange(-180.0, 180.0, 0.5),
+                        labels=[1, 0, 0, 1])
+        m.drawparallels(np.arange(-90.0, 90.0, 0.5),
+                        labels=[1, 0, 0, 1])
+        m.scatter(self.lon,
+                  self.lat,
+                  marker="*",
+                  s=50.,
+                  c=self.depth / 20.,
+                  cmap=cm.hot)
         bbox_props = {"boxstyle": "round", "facecolor": "white", "alpha": 0.5}
-        plt.figtext(0.95, 0.90,
-                    "{:>7s}: {:>6s}\n"\
-                    "{:>7s}: {:>6.2f}\n"\
-                    "{:>7s}: {:>6.2f}\n"\
-                    "{:>7s}: {:>6.2f}\n"\
+        position = ax.get_position()
+        plt.figtext(position.x0, position.y1,
+                    "{:>7s}: {:>6s}\n"
+                    "{:>7s}: {:>6.2f}\n"
+                    "{:>7s}: {:>6.2f}\n"
+                    "{:>7s}: {:>6.2f}\n"
                     "{:>7s}: {:>6d}".format("quality",
-                                          self.quality,
-                                          "lat",
-                                          self.lat,
-                                          "lon",
-                                          self.lon,
-                                          "depth",
-                                          self.depth,
-                                          "orid",
-                                          self.orid),
+                                            self.quality,
+                                            "lat",
+                                            self.lat,
+                                            "lon",
+                                            self.lon,
+                                            "depth",
+                                            self.depth,
+                                            "orid",
+                                            self.orid),
                     bbox=bbox_props,
-                    horizontalalignment="right",
+                    horizontalalignment="left",
                     verticalalignment="top",
                     family="monospace")
-        plt.subplots_adjust(right=0.75)
-        if subplot_ax:
-            return ax
-        if save:
-            plt.savefig(save + ".png", format="png")
-        if show:
-            plt.show()
-            
-    def plot_special(self,
-             cmap=None,
-             label_positions=[1, 0, 1, 0],
-             meridian_mark_stride=0.5,
-             parallel_mark_stride=0.5,
-             resolution='c',
-             show=True,
-             subplot_ax=None):
-        lat0, lon0 = self.lat, self.lon
-        X = [arrival.station.lon for arrival in self.arrivals]
-        Y = [arrival.station.lat for arrival in self.arrivals]
-        if cmap is not None:
-            colors = [cmap(gps2dist_azimuth(lat0, lon0, Y[i], X[i])[1] / 360.)
-                      for i in range(len(X))]
-        else:
-            colors = ["g" for i in range(len(X))]
-        xmin, xmax = min([lon0] + X), max([lon0] + X)
-        ymin, ymax = min([lat0] + Y), max([lat0] + Y)
-        x0 = (xmax + xmin) / 2
-        y0 = (ymax + ymin) / 2
-        extent = max([sqrt((X[i] - x0) ** 2 + (Y[i] - y0) ** 2)
-                      for i in range(len(X))]) * 1.1
-        extent = max(0.85, extent)
-        if subplot_ax:
-            ax = subplot_ax
-        else:
-            fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-        m = Basemap(llcrnrlon=x0 - extent,
-                    llcrnrlat=y0 - extent,
-                    urcrnrlon=x0 + extent,
-                    urcrnrlat=y0 + extent,
-                    resolution=resolution)
-        m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
-                      service='USA_Topo_Maps')
-        m.drawmapboundary()
-        xmin, xmax = ax.get_xlim()
-        ymin, ymax = ax.get_ylim()
-        if ymax - ymin < 1.0:
-            parallel_mark_stride = 0.2
-        elif 1.0 <= ymax - ymin < 2.5:
-            parallel_mark_stride = 0.5
-        else:
-            parallel_mark_stride = 1.0
-        if xmax - xmin < 1.0:
-            meridian_mark_stride = 0.2
-        elif 1.0 <= xmax - xmin < 2.5:
-            meridian_mark_stride = 0.5
-        else:
-            meridian_mark_stride = 1.0
-        m.drawparallels(np.arange(ymin - ymin % parallel_mark_stride,
-                        ymax - ymax % parallel_mark_stride +
-                        parallel_mark_stride,
-                        parallel_mark_stride),
-                        labels=label_positions)
-        m.drawmeridians(np.arange(xmin - xmin % meridian_mark_stride,
-                        xmax - xmax % meridian_mark_stride +
-                        meridian_mark_stride,
-                        meridian_mark_stride),
-                        labels=label_positions)
-        m.scatter(lon0, lat0, marker="*", color="r", s=100)
-        [m.scatter(X[i], Y[i], marker="v", color=colors[i], s=50)
-            for i in range(len(X))]
-        stations = {}
-        for arrival in self.arrivals:
-            if arrival.station.name not in stations:
-                stations[arrival.station.name] = arrival.station
-        coordinates = np.asarray([[stations[key].lat,
-                                   stations[key].lon] for key in stations])
-        centroid = coordinates.mean(axis=0)
-        median_dist = np.median(np.asarray([sqrt((centroid[0] - stations[key].lat) ** 2 +
-                                     (centroid[1] - stations[key].lon) ** 2)
-                                for key in stations]))
-        ax = plt.gca()
-        [ax.add_patch(Circle((X[i], Y[i]),
-                             median_dist,
-                             fill=False)) for i in range(len(X))]
-        density = len([key for key in stations]) / (pi * median_dist ** 2)
-        ax.add_patch(Circle((centroid[1], centroid[0]),
-                            median_dist * (density / 100.),
-                            alpha=0.25))
-        if subplot_ax:
-            return ax
-        elif show:
-            plt.show()
+
+
+def test():
+    import gazelle.datascope
+#    database = gazelle.datascope.Database("/home/shake/malcolcw/projects/SJFZ/"
+#                                          "dbs/2013-droptest/SJFZ_2013")
+    database = gazelle.datascope.Database("/home/shake/malcolcw/data/"
+                                          "ZR_catalog/anza_2013")
+    for origin in database.iterate_events(parse_magnitudes=False):
+        origin.plot(filter=(("highpass",), {"freq": 3.0}))
+
+if __name__ == "__main__":
+    test()
