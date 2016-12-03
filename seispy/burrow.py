@@ -10,14 +10,15 @@ import subprocess
 import tempfile
 
 class Groundhog:
-    def __init__(self, server_directory):
+    def __init__(self,
+                 server_directory="rsync://eqinfo.ucsd.edu/ANZA_waveforms",
+                 database_dir="/home/seismech-00/sjfzdb/anf/wfdiscs"):
         self.server_directory = server_directory
         self.dbs = {}
         self.wfdiscs = {}
         for year in range(1998, 2016):
-            self.dbs[year] = dbopen("/home/seismech-00/sjfzdb/anf/wfdiscs/%d" % year)
+            self.dbs[year] = dbopen(os.path.join(database_dir, str(year)))
         self.temp_dir = tempfile.mkdtemp()
-        print self.temp_dir
 
     def __del__(self):
         for year in self.dbs:
@@ -64,7 +65,13 @@ class Groundhog:
                                                    dfile),
                                      self.temp_dir],
                                      stdout=FNULL)
+                os.listdir(self.temp_dir)
                 st += read(os.path.join(self.temp_dir, dfile))
                 os.remove(os.path.join(self.temp_dir, dfile))
         st.trim(starttime, endtime)
         return st
+
+if __name__ == "__main__":
+    willy = Groundhog("rsync://eqinfo.ucsd.edu/ANZA_waveforms")
+    st = willy.fetch("PFO", "HHZ", validate_time("2015-120T00:00:00"), validate_time("2015-120T00:01:00"))
+    st.plot()
