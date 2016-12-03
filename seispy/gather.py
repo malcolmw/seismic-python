@@ -9,10 +9,8 @@ from seispy.event import Detection
 from seispy.signal.detect import detect_swave_cc
 from copy import deepcopy
 import matplotlib.pyplot as plt
-import numpy as np
 import obspy.core
-from obspy.geodetics import gps2dist_azimuth
-import warnings
+
 
 class Gather3C(obspy.core.Stream):
     """
@@ -37,21 +35,21 @@ class Gather3C(obspy.core.Stream):
         self.stats.channel_set = channel_set
 
     def detect_swave(self,
-                detection_p,
-                covariance_twin=3.0,
-                kurtosis_twin=1.0,
-                lta_twin=5.0,
-                sta_twin=1.0):
+                     detection_p,
+                     covariance_twin=3.0,
+                     kurtosis_twin=1.0,
+                     lta_twin=5.0,
+                     sta_twin=1.0):
         ppick_dbl = detection_p.timestamp - self.stats.starttime.timestamp
         output = detect_swave_cc(self.V.data,
-                                  self.H1.data,
-                                  self.H2.data,
-                                  self.stats.delta,
-                                  covariance_twin,
-                                  kurtosis_twin,
-                                  sta_twin,
-                                  lta_twin,
-                                  ppick_dbl)
+                                 self.H1.data,
+                                 self.H2.data,
+                                 self.stats.delta,
+                                 covariance_twin,
+                                 kurtosis_twin,
+                                 sta_twin,
+                                 lta_twin,
+                                 ppick_dbl)
         lag1, lag2, snr1, snr2, S1, S2, K1, K2 = output
         return output
         if lag1 > 0 and lag2 > 0:
@@ -77,7 +75,8 @@ class Gather3C(obspy.core.Stream):
         return Detection(self.stats.station,
                          channel,
                          self.stats.starttime + lag,
-                         'S')
+                         'S',
+                         snr=snr)
 
     def filter(self, *args, **kwargs):
         self.V.filter(*args, **kwargs)
