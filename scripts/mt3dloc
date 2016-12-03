@@ -41,6 +41,59 @@ def getter(args):
                                          parse_magnitudes=False):
         yield origin
 
+def _main_processor(origin, cfg):
+    locator = Locator(cfg)
+    if cfg['mode'] == 'relocate':
+        return locator.relocate(origin)
+    elif cfg['mode'] == 'locate':
+        new = locator.locate(origin)
+        if new is None:
+            import seispy.burrow
+            import matplotlib.pyplot as plt
+            from obspy.core import Stream
+            import os
+            willy = seispy.burrow.Groundhog()
+            st = Stream()
+            picks = []
+            try:
+                os.mkdir(str(origin.evid))
+            except OSError:
+                pass
+            for arrival in sorted(origin.arrivals,
+                                  key = lambda arrival: (arrival.station.network,
+                                                         arrival.station.name,
+                                                         arrival.channel)):
+                st += willy.fetch(arrival.station.name,
+                                  arrival.channel.code,
+                                  origin.time,
+                                  origin.time + 20)
+                pick = arrival.time.toordinal() +\
+                    arrival.time._get_hours_after_midnight() / 24.
+                if arrival.phase == "P":
+                    color = "r"
+                else:
+                    color = "b"
+                picks += [(pick, color)]
+            st.filter("highpass", freq=3.0)
+            st.trim(starttime=origin.time + 2)
+            st.normalize()
+            st = [st[i * 10:(i + 1) * 10] for i in range(len(st) / 10)]
+            picks = [picks[i * 10:(i + 1) * 10] for i in range(len(picks) / 10)]
+            arrivals = [origin.arrivals[i * 10:(i + 1) * 10] for i in range(len(origin.arrivals) / 10)]
+            for i in range(len(st)):
+                fig = st[i].plot(handle=True,
+                                 equal_scale=True)
+                for j in range(len(fig.axes)):
+                    arrival = arrivals[i][j]
+                    fig.axes[j].axvline(picks[i][j][0],
+                                        color=picks[i][j][1])
+                plt.savefig("%d/traces_%d.png" % (origin.evid, i), format="png")
+            origin.plot(save="%d/map.png" % origin.evid,
+                        show=False)
+            #plt.show()
+    else:
+        print "invalid mode: %s" % cfg['mode']
+        exit()
 
 def main_processor(origin, cfg):
     locator = Locator(cfg)

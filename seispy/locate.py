@@ -57,6 +57,7 @@ class Locator(object):
 
     def locate(self, origin, P_only=False):
         if not self._locate_init(origin):
+            print "Locator failed to initialize"
             return None
         arrivals = origin.arrivals
         if P_only:
@@ -277,6 +278,7 @@ class Locator(object):
         if not gr0 < r0 < gr0 + gdr * (gnr - 1)\
                 or not (gtheta0 - (gntheta - 1) * gdtheta < theta0 < gtheta0)\
                 or not (gphi0 < phi0 < gphi0 + (gnphi - 1) * gdphi):
+            print "solution did not converge within grid"
             return None
         res0 = np.array([float(arrival.time) -
                          (t0 + self._get_tt(arrival.station.name,
