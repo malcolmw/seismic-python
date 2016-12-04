@@ -1,10 +1,13 @@
 # -*- coding: utf-8 -*-
-from math import sqrt, pi
+from math import ceil,\
+                 pi,\
+                 sqrt
 import seispy.burrow
 from seispy.util import validate_time
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 from matplotlib.gridspec import GridSpec
+from matplotlib.markers import MarkerStyle
 from matplotlib.transforms import Bbox
 from mpl_toolkits.basemap import Basemap
 import numpy as np
@@ -216,9 +219,11 @@ class Origin(object):
 
     def clear_magnitudes(self):
         self.magnitudes = ()
-
+        
     def plot(self,
-             filter=None):
+             filter=None,
+             save=False,
+             show=True):
         st = Stream()
         willy = seispy.burrow.Groundhog()
         distance = sorted([gps2dist_azimuth(self.lat,
@@ -227,7 +232,7 @@ class Origin(object):
                                             arrival.station.lon)[0]
                            for arrival in self.arrivals])
         dmin, dmax = min(distance), max(distance)
-        startlag = dmin / 6000. - 5
+        startlag = dmin / 6000. - 7
         endlag = dmax / 2000. + 5
         for arrival in self.arrivals:
             st += willy.fetch(arrival.station.name,
@@ -240,16 +245,17 @@ class Origin(object):
                                                arrival.channel))
         if filter is not None:
             st.filter(*filter[0], **filter[1])
-        st.trim(starttime=self.time + startlag + 1.)
+        st.trim(starttime=self.time + startlag + 2.)
         st.normalize()
         MAX_TRACES = 9
-        ncol = len(st) / MAX_TRACES + 2
-        if len(st) % MAX_TRACES == 0:
-            ncol -= 1
-        nrow = min((len(st), MAX_TRACES))
+        ncol = int(ceil(len(st) / float(MAX_TRACES))) + 1
+        nrow = int(ceil(len(st) / float(ncol - 1)))
         gs = GridSpec(nrow, ncol)
         gs.update(hspace=0, wspace=0)
-        fig = st.plot(size=(1600, 600),
+        width = 1600
+        height = width / float(ncol)
+        print width, height
+        fig = st.plot(size=(width, height),
                       handle=True)
         row, col = 0, 0
         for i in range(len(fig.axes)):
@@ -262,8 +268,6 @@ class Origin(object):
                        color=color,
                        linewidth=2,
                        alpha=0.75)
-            if row % (nrow - 1) == 0:
-                ax.get_xaxis().set_visible(True)
             if row % nrow == 0:
                 col += 1
                 row = 0
@@ -271,14 +275,23 @@ class Origin(object):
             ax.set_position(position)
             ax.get_yaxis().set_visible(False)
             row += 1
+        for ax in fig.axes[nrow - 1::nrow] + [fig.axes[-1]]:
+            ax.set_xticklabels(ax.get_xticklabels(),
+                               visible=True,
+                               fontsize=10,
+                               rotation=-15,
+                               horizontalalignment="left")
         gs.update(wspace=0.2)
         postl = gs[0].get_position(fig)
         posbl = gs[ncol * (nrow - 1)].get_position(fig)
         bbox_map = Bbox(((posbl.x0, posbl.y0), (posbl.x1, postl.y1)))
         ax = fig.add_axes(bbox_map)
         self.plot_map(ax=ax)
-        fig.suptitle("EVENT #12345")
-        plt.show()
+        fig.suptitle("%s  (ID #%d)" % (self.time, self.evid))
+        if save:
+            plt.savefig("%s.png" % save, format="png")
+        if show:
+            plt.show()
 
     def plot_map(self,
                  ax=None):
@@ -298,37 +311,65 @@ class Origin(object):
         m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
                       service='USA_Topo_Maps')
         m.drawmapboundary()
+        # orient ticklabels
         m.drawmeridians(np.arange(-180.0, 180.0, 0.5),
-                        labels=[1, 0, 0, 1])
+                        labels=[1, 0, 0, 1],
+                        fontsize=10,
+                        rotation=15)
+        for item in ax.get_children():
+            print item
         m.drawparallels(np.arange(-90.0, 90.0, 0.5),
-                        labels=[1, 0, 0, 1])
-        m.scatter(self.lon,
-                  self.lat,
-                  marker="*",
-                  s=50.,
-                  c=self.depth / 20.,
-                  cmap=cm.hot)
+                        labels=[1, 0, 0, 1],
+                        fontsize=10)
+        m.plot(self.lon,
+               self.lat,
+               marker="*",
+               markersize=15.,
+               color=cm.hot(self.depth / 20.))
+        stations = {}
+        for arrival in self.arrivals:
+            color = "r" if arrival.phase == "P" else "g"
+            station = arrival.station
+            if station.name not in stations:
+                stations[station.name] = (station.lon,
+                                          station.lat,
+                                          color,
+                                          "full")
+            else:
+                stations[station.name] = (station.lon,
+                                          station.lat,
+                                          "g",
+                                          "right")
+        for station in stations:
+            m.plot(stations[station][0],
+                   stations[station][1],
+                   marker="v",
+                   markersize=10,
+                   color=stations[station][2],
+                   fillstyle=stations[station][3],
+                   markerfacecoloralt="r")
         bbox_props = {"boxstyle": "round", "facecolor": "white", "alpha": 0.5}
-        position = ax.get_position()
-        plt.figtext(position.x0, position.y1,
-                    "{:>7s}: {:>6s}\n"
-                    "{:>7s}: {:>6.2f}\n"
-                    "{:>7s}: {:>6.2f}\n"
-                    "{:>7s}: {:>6.2f}\n"
-                    "{:>7s}: {:>6d}".format("quality",
-                                            self.quality,
-                                            "lat",
-                                            self.lat,
-                                            "lon",
-                                            self.lon,
-                                            "depth",
-                                            self.depth,
-                                            "orid",
-                                            self.orid),
-                    bbox=bbox_props,
-                    horizontalalignment="left",
-                    verticalalignment="top",
-                    family="monospace")
+        x, y = m(self.lon - extent, self.lat + extent)
+        ax = plt.gca()
+        ax.text(x + 0.05 * extent, y - 0.05 * extent,
+                "{:>7s}: {:>6s}\n"
+                "{:>7s}: {:>6.2f}\n"
+                "{:>7s}: {:>6.2f}\n"
+                "{:>7s}: {:>6.2f}\n"
+                "{:>7s}: {:>6d}".format("quality",
+                                        self.quality,
+                                        "lat",
+                                        self.lat,
+                                        "lon",
+                                        self.lon - 360.,
+                                        "depth",
+                                        self.depth,
+                                        "orid",
+                                        self.orid),
+                bbox=bbox_props,
+                horizontalalignment="left",
+                verticalalignment="top",
+                family="monospace")
 
 
 def test():
