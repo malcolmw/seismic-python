@@ -1,17 +1,38 @@
 #! /usr/bin/env python
-from seispy.locate import Locator
-from seispy.util import MultiThreadProcess
-from gazelle.datascope import Database
+import seispy as sp
+import gazelle.datascope as ds
 import argparse
 import ConfigParser
+import os
 
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("db", type=str, nargs=1)
-    parser.add_argument("config", type=str, nargs=1)
+    parser.add_argument("db", type=str, nargs=1, help="database")
+    parser.add_argument("config", type=str, nargs=1, help="configuration file")
+    parser.add_argument("-d", "--display_plots",
+                        action="store_true",
+                        default=False,
+                        help="display plots")
+    parser.add_argument("-p", "--plot",
+                        nargs="?",
+                        const=None,
+                        default=False,
+                        help="plot non-convergent events",
+                        metavar="output_directory")
+    parser.add_argument("-P", "--plot_all",
+                        nargs="?",
+                        const=None,
+                        default=False,
+                        help="plot all events",
+                        metavar="output_directory")
     parser.add_argument("-s", "--subset", type=str)
-    return parser.parse_args()
+    args = parser.parse_args()
+    if args.plot is not False or args.plot_all is not False:
+        if not args.plot and not args.plot_all and not args.display_plots:
+            print "no destination for plots"
+            args.plot, args.plot_all = False, False
+    return args
 
 
 def parse_config(args):
@@ -23,6 +44,7 @@ def parse_config(args):
     cfg["author"] = config.get("General", "author")
     cfg["n_threads"] = config.getint("General", "n_threads")
     cfg["min_nsta"] = config.getint("General", "min_nsta")
+    cfg["min_nobs"] = config.getint("General", "min_nobs")
     cfg["P_residual_tolerance"] = config.getfloat("General",
                                                   "P_residual_tolerance")
     cfg["S_residual_tolerance"] = config.getfloat("General",
@@ -36,100 +58,104 @@ def parse_config(args):
 
 
 def getter(args):
-    print "INITIALIZE REAP THREAD"
     for origin in args.db.iterate_events(subset=args.subset,
                                          parse_magnitudes=False):
         yield origin
+        break
 
-def _main_processor(origin, cfg):
-    locator = Locator(cfg)
-    if cfg['mode'] == 'relocate':
-        return locator.relocate(origin)
-    elif cfg['mode'] == 'locate':
-        new = locator.locate(origin)
-        if new is None:
-            import seispy.burrow
-            import matplotlib.pyplot as plt
-            from obspy.core import Stream
-            import os
-            willy = seispy.burrow.Groundhog()
-            st = Stream()
-            picks = []
-            try:
-                os.mkdir(str(origin.evid))
-            except OSError:
-                pass
-            for arrival in sorted(origin.arrivals,
-                                  key = lambda arrival: (arrival.station.network,
-                                                         arrival.station.name,
-                                                         arrival.channel)):
-                st += willy.fetch(arrival.station.name,
-                                  arrival.channel.code,
-                                  origin.time,
-                                  origin.time + 20)
-                pick = arrival.time.toordinal() +\
-                    arrival.time._get_hours_after_midnight() / 24.
-                if arrival.phase == "P":
-                    color = "r"
-                else:
-                    color = "b"
-                picks += [(pick, color)]
-            st.filter("highpass", freq=3.0)
-            st.trim(starttime=origin.time + 2)
-            st.normalize()
-            st = [st[i * 10:(i + 1) * 10] for i in range(len(st) / 10)]
-            picks = [picks[i * 10:(i + 1) * 10] for i in range(len(picks) / 10)]
-            arrivals = [origin.arrivals[i * 10:(i + 1) * 10] for i in range(len(origin.arrivals) / 10)]
-            for i in range(len(st)):
-                fig = st[i].plot(handle=True,
-                                 equal_scale=True)
-                for j in range(len(fig.axes)):
-                    arrival = arrivals[i][j]
-                    fig.axes[j].axvline(picks[i][j][0],
-                                        color=picks[i][j][1])
-                plt.savefig("%d/traces_%d.png" % (origin.evid, i), format="png")
-            origin.plot(save="%d/map.png" % origin.evid,
-                        show=False)
-            #plt.show()
-    else:
-        print "invalid mode: %s" % cfg['mode']
-        exit()
 
 def main_processor(origin, cfg):
-    locator = Locator(cfg)
+    locator = sp.locate.Locator(cfg)
     if cfg['mode'] == 'relocate':
         return locator.relocate(origin)
     elif cfg['mode'] == 'locate':
-        return locator.locate(origin)
+        result = locator.locate(origin)
+        if result is None:
+            return (False, origin)
+        else:
+            return (True, result)
     else:
         print "invalid mode: %s" % cfg['mode']
         exit()
 
 
-def outputter(origin, args, cfg):
-    if origin is None:
+def outputter(result, args, cfg):
+    prefilter = (("bandpass",), {"freqmin": 3.0, "freqmax": 10.0})
+    origin = result[1]
+    # first, deal with convergent solutions
+    if result[0]:
+        auth = cfg['author']
+        origin.author = auth
+        args.db.write_origin(origin)
+        # plot origin
+        if args.plot_all is not False:
+            # don't save plots if output directory not provided
+            if args.plot_all is None:
+                save = False
+            else:
+                # create output directory if it doesn't exist
+                if not os.path.isdir(args.plot_all):
+                    os.mkdir(args.plot_all)
+                # build file path name
+                save = os.path.join(args.plot_all, str(origin.evid))
+            # finally, plot
+            origin.plot(filter=prefilter,
+                        save=save,
+                        show=args.display_plots)
         return
-    if cfg['mode'] == 'relocate':
-        auth = cfg['author'] + ":reloc"
-    elif cfg['mode'] == 'locate':
-        auth = cfg['author'] + ":loc"
-    origin.author = auth
-    args.db.write_origin(origin)
+    # now deal with plotting non-convergent solutions
+    if args.plot is not False:
+        # don't save plots if output directory not provided
+        if args.plot is None and\
+                (args.plot_all is None or args.plot_all is False):
+            save = False
+        # save plots to non-convergent solution output directory
+        elif args.plot is not None:
+            # create output directory if it doesn't exist
+            if not os.path.isdir(args.plot):
+                os.mkdir(args.plot)
+            # build file path name
+            save = os.path.join(args.plot, str(origin.evid))
+        # save plots to all solution output directory if needed
+        elif args.plot_all is not False and args.plot_all is not None:
+            # create output directory if it doesn't exist
+            if not os.path.isdir(args.plot_all):
+                os.mkdir(args.plot_all)
+            # build file path name
+            save = os.path.join(args.plot_all, str(origin.evid))
+        # finally, plot
+        origin.plot(filter=prefilter,
+                    save=save,
+                    show=args.display_plots)
+    elif args.plot_all is not False:
+        # save plots if output directory provided
+        if args.plot_all is not None:
+            # create output directory if it doesn't exist
+            if not os.path.isdir(args.plot_all):
+                os.mkdir(args.plot_all)
+            # build file path name
+            save = os.path.join(args.plot_all, str(origin.evid))
+        else:
+            save = False
+        # finally, plot
+        origin.plot(filter=prefilter,
+                    save=save,
+                    show=args.display_plots)
 
 
 def main():
-    args.db = Database(args.db[0], mode='r+')
+    args.db = ds.Database(args.db[0], mode='r+')
     config_params = {'n_threads': cfg['n_threads'],
                      'input_q_max_size': cfg['input_q_size'],
                      'output_q_max_size': cfg['output_q_size']}
     extra_args = {'input_init_args': (args,),
                   'main_init_args': (cfg,),
                   'output_init_args': (args, cfg)}
-    mtp = MultiThreadProcess(getter,
-                             main_processor,
-                             outputter,
-                             extra_args=extra_args,
-                             config_params=config_params)
+    mtp = sp.util.MultiThreadProcess(getter,
+                                     main_processor,
+                                     outputter,
+                                     extra_args=extra_args,
+                                     config_params=config_params)
     mtp.start()
     args.db.close()
 
