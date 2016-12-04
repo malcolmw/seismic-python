@@ -1,5 +1,4 @@
-from gazelle.datascope import closing,\
-                              dbopen
+import gazelle.datascope as ds
 import seispy.station
 from seispy.util import validate_time
 from obspy.core import read,\
@@ -17,7 +16,7 @@ class Groundhog:
         self.dbs = {}
         self.wfdiscs = {}
         for year in range(1998, 2016):
-            self.dbs[year] = dbopen(os.path.join(database_dir, str(year)))
+            self.dbs[year] = ds.dbopen(os.path.join(database_dir, str(year)))
         self.temp_dir = tempfile.mkdtemp()
 
     def __del__(self):
