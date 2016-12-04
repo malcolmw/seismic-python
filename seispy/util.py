@@ -356,6 +356,7 @@ class _MainPool(object):
         Start input process.
         """
         for i in range(self.parent.config_params['n_threads']):
+            print "starting processing thread #%d" % (i + 1)
             self.process_threads[i].start()
 
     def _target_wrapper(self, thread_id):
