@@ -24,8 +24,7 @@ class Locator(object):
         grid = self.grid
         arrivals = [arrival for arrival in origin.arrivals
                     if arrival.station.name in self.mmttf]
-        if not self.check_nsta(arrivals):
-            print "unable to relocate event, not enough stations"
+        if not self.check_nobs(arrivals):
             return None
         origin.clear_arrivals()
         origin.add_arrivals(arrivals)
@@ -45,29 +44,27 @@ class Locator(object):
                     offset += 4
         return True
 
-    def check_nsta(self, arrivals):
+    def check_nobs(self, arrivals):
         stations = []
         for arrival in arrivals:
             if arrival.station.name not in stations:
                 stations += [arrival.station.name]
-        if len(stations) >= self.cfg['min_nsta']:
-            return True
-        else:
+        if len(stations) < self.cfg["min_nsta"]:
+            print "not enough stations"
             return False
+        if len(arrivals) < self.cfg["min_nobs"]:
+            print "not enough observations"
+            return False
+        return True
 
     def locate(self, origin, P_only=False):
+        print "locating event %d" % origin.evid
         if not self._locate_init(origin):
-            print "Locator failed to initialize"
             return None
         arrivals = origin.arrivals
         if P_only:
-            arrivals = tuple([arr for arr in arrivals if arr.phase == 'P'])
-            print "locating with %d P-wave observations" % len(arrivals)
-        else:
-            print "locating with %d combined P-wave and S-wave observations"\
-                % len(arrivals)
-        if not self.check_nsta(arrivals):
-            print "not enough stations"
+            arrivals = tuple([arr for arr in arrivals if arr.phase == 'P'])            
+        if not self.check_nobs(arrivals):
             return None
         r0, theta0, phi0, t0 = self._grid_search(arrivals)
         soln = self._subgrid_inversion(r0, theta0, phi0, t0, arrivals)
@@ -160,8 +157,8 @@ class Locator(object):
                                                       "%s.%s.tt"
                          % (sta, arrival.phase))), 'rb')
             except IOError:
-                print "no %s-wave travel-time file for %s"\
-                    % (arrival.phase, sta)
+#                print "no %s-wave travel-time file for %s"\
+#                    % (arrival.phase, sta)
                 continue
             mm = mmap.mmap(f.fileno(), 0, access=mmap.ACCESS_READ)
             if sta not in mmttf:
@@ -278,7 +275,7 @@ class Locator(object):
         if not gr0 < r0 < gr0 + gdr * (gnr - 1)\
                 or not (gtheta0 - (gntheta - 1) * gdtheta < theta0 < gtheta0)\
                 or not (gphi0 < phi0 < gphi0 + (gnphi - 1) * gdphi):
-            print "solution did not converge within grid"
+            print "solution did not converge" 
             return None
         res0 = np.array([float(arrival.time) -
                          (t0 + self._get_tt(arrival.station.name,
@@ -291,8 +288,7 @@ class Locator(object):
             arrivals[i].timeres = res0[i]
         sdobs0 = np.sqrt(np.sum(np.square(res0))) / (len(res0) - 4)
         arrivals = self.remove_outliers(r0, theta0, phi0, t0, arrivals)
-        if not self.check_nsta(arrivals):
-            print "not enough stations remaining"
+        if not self.check_nobs(arrivals):
             return None
         if itern < self.cfg['max_iterations'] and\
                 abs(sdobs0 - sdobs_start) > self.cfg['convergance_threshold']:
@@ -300,7 +296,7 @@ class Locator(object):
                                     arrivals,
                                     itern=itern + 1)
         elif itern >= self.cfg['max_iterations']:
-            print "solution did not converge after %d iterations" % itern
+            print "solution did not converge"
             return None
         return r0, theta0, phi0, t0, sdobs0, res0, arrivals
 
