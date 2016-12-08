@@ -2,6 +2,7 @@
 from math import ceil,\
                  pi,\
                  sqrt
+import seispy as sp
 import seispy.burrow
 from seispy.util import validate_time
 import matplotlib.cm as cm
@@ -48,11 +49,12 @@ class Detection(object):
     """
     This is a container object to store data pertaining to signal detections.
     """
-    def __init__(self, station, channel, time, label):
+    def __init__(self, station, channel, time, label, snr=-1):
         self.station = station
         self.channel = channel
         self.time = validate_time(time)
         self.label = label
+        self.snr = snr
 
 
 class Event(object):
@@ -121,7 +123,7 @@ class Origin(object):
             raise AttributeError
 
     def __str__(self):
-        return "origin: %d %.4f %.4f %.4f %s %s" % (self.orid,
+        return "origin: %d %.4f %.4f %.4f %s %s" % (self.evid,
                                                     self.lat,
                                                     self.lon,
                                                     self.depth,
@@ -153,6 +155,21 @@ class Origin(object):
                 raise TypeError("not an Arrival object")
             self.magnitudes += (magnitude, )
 
+    def azimuthal_distribution_coefficient(self):
+        azimuths = []
+        for arrival in self.arrivals:
+            d, abaz, baaz = gps2dist_azimuth(self.lat,
+                                             self.lon,
+                                             arrival.station.lat,
+                                             arrival.station.lon)
+            if abaz not in azimuths:
+                azimuths += [abaz]
+        hist = np.histogram(azimuths,
+                            bins=18,
+                            range=(0., 360.))
+        return sum([1 for count in hist[0] if count > 0]) /\
+            float(len(hist[1]) - 1)
+
     def get_magnitude(self, magtype=None):
         """
         This should return the preferred magnitude based on some order
@@ -160,6 +177,17 @@ class Origin(object):
         keyword, if it exists.
         """
         return None if len(self.magnitudes) == 0 else self.magnitudes[0]
+        
+    def get_rms(self, ttgrid):
+        r, theta, phi = sp.geometry.geo2sph(self.lat, self.lon, self.depth)
+        tt = np.asarray([ttgrid.get_tt(arrival.station.name,
+                                       arrival.phase,
+                                       r,
+                                       theta,
+                                       phi) for arrival in self.arrivals])
+        at = np.asarray([arrival.time.timestamp for arrival in self.arrivals])
+        residuals = at - (self.time.timestamp + tt)
+        return np.sqrt(np.mean(np.square(residuals)))
 
     def is_in_neighbourhood_A(self):
         stations = self.stations
@@ -198,32 +226,18 @@ class Origin(object):
             if distance < median_dist:
                 return True
 
-    def azimuthal_distribution_coefficient(self):
-        azimuths = []
-        for arrival in self.arrivals:
-            d, abaz, baaz = gps2dist_azimuth(self.lat,
-                                             self.lon,
-                                             arrival.station.lat,
-                                             arrival.station.lon)
-            if abaz not in azimuths:
-                azimuths += [abaz]
-        hist = np.histogram(azimuths,
-                            bins=18,
-                            range=(0., 360.))
-        return sum([1 for count in hist[0] if count > 0]) /\
-            float(len(hist[1]) - 1)
-
     def clear_arrivals(self):
         self.arrivals = ()
         self.stations = {}
 
     def clear_magnitudes(self):
         self.magnitudes = ()
-        
+
     def plot(self,
              filter=None,
              save=False,
-             show=True):
+             show=True,
+             ttgrid=None):
         st = Stream()
         willy = seispy.burrow.Groundhog()
         distance = sorted([gps2dist_azimuth(self.lat,
@@ -268,6 +282,21 @@ class Origin(object):
                        color=color,
                        linewidth=2,
                        alpha=0.75)
+            if ttgrid is not None:
+                r, theta, phi = sp.geometry.geo2sph(self.lat,
+                                                    self.lon,
+                                                    self.depth)
+                predicted = self.time + ttgrid.get_tt(arrival.station.name,
+                                                      arrival.phase,
+                                                      r,
+                                                      theta,
+                                                      phi)
+                ax.axvline(predicted.toordinal() +
+                           predicted._get_hours_after_midnight() / 24.,
+                           color=color,
+                           linewidth=2,
+                           linestyle="--",
+                           alpha=0.75)
             if row % nrow == 0:
                 col += 1
                 row = 0
@@ -292,6 +321,8 @@ class Origin(object):
             plt.savefig("%s.png" % save, format="png")
         if show:
             plt.show()
+        else:
+            plt.close()
 
     def plot_map(self,
                  ax=None):
@@ -316,8 +347,6 @@ class Origin(object):
                         labels=[1, 0, 0, 1],
                         fontsize=10,
                         rotation=15)
-        for item in ax.get_children():
-            print item
         m.drawparallels(np.arange(-90.0, 90.0, 0.5),
                         labels=[1, 0, 0, 1],
                         fontsize=10)

@@ -6,7 +6,7 @@
 static PyObject *
 grid_search(PyObject *self, PyObject *args)
 {
-    PyObject* locator;
+    PyObject* ttgrid;
     PyObject* grid;
     PyObject* arrivals;
     PyObject* station;
@@ -35,13 +35,12 @@ grid_search(PyObject *self, PyObject *args)
     bool last_iteration = false;
 
     if ( !PyArg_ParseTuple(args, "OO!",
-                                  &locator,
+                                  &ttgrid,
                                   &PyTuple_Type, &arrivals) )
         return NULL;
-    grid = PyObject_GetAttrString(locator, "grid");
-    nr = (int) PyInt_AsLong(PyDict_GetItemString(grid, "nr"));
-    ntheta = (int) PyInt_AsLong(PyDict_GetItemString(grid, "ntheta"));
-    nphi = (int) PyInt_AsLong(PyDict_GetItemString(grid, "nphi"));
+    nr = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "nr"));
+    ntheta = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "ntheta"));
+    nphi = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "nphi"));
     narr = (int) PyTuple_Size(arrivals);
     for (iarr = 0; iarr < narr; iarr++){
  	temp1 = PyObject_GetAttrString(PyTuple_GetItem(arrivals, iarr), "time");
@@ -78,6 +77,8 @@ grid_search(PyObject *self, PyObject *args)
                        Py_DECREF(temp1);
                        temp1 = PyObject_CallMethod(locator,
             					    	     "_get_node_tt",
+                       temp1 = PyObject_CallMethod(ttgrid,
+            					    	     "get_node_tt",
             					    	     "OOiii",
             					    	     station,
                                                    phase,
@@ -138,7 +139,6 @@ grid_search(PyObject *self, PyObject *args)
         phi_lb = (0 > (iphi0 - phi_range)) ? 0 : (iphi0 - phi_range);
         phi_ub = (nphi < (iphi0 + phi_range)) ? nphi : (iphi0 + phi_range);
     }
-    Py_DECREF(grid);
     return Py_BuildValue("iiif", ir0, itheta0, iphi0, t0);
 }
 

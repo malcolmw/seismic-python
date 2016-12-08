@@ -17,6 +17,7 @@ submodules = ["burrow",
               "network",
               "station",
               "trace",
+              "ttgrid",
               "util",
               "velocity"]
 

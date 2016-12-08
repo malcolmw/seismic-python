@@ -11,7 +11,6 @@ if sp._ANTELOPE_DEFINED:
 if not sp._ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
 
-
 class Database:
     def __init__(self, path, mode='r'):
         self.ptr = dbopen(path, mode)
@@ -25,13 +24,15 @@ class Database:
                       "sitechan",
                       "snetsta"):
             self.tables[table] = self.ptr.lookup(table=table)
-        self.groups = {}
-        view_assoc = self.tables["assoc"].join("arrival")
-        _view = view_assoc.sort("orid")
-        view_assoc.free()
-        view_assoc = _view
-        grp_assoc = view_assoc.group("orid")
-        self.groups["assoc"] = (grp_assoc, view_assoc)
+        if self.tables["assoc"].record_count > 0 and\
+                self.tables["arrival"].record_count > 0:
+            self.groups = {}
+            view_assoc = self.tables["assoc"].join("arrival")
+            _view = view_assoc.sort("orid")
+            view_assoc.free()
+            view_assoc = _view
+            grp_assoc = view_assoc.group("orid")
+            self.groups["assoc"] = (grp_assoc, view_assoc)
 
     def __getattr__(self, name):
         if name == "virtual_network":

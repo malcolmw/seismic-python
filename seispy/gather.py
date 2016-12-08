@@ -51,7 +51,6 @@ class Gather3C(obspy.core.Stream):
                                  lta_twin,
                                  ppick_dbl)
         lag1, lag2, snr1, snr2, S1, S2, K1, K2 = output
-        return output
         if lag1 > 0 and lag2 > 0:
             if snr1 > snr2:
                 lag = lag1
@@ -70,8 +69,8 @@ class Gather3C(obspy.core.Stream):
             snr = snr2
             channel = self.H2.stats.channel
         else:
-            return
         print type(self.stats.station)
+            return None
         return Detection(self.stats.station,
                          channel,
                          self.stats.starttime + lag,

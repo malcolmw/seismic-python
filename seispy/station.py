@@ -180,7 +180,8 @@ class Station(object):
         """
         channels = ()
         for channel in self.channels:
-            if channel.code[:2] == code:
+            channel = self.channels[channel]
+            if channel.code[:2] == code[:2]:
                 channels += (channel,)
         return sorted(channels)
 

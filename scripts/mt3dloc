@@ -8,8 +8,8 @@ import os
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("db", type=str, nargs=1, help="database")
-    parser.add_argument("config", type=str, nargs=1, help="configuration file")
+    parser.add_argument("db", type=str, help="database")
+    parser.add_argument("config", type=str, help="configuration file")
     parser.add_argument("-d", "--display_plots",
                         action="store_true",
                         default=False,
@@ -32,13 +32,19 @@ def parse_args():
         if not args.plot and not args.plot_all and not args.display_plots:
             print "no destination for plots"
             args.plot, args.plot_all = False, False
+    args.db = os.path.abspath(args.db)
+    args.config = os.path.abspath(args.config)
+    if args.plot:
+        args.plot = os.path.abspath(args.plot)
+    if args.plot_all:
+        args.plot_all = os.path.abspath(args.plot_all)
     return args
 
 
 def parse_config(args):
     cfg = {}
     config = ConfigParser.RawConfigParser()
-    config.read(args.config[0])
+    config.read(args.config)
     cfg["tt_dir"] = config.get("General", "tt_dir")
     cfg["mode"] = config.get("General", "mode")
     cfg["author"] = config.get("General", "author")
@@ -61,15 +67,17 @@ def getter(args):
     for origin in args.db.iterate_events(subset=args.subset,
                                          parse_magnitudes=False):
         yield origin
-        break
 
 
-def main_processor(origin, cfg):
-    locator = sp.locate.Locator(cfg)
+def main_processor(origin, locator, cfg):
+    print "MAIN!"
     if cfg['mode'] == 'relocate':
+        print "RELOCATE"
         return locator.relocate(origin)
     elif cfg['mode'] == 'locate':
+        print "LOCATE"
         result = locator.locate(origin)
+        print result
         if result is None:
             return (False, origin)
         else:
@@ -79,11 +87,12 @@ def main_processor(origin, cfg):
         exit()
 
 
-def outputter(result, args, cfg):
+def outputter(result, ttgrid, args, cfg):
     prefilter = (("bandpass",), {"freqmin": 3.0, "freqmax": 10.0})
     origin = result[1]
     # first, deal with convergent solutions
     if result[0]:
+        print origin
         auth = cfg['author']
         origin.author = auth
         args.db.write_origin(origin)
@@ -101,7 +110,8 @@ def outputter(result, args, cfg):
             # finally, plot
             origin.plot(filter=prefilter,
                         save=save,
-                        show=args.display_plots)
+                        show=args.display_plots,
+                        ttgrid=ttgrid)
         return
     # now deal with plotting non-convergent solutions
     if args.plot is not False:
@@ -126,7 +136,8 @@ def outputter(result, args, cfg):
         # finally, plot
         origin.plot(filter=prefilter,
                     save=save,
-                    show=args.display_plots)
+                    show=args.display_plots,
+                    ttgrid=ttgrid)
     elif args.plot_all is not False:
         # save plots if output directory provided
         if args.plot_all is not None:
@@ -140,17 +151,22 @@ def outputter(result, args, cfg):
         # finally, plot
         origin.plot(filter=prefilter,
                     save=save,
-                    show=args.display_plots)
+                    show=args.display_plots,
+                    ttgrid=ttgrid)
 
 
 def main():
-    args.db = ds.Database(args.db[0], mode='r+')
+    args = parse_args()
+    cfg = parse_config(args)
+    args.db = ds.Database(args.db, mode='r+')
     config_params = {'n_threads': cfg['n_threads'],
                      'input_q_max_size': cfg['input_q_size'],
                      'output_q_max_size': cfg['output_q_size']}
+    ttgrid = sp.ttgrid.TTGrid(cfg["tt_dir"])
+    locator = sp.locate.Locator(ttgrid, cfg)
     extra_args = {'input_init_args': (args,),
-                  'main_init_args': (cfg,),
-                  'output_init_args': (args, cfg)}
+                  'main_init_args': (locator, cfg),
+                  'output_init_args': (ttgrid, args, cfg)}
     mtp = sp.util.MultiThreadProcess(getter,
                                      main_processor,
                                      outputter,
@@ -160,6 +176,4 @@ def main():
     args.db.close()
 
 if __name__ == "__main__":
-    args = parse_args()
-    cfg = parse_config(args)
     main()

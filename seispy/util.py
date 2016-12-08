@@ -365,7 +365,12 @@ class _MainPool(object):
         the main processing function and place the resulting processed
         object on the output queue.
         """
+        load_thresh = cpu_count() / 2.
         while True:
+            load1, load5, load15 = get_loadavg()
+            while load1 > load_thresh or load5 > load_thresh or load15 > load_thresh:
+                load1, load5, load15 = get_loadavg()
+                sleep(5)
             try:
                 obj = self.parent.input_q.get(timeout=0.1)
             except Empty:
@@ -395,8 +400,13 @@ def validate_time(time):
             time = UTCDateTime(time)
         if isinstance(time, int) and 1000000 <= time <= 9999999:
             time = UTCDateTime(year=time / 1000, julday=time % 1000)
-        elif isinstance(time, float) and time == -1.0:
-            time = UTCDateTime(year=3000, julday=365, hour=23, minute=59, second=59)
+        elif (isinstance(time, float) or isinstance(time, int))\
+                and time == -1.0:
+            time = UTCDateTime(year=3000,
+                               julday=365,
+                               hour=23,
+                               minute=59,
+                               second=59)
         else:
             time = UTCDateTime(time)
     return time
