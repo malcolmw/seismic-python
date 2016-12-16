@@ -4,9 +4,12 @@ from seispy.util import validate_time
 from obspy.core import read,\
                        Stream
 import os
+import psutil as ps
 import shutil
 import subprocess
 import tempfile
+import time
+
 
 class Groundhog:
     def __init__(self,
@@ -22,7 +25,8 @@ class Groundhog:
     def __del__(self):
         for year in self.dbs:
             self.dbs[year].close()
-        shutil.rmtree(self.temp_dir)
+        if hasattr(self, "temp_dir"):
+            shutil.rmtree(self.temp_dir)
 
     def fetch(self, station, channel, starttime, endtime):
         """
@@ -53,6 +57,9 @@ class Groundhog:
                                                               endtime.timestamp))
             for data_record in view_data.iter_record():
                 ddir, dfile = data_record.getv("dir", "dfile")
+                while n_rsync_processes() >= 6:
+                    print "SLEEPING,", n_rsync_processes()
+                    time.sleep(1)
                 with open(os.devnull, 'w') as FNULL:
                     subprocess.call(["rsync",
                                      "-a",
@@ -67,8 +74,19 @@ class Groundhog:
                 os.listdir(self.temp_dir)
                 st += read(os.path.join(self.temp_dir, dfile))
                 os.remove(os.path.join(self.temp_dir, dfile))
+        if len(st) == 0:
+            raise IOError("data not found")
         st.trim(starttime, endtime)
         return st
+
+def n_rsync_processes():
+    try:
+        n = len([p.parent()
+                 for p in ps.process_iter()
+                 if p.name() == "rsync"]) / 2
+    except ps.NoSuchProcess:
+        return n_rsync_processes()
+    return n
 
 if __name__ == "__main__":
     willy = Groundhog("rsync://eqinfo.ucsd.edu/ANZA_waveforms")
