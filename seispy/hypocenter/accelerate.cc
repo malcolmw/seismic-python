@@ -45,7 +45,7 @@ grid_search(PyObject *self, PyObject *args)
     for (iarr = 0; iarr < narr; iarr++){
  	temp1 = PyObject_GetAttrString(PyTuple_GetItem(arrivals, iarr), "time");
 	temp2 = PyObject_GetAttrString(temp1, "timestamp");
-      arrival_times.push_back(PyFloat_AsDouble(temp2));
+        arrival_times.push_back(PyFloat_AsDouble(temp2));
 	Py_DECREF(temp1);
 	Py_DECREF(temp2);
     }
@@ -75,18 +75,16 @@ grid_search(PyObject *self, PyObject *args)
                                                                       iarr),
                                                       "phase");
                        Py_DECREF(temp1);
-                       temp1 = PyObject_CallMethod(locator,
-            					    	     "_get_node_tt",
                        temp1 = PyObject_CallMethod(ttgrid,
-            					    	     "get_node_tt",
-            					    	     "OOiii",
-            					    	     station,
+            					   "get_node_tt",
+            					   "OOiii",
+            					   station,
                                                    phase,
-            					    	     ir,
-            					    	     itheta,
-            					    	     iphi);
+            					   ir,
+            					   itheta,
+            					   iphi);
                         tt = PyFloat_AsDouble(temp1);
-            		 Py_DECREF(temp1);
+            		Py_DECREF(temp1);
                         Py_DECREF(station);
                         Py_DECREF(phase);
                         travel_times.push_back(tt);

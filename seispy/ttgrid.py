@@ -28,12 +28,6 @@ class TTGrid:
                     self.byteoffset[ir, itheta, iphi] = offset
                     offset += 4
 
-#    def __del__(self):
-#        print "DELETE!"
-#        for station in self.mmttf:
-#            for phase in self.mmttf[station]:
-#                self.mmttf[station][phase].close()
-
     def _initialize_mmap(self, ttdir):
         mmttf = {}
         init = True
@@ -96,10 +90,8 @@ class TTGrid:
         return True
 
     def get_node_tt(self, station, phase, ir, itheta, iphi):
-        print station, phase, ir, itheta, iphi
         f = self.mmttf[station][phase]
         offset = self.byteoffset[ir, itheta, iphi]
-        print f, offset
         f.seek(int(offset))
         return struct.unpack("f", f.read(4))[0]
 
