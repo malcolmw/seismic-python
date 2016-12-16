@@ -69,7 +69,6 @@ class Gather3C(obspy.core.Stream):
             snr = snr2
             channel = self.H2.stats.channel
         else:
-        print type(self.stats.station)
             return None
         return Detection(self.stats.station,
                          channel,
