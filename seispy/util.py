@@ -365,10 +365,10 @@ class _MainPool(object):
         the main processing function and place the resulting processed
         object on the output queue.
         """
-        load_thresh = cpu_count() / 2.
+        ncpus = cpu_count()
         while True:
             load1, load5, load15 = get_loadavg()
-            while load1 > load_thresh or load5 > load_thresh or load15 > load_thresh:
+            while load1 > ncpus or load5 > ncpus or load15 > ncpus:
                 load1, load5, load15 = get_loadavg()
                 sleep(5)
             try:
@@ -387,7 +387,17 @@ class _MainPool(object):
 #                        #
 ##########################
 
-isfunction = lambda func: hasattr(func, '__call__')
+
+def isfunction(func):
+    return hasattr(func, '__call__')
+
+
+def get_loadavg():
+    infile = open("/proc/loadavg")
+    l1, l5, l15 = [float(v) for v in infile.readline().split()[:3]]
+    infile.close()
+    return l1, l5, l15
+
 
 def validate_time(time):
     if not isinstance(time, UTCDateTime) and\
