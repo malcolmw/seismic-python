@@ -1,71 +1,71 @@
-from geometry import EARTH_RADIUS
+import seispy as sp
 from math import pi,\
                  radians
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator
 
-class Geoid(np.ndarray):
-    def __new__(cls, infile):
+class Geoid(object):
+    def __init__(self,
+                 infile="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz"):
+        """
+        This container class provides query functionality for surface
+        elevation data.
+        """
         infile = open(infile)
-        lons, lats, elevs = [], [], []
+        R, T, P = [], [], []
         for line in infile:
             lon, lat, elev = [float(v) for v in line.split()]
-            lon = lon % 360.
-            lons += [lon]
-            lats += [lat]
-            elevs += [elev]
-        nlon = len(set(lons))
-        nlat = len(set(lats))
-        me = np.ndarray.__new__(cls, shape=(nlon, nlat))
-        for i in range(nlon):
-            for j in range(nlat):
-                me[i, j] = elevs[i * nlat + j] / 1000. + EARTH_RADIUS
-        me.coords = Coordinates(lons, lats)
-        me._coords = Coordinates([radians(lon) for lon in lons],
-                                [pi / 2 - radians(lat) for lat in lats])
-        me.interpolate = LinearNDInterpolator(zip(me._coords.X1[0,:],
-                                                     me._coords.X2[:,0]),
-                                                 np.concatenate(me))
-        me.lat_min, me.lat_max = min(lats), max(lats)
-        me.lon_min, me.lon_max = min(lons), max(lons)
-        me.phi_min, me.phi_max = min(me._coords.X1[0,:]), max(me._coords.X1[0,:])
-        me.theta_min, me.theta_max = min(me._coords.X2[:,0]), max(me._coords.X2[:,0])
-        return me
-
-    def __call__(self, *args, **kwargs):
-        return self._eval(*args, **kwargs)
-
-    def _eval(self, u, v, coords="geographical"):
-        if coords == "geographical":
-            u = radians(u)
-            v = radians(90. - v)
-        elif coords == "spherical":
-            #make sure phi falls in the same range as nodes
-            u = u + 2 * pi if u < self.phi_min\
-                    else u - 2 * pi if u > self.phi_max\
-                    else u
-        else:
-            raise ValueError("invalid coordinate system")
-        return self.interpolate((u, v))
+            r, theta, phi = sp.geometry.geo2sph(lat, lon % 360., -elev / 1000.)
+            R += [r]
+            T += [theta]
+            P += [phi]
+        self.theta = np.asarray(sorted(list(set(T))))
+        self.ntheta = len(self.theta)
+        self.theta0 = min(self.theta)
+        self.dtheta = (max(self.theta) - self.theta0) / self.ntheta
+        self.phi = np.asarray(sorted(list(set(P))))
+        self.nphi = len(self.phi)
+        self.phi0 = min(self.phi)
+        self.dphi = (max(self.phi) - self.phi0) / self.nphi
+        self.radius = np.empty(shape=(len(set(T)), len(set(P))))
+        for i in range(len(R)):
+            itheta = np.where(self.theta == T[i])
+            iphi = np.where(self.phi == P[i])
+            self.radius[itheta, iphi] = R[i]
             
+    def __call__(self, theta, phi):
+        itheta0 = np.argmin(np.absolute(self.theta - theta))
+        iphi0 = np.argmin(np.absolute(self.phi - phi))
+        deltheta, delphi = itheta0 % 1., iphi0 % 1.
+        itheta1 = min(itheta0 + 1, self.ntheta - 1)
+        iphi1 = min(iphi0 + 1, self.nphi - 1)
+        T00 = self.radius[itheta0, iphi0]
+        T01 = self.radius[itheta0, iphi1]
+        T10 = self.radius[itheta1, iphi0]
+        T11 = self.radius[itheta1, iphi1]
+        T0 = T00 + (T10 - T00) * deltheta
+        T1 = T01 + (T11 - T01) * deltheta
+        return T0 + (T1 - T0) * delphi
 
-    def plot(self, lat=-999, lon=-999, npts=50):
-        x, y = [], []
-        if lat == -999:
-            for lat in np.linspace(self.lat_min, self.lat_max, npts):
-                x += [lat]
-                y += [self.call(lon, lat)]
-        elif lon == -999:
-            for lon in np.linspace(self.lon_min, self.lon_max, npts):
-                x += [lon]
-                y += [self.call(lon, lat)]
+    def plot(self):
+        f = 4
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
-        ax.plot(x, y)
+        r = np.empty(shape=(self.ntheta * f, self.nphi * f))
+        i = 0
+        for theta in np.linspace(self.theta0, self.theta0 + (self.ntheta - 1) * self.dtheta, self.ntheta * f):
+            j = 0
+            for phi in np.linspace(self.phi0, self.phi0 + (self.nphi - 1) * self.dphi, self.nphi * f):
+                r[i, j] = self(theta, phi)
+                j += 1
+            i += 1
+        ax.pcolormesh(r[-1:0:-1])
         plt.show()
 
-class Coordinates(object):
-    def __init__(self, x1, x2, system="geographical"):
-        self.X1, self.X2 = np.meshgrid(x1, x2)
-        self.system = system
+def test():
+    geoid = Geoid()
+    geoid.plot()
+
+if __name__ == "__main__":
+    test()
