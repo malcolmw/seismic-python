@@ -268,7 +268,6 @@ class Origin(object):
         gs.update(hspace=0, wspace=0)
         width = 1600
         height = width / float(ncol)
-        print width, height
         fig = st.plot(size=(width, height),
                       handle=True)
         row, col = 0, 0
@@ -286,11 +285,14 @@ class Origin(object):
                 r, theta, phi = sp.geometry.geo2sph(self.lat,
                                                     self.lon,
                                                     self.depth)
-                predicted = self.time + ttgrid.get_tt(arrival.station.name,
-                                                      arrival.phase,
-                                                      r,
-                                                      theta,
-                                                      phi)
+                try:
+                    predicted = self.time + ttgrid.get_tt(arrival.station.name,
+                                                          arrival.phase,
+                                                          r,
+                                                          theta,
+                                                          phi)
+                except KeyError:
+                    continue
                 ax.axvline(predicted.toordinal() +
                            predicted._get_hours_after_midnight() / 24.,
                            color=color,
@@ -350,6 +352,24 @@ class Origin(object):
         m.drawparallels(np.arange(-90.0, 90.0, 0.5),
                         labels=[1, 0, 0, 1],
                         fontsize=10)
+        # TEMPORARY HACK START
+        from matplotlib.patches import PathPatch
+        from matplotlib.path import Path
+        lonmin, lonmax, latmin, latmax = -117.5 % 360., -115.5 % 360., 32.75, 34.25
+        vertices = [(lonmin, latmin),
+                    (lonmax, latmin),
+                    (lonmax, latmax),
+                    (lonmin, latmax),
+                    (0, 0)]
+        alpha = 0.25
+        codes = [Path.MOVETO,
+                 Path.LINETO,
+                 Path.LINETO,
+                 Path.LINETO,
+                 Path.CLOSEPOLY]
+        path = Path(vertices, codes)
+        ax.add_patch(PathPatch(path, alpha=alpha))
+        # HACK END
         m.plot(self.lon,
                self.lat,
                marker="*",
