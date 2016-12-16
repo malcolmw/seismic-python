@@ -1,0 +1,110 @@
+#! /usr/bin/env python
+
+from gazelle.datascope import Database
+import seispy as sp
+from obspy.core import Stream
+from obspy.core.utcdatetime import UTCDateTime
+from argparse import ArgumentParser
+from ConfigParser import RawConfigParser
+import os
+import shutil
+import tempfile
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("database", type=str, help="database")
+    parser.add_argument("config", type=str, help="configuration file")
+    parser.add_argument("-n", "--n_threads",
+                        type=int,
+                        help="number of threads")
+    return parser.parse_args()
+
+def parse_config(args):
+    parser = RawConfigParser()
+    parser.read(args.config)
+    cfg = {}
+    return cfg
+
+def inputter(args, cfg):
+    db = args.database
+    for subnet in db.virtual_network.subnets:
+        subnet = db.virtual_network.subnets[subnet]
+        for station in subnet.stations:
+            station = subnet.stations[station]
+            view = db.tables["detection"].subset("sta =~ /%s/ && state =~ /P/"
+                                                 % station.name)
+            if view.record_count > 0:
+                view.record = 0
+                year = sp.util.validate_time(view.getv("time")[0]).year
+                end = 366 if year % 4 == 0 else 365
+                for day in range(1, end):
+                    time = UTCDateTime(year=year, julday=day)
+                    day_view = view.subset("time >= _%d%03d_ && time < _%d%03d_"
+                                           % (time.year,
+                                              time.julday,
+                                              time.year,
+                                              time.julday + 1))
+                    yield (station,
+                           time, 
+                           [UTCDateTime(record.getv("time")[0])
+                                for record in day_view.iter_record()])
+                    day_view.free()
+                view.free()
+
+def main_processor(obj, args):
+    station, time, pdts = obj
+    swave_detections = []
+    willy = sp.burrow.Groundhog()
+    for channel in station.get_channels(match="[HBES][HN]Z.*"):
+        channel_set = station.get_channel_set(channel.code)
+        st0 = Stream()
+        try:
+            for channel in channel_set:
+                st0 += willy.fetch(station.name,
+                                   channel.code,
+                                   time,
+                                   time + 86400)
+        except IOError:
+            continue
+        st0.filter("bandpass", freqmin=3.0, freqmax=10.0)
+        st0.detrend("linear")
+        for pdt in pdts:
+            starttime = pdt - 4.0
+            endtime = pdt + 16.0
+            st = st0.copy()
+            st.trim(starttime=starttime, endtime=endtime)
+            gather = sp.gather.Gather3C(st)
+            detection = gather.detect_swave(time)
+            swave_detections += [detection]
+    return swave_detections
+
+def outputter(obj, tbl):
+    for detection in obj:
+        if detection is not None:
+            print detection.station, detection.channel, detection.snr, detection.time
+            tbl.record = tbl.addnull()
+            tbl.putv(("sta", detection.station),
+                     ("chan", detection.channel),
+                     ("time", detection.time.timestamp),
+                     ("snr", detection.snr),
+                     ("state", "S"),
+                     ("filter", "BP 3-10"))
+
+def main():
+    args = parse_args()
+    #cfg = parse_config(args)
+    cfg = None
+    args.database = Database(args.database, mode="r+")
+    extra_args = {"input_init_args": (args, cfg),
+                  "main_init_args": (args,),
+                  "output_init_args": (args.database.tables["detection"],)}
+    config_params = {"n_threads": 6}
+    mtp = sp.util.MultiThreadProcess(inputter,
+                                     main_processor,
+                                     outputter,
+                                     extra_args=extra_args,
+                                     config_params=config_params)
+    mtp.start()
+
+if __name__ == "__main__":
+    main()
