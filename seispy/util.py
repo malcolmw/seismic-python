@@ -365,7 +365,7 @@ class _MainPool(object):
         the main processing function and place the resulting processed
         object on the output queue.
         """
-        ncpus = cpu_count()
+        ncpus = cpu_count() + 2
         while True:
             load1, load5, load15 = get_loadavg()
             while load1 > ncpus or load5 > ncpus or load15 > ncpus:
