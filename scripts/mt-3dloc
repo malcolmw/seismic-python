@@ -70,14 +70,10 @@ def getter(args):
 
 
 def main_processor(origin, locator, cfg):
-    print "MAIN!"
     if cfg['mode'] == 'relocate':
-        print "RELOCATE"
         return locator.relocate(origin)
     elif cfg['mode'] == 'locate':
-        print "LOCATE"
         result = locator.locate(origin)
-        print result
         if result is None:
             return (False, origin)
         else:
