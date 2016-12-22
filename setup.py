@@ -33,9 +33,9 @@ kwargs = {'name': 'seispy',
                          'seispy.velocity'],
           'scripts': ['scripts/fetch_data',
                       'scripts/fm3d_ttimes',
-                      'scripts/mt3dloc',
-                      'scripts/mtshear',
-                      'scripts/mtsynth',
+                      'scripts/mt-3dloc',
+                      'scripts/mt-shear',
+                      'scripts/mt-synth',
                       'scripts/plot_events',
                       'scripts/synthetics2db']}
 
