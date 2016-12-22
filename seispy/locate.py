@@ -38,7 +38,7 @@ class Locator:
         r0, theta0, phi0, t0 = h0
         while r0 > self.geoid(theta0, phi0):
             r = self.geoid(theta0, phi0)
-            print "solution above surface (%.2f > %.2f), iterating..." % (r0, r)
+            # print "solution above surface (%.2f > %.2f), iterating..." % (r0, r)
             bounds[0] = (r - 1., r)
             h0 = self._iterate(h0, arrivals, bounds)
             r0, theta0, phi0, t0 = h0
