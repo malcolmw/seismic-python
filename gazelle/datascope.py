@@ -19,6 +19,7 @@ class Database:
                       "assoc",
                       "detection",
                       "event",
+                      "origerr",
                       "origin",
                       "site",
                       "sitechan",
