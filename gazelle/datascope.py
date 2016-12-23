@@ -12,7 +12,7 @@ if not sp._ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
 
 class Database:
-    def __init__(self, path, mode='r'):
+    def __init__(self, path, mode="r"):
         self.ptr = dbopen(path, mode)
         self.tables = {}
         for table in ("arrival",
@@ -131,13 +131,13 @@ class Database:
                         subset=None,
                         parse_arrivals=True,
                         parse_magnitudes=True):
-        tbl_origin = self.tables['origin']
+        tbl_origin = self.tables["origin"]
         if subset:
-            ptr = tbl_origin.join('netmag', outer=True)
+            ptr = tbl_origin.join("netmag", outer=True)
             _ptr = ptr.subset(subset)
             ptr.free()
             ptr = _ptr
-            _ptr = ptr.separate('origin')
+            _ptr = ptr.separate("origin")
             ptr.free()
             ptr = _ptr
             is_view = True
@@ -145,7 +145,7 @@ class Database:
             ptr = tbl_origin
             is_view = False
         for record in ptr.iter_record():
-            orid = record.getv('orid')[0]
+            orid = record.getv("orid")[0]
             yield self.parse_origin(orid,
                                     parse_arrivals=parse_arrivals,
                                     parse_magnitudes=parse_magnitudes)
@@ -195,15 +195,15 @@ class Database:
             time0,\
             nass,\
             ndef,\
-            author = tbl_origin.getv('orid',
-                                     'evid',
-                                     'lat',
-                                     'lon',
-                                     'depth',
-                                     'time',
-                                     'nass',
-                                     'ndef',
-                                     'auth')
+            author = tbl_origin.getv("orid",
+                                     "evid",
+                                     "lat",
+                                     "lon",
+                                     "depth",
+                                     "time",
+                                     "nass",
+                                     "ndef",
+                                     "auth")
         origin = seispy.event.Origin(lat0, lon0, z0, time0,
                         orid=orid,
                         evid=evid,
@@ -217,11 +217,11 @@ class Database:
             start, stop = self.groups["assoc"][0].get_range()
             for self.groups["assoc"][1].record in range(start, stop):
                 record = self.groups["assoc"][1]
-                arid, station, channel, time, phase = record.getv('arid',
-                                                                  'sta',
-                                                                  'chan',
-                                                                  'time',
-                                                                  'iphase')
+                arid, station, channel, time, phase = record.getv("arid",
+                                                                  "sta",
+                                                                  "chan",
+                                                                  "time",
+                                                                  "iphase")
                 station = self.virtual_network.stations[station]
                 try:
                     channel = station.channels[channel]
@@ -243,9 +243,9 @@ class Database:
             netmag_view = _view
             magnitudes = ()
             for netmag_row in netmag_view.iter_record():
-                magid, mag, magtype = netmag_row.getv('magid',
-                                                      'magnitude',
-                                                      'magtype')
+                magid, mag, magtype = netmag_row.getv("magid",
+                                                      "magnitude",
+                                                      "magtype")
                 magnitudes += (seispy.event.Magnitude(magtype, mag, magid=magid), )
             netmag_view.free()
             origin.add_magnitudes(magnitudes)
@@ -253,20 +253,20 @@ class Database:
 
     def parse_network(self, net_code):
         network = seispy.network.Network(net_code)
-        tbl_snetsta = self.tables['snetsta']
+        tbl_snetsta = self.tables["snetsta"]
         view = tbl_snetsta.subset("snet =~ /%s/" % net_code)
         _view = view.sort("sta", unique=True)
         view.free()
         view = _view
         for record in view.iter_record():
-            code = record.getv('sta')[0]
+            code = record.getv("sta")[0]
             network.add_station(self.parse_station(code, net_code))
         view.free()
         return network
 
     def parse_station(self, name, net_code):
-        tbl_sitechan = self.tables['sitechan']
-        tbl_site = self.tables['site']
+        tbl_sitechan = self.tables["sitechan"]
+        tbl_site = self.tables["site"]
         sitechan_view = tbl_sitechan.subset("sta =~ /%s/" % name)
         site_view = tbl_site.join("snetsta")
         _site_view = site_view.subset("sta =~ /%s/ && snet =~ /%s/"
@@ -274,11 +274,11 @@ class Database:
         site_view.free()
         site_view = _site_view
         site_view.record = 0
-        lat, lon, elev, ondate, offdate = site_view.getv('lat',
-                                                         'lon',
-                                                         'elev',
-                                                         'ondate',
-                                                         'offdate')
+        lat, lon, elev, ondate, offdate = site_view.getv("lat",
+                                                         "lon",
+                                                         "elev",
+                                                         "ondate",
+                                                         "offdate")
         station = seispy.station.Station(name,
                           lon,
                           lat,
@@ -287,8 +287,8 @@ class Database:
                           ondate=ondate,
                           offdate=offdate)
         for record in sitechan_view.iter_record():
-            code, ondate, offdate = record.getv('chan', 'ondate', 'offdate')
-            if not code[1] == 'H' and not code[1] == 'N':
+            code, ondate, offdate = record.getv("chan", "ondate", "offdate")
+            if not code[1] == "H" and not code[1] == "N":
                 continue
             channel = seispy.station.Channel(code, ondate, offdate)
             station.add_channel(channel)
@@ -296,7 +296,7 @@ class Database:
 
     def parse_virtual_network(self):
         virtual_network = seispy.network.VirtualNetwork("ZZ")
-        tbl_snetsta = self.tables['snetsta']
+        tbl_snetsta = self.tables["snetsta"]
         view = tbl_snetsta.sort("snet", unique=True)
         for record in view.iter_record():
             net_code = record.getv("snet")[0]
@@ -306,8 +306,8 @@ class Database:
         
     def plot_origin(self,
                     origin,
-                    pre_filter=('highpass', {"freq": 2.0}),
-                    resolution='c',
+                    pre_filter=("highpass", {"freq": 2.0}),
+                    resolution="c",
                     savefig=False,
                     show=True):
         gather = seispy.gather.Gather()
@@ -334,7 +334,7 @@ class Database:
                      fontsize=22)
         ax1 = fig.add_subplot(1, 2, 1)
         # ax1 = fig.add_axes([0.0, 0.0, 0.5, 0.5])
-        ax1.set_aspect('equal', adjustable='box')
+        ax1.set_aspect("equal", adjustable="box")
         origin.plot(subplot_ax=ax1,
                     show=False,
                     cmap=mpl.cm.jet)
@@ -351,7 +351,7 @@ class Database:
                     subplot_ax=ax2)
         xmin, xmax = ax2.get_xlim()
         ymax, ymin = ax2.get_ylim()
-        ax2.set_aspect((xmax - xmin) / (ymax - ymin), adjustable='box')
+        ax2.set_aspect((xmax - xmin) / (ymax - ymin), adjustable="box")
         # cax = fig.add_axes([0.1, 0.1, 0.75, 0.025])
         # mpl.colorbar.ColorbarBase(cax,
         #                          cmap=mpl.cm.jet)
@@ -382,24 +382,28 @@ class Database:
         return starttime, endtime
 
     def write_origin(self, origin):
-        tbl_origin = self.tables['origin']
-        tbl_assoc = self.tables['assoc']
-        orid = tbl_origin.nextid('orid')
+        tbl_origin = self.tables["origin"]
+        tbl_origerr = self.tables["origerr"]
+        tbl_assoc = self.tables["assoc"]
+        orid = tbl_origin.nextid("orid")
         tbl_origin.record = tbl_origin.addnull()
-        tbl_origin.putv(('orid', orid),
-                        ('evid', origin.evid),
-                        ('lat', origin.lat),
-                        ('lon', origin.lon),
-                        ('depth', origin.depth),
-                        ('time', float(origin.time)),
-                        ('auth', origin.author),
-                        ('nass', len(origin.arrivals)),
-                        ('ndef', len(origin.arrivals)),
-                        ('review', origin.quality))
+        tbl_origin.putv(("orid", orid),
+                        ("evid", origin.evid),
+                        ("lat", origin.lat),
+                        ("lon", origin.lon),
+                        ("depth", origin.depth),
+                        ("time", float(origin.time)),
+                        ("auth", origin.author),
+                        ("nass", len(origin.arrivals)),
+                        ("ndef", len(origin.arrivals)),
+                        ("review", origin.quality))
         for arrival in origin.arrivals:
             tbl_assoc.record = tbl_assoc.addnull()
-            tbl_assoc.putv(('orid', orid),
-                           ('arid', arrival.arid),
-                           ('sta', arrival.station.name),
-                           ('phase', arrival.phase),
-                           ('timeres', arrival.timeres))
+            tbl_assoc.putv(("orid", orid),
+                           ("arid", arrival.arid),
+                           ("sta", arrival.station.name),
+                           ("phase", arrival.phase),
+                           ("timeres", arrival.timeres))
+        tbl_origerr.record = tbl_origerr.addnull()
+        tbl_origerr.putv(("orid", orid),
+                         ("sdobs", origin.sdobs))
