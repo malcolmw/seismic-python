@@ -88,7 +88,7 @@ class VelocityModel(object):
         phi %= (2 * pi)
         #If the position requested is above the surface, return the
         #velocity of air for Vp and a NULL value, -1, for Vs.
-        if r > self.geoid(phi, theta, coords="spherical"):
+        if r > self.geoid(theta, phi):
             return self._air[phase]
         #If the location requested is below the grid, return the
         #basement velocity.
@@ -131,7 +131,7 @@ class VelocityModel(object):
         iphi = (phi - self.nodes['phi_min']) / self.nodes['dphi']
         #If the position requested is above the surface, return the
         #velocity of air for Vp and a NULL value, -1, for Vs.
-        if r > self.geoid(phi, theta, coords="spherical"):
+        if r > self.geoid(theta, phi):
             return self._air[phase]
         #If the location requested is below the grid, return the
         #basement velocity.
