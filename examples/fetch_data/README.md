@@ -43,7 +43,7 @@ and output data saved in these subdirectories with filenames like
 $STA.$CHAN.$EVID.
 
 ```bash
--bash-4.3$ fetch\_data ~/projects/SJFZ/dbs/1.0/2015/SJFZ\_2015 fetch\_data.cfg 
+-bash-4.3$ fetch_data ~/projects/SJFZ/dbs/1.0/2015/SJFZ_2015 fetch_data.cfg 
 starting processing thread #1
 Copying data for 2015/001
 receiving file list ... 
@@ -124,9 +124,9 @@ receiving file list ...
      13,332,480 100%   12.20MB/s    0:00:01 (xfr#36, to-chk=3/41)
 2015/001/RA12.HNZ.2015.001.00.00.00
      13,676,544 100%   82.03MB/s    0:00:00 (xfr#37, to-chk=2/41)
-2015/001/i4.CRN.HNE.2015001\_0+
+2015/001/i4.CRN.HNE.2015001_0+
       9,527,296 100%   37.86MB/s    0:00:00 (xfr#38, to-chk=1/41)
-2015/001/i4.CRN.HNZ.2015001\_0+
+2015/001/i4.CRN.HNZ.2015001_0+
      11,767,808 100%   33.01MB/s    0:00:00 (xfr#39, to-chk=0/41)
 Data retrieved for 2015/001
 origin: 120070 33.3637 243.1422 11.8659 2015-01-01T00:36:27.680380Z dbgrassoc:local
