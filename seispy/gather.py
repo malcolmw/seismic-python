@@ -28,10 +28,10 @@ class Gather3C(obspy.core.Stream):
         self.H2 = self[2]
         self.stats = deepcopy(traces[0].stats)
         channel_set = [tr.stats.channel for tr in traces]
-        self.stats.channel = "%s:%s%s%s" % (channel_set[0][:2],
-                                            channel_set[0][2],
-                                            channel_set[1][2],
-                                            channel_set[2][2])
+        self.stats.channel = "%s:%s%s%s" % (channel_set[0].code[:2],
+                                            channel_set[0].code[2],
+                                            channel_set[1].code[2],
+                                            channel_set[2].code[2])
         self.stats.channel_set = channel_set
 
     def detect_swave(self,
@@ -41,6 +41,11 @@ class Gather3C(obspy.core.Stream):
                      lta_twin=5.0,
                      sta_twin=1.0):
         ppick_dbl = detection_p.timestamp - self.stats.starttime.timestamp
+        min_nsamp = int(4 * lta_twin * self.stats.sampling_rate)
+        if not (len(self.V.data) >= min_nsamp 
+                and len(self.H1.data) >= min_nsamp
+                and len(self.H2.data) >= min_nsamp):
+            return None
         output = detect_swave_cc(self.V.data,
                                  self.H1.data,
                                  self.H2.data,
@@ -80,6 +85,10 @@ class Gather3C(obspy.core.Stream):
         self.V.filter(*args, **kwargs)
         self.H1.filter(*args, **kwargs)
         self.H2.filter(*args, **kwargs)
+
+    def trim(self, *args, **kwargs):
+        super(self.__class__, self).trim(*args, **kwargs)
+        self.stats.starttime = self.V.stats.starttime
 
     def _plot(self,
              starttime=None,
