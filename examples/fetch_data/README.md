@@ -1,17 +1,14 @@
 # Tutorial
-##fetch\_data
-####usage: fetch\_data database configuration\_file
+## fetch\_data
 
-fetch\_data is a easy-to-use command line program to retrieve event-segmented
-waveform data from the Array Network Facility (UCSD, Frank Vernon) data
-archives. Type fetch\_data -h to get help.
+usage: **fetch\_data** *database config-file*
 
-fetch\_data is configured using a configuration file. The user should only need
-to edit the configuration file and command line arguments to retrieve the data
-desired.
+**fetch\_data** is a easy-to-use command line program to retrieve event-segmented waveform data from the Array Network Facility (UCSD, Frank Vernon) data archives. Type fetch\_data -h to get help.
 
-###Example configuration file
-####fetch\_data.cfg
+**fetch\_data** is configured using a configuration file. The user should only need to edit the configuration file and command line arguments to retrieve the data desired.
+
+### Example configuration file
+#### fetch\_data.cfg
 ```python
 [General]
 rsync_server = rsync://eqinfo.ucsd.edu/ANZA_waveforms
@@ -23,22 +20,20 @@ stations = PFO, RA[01][1-9], C.*
 channels = HNZ, HNE, BH.*
 ```
 
-####configuration parameters
-rsync\_server: This shouldn't need to change.
-n\_threads: Number of data fetching threads. Testing shows that the rsync
+#### configuration parameters
+- **rsync\_server** - This shouldn't need to change.
+- **n\_threads** - Number of data fetching threads. Testing shows that the rsync
 server at UCSD cannot handle requests from more than 8 threads. Try running
 with a few threads but be careful using too many, you might not get all the
 data you want.
-start\_lead: Number of seconds before origin time to fetch.
-end\_lag: Number of seconds after origin time to fetch.
-output\_format: Output data format (eg. MSEED, SAC or any format understood, by
+- **start\_lead** - Number of seconds before origin time to fetch.
+- **end\_lag** - Number of seconds after origin time to fetch.
+- **output\_format** - Output data format (eg. MSEED, SAC or any format understood, by
 [obspy.core.Stream.write()](http://docs.obspy.org/packages/autogen/obspy.core.stream.Stream.write.html#obspy.core.stream.Stream.write).
-stations: Comma separated list of stations to retrieve data for.
-Whitespace and wildcards are ok.
-channels: Comma separated list of channels to retrieve data for.
-Whitespace and wildcards are ok.
+- **stations** - Comma separated list of stations to retrieve data for. Whitespace and wildcards are ok.
+- **channels** - Comma separated list of channels to retrieve data for. Whitespace and wildcards are ok.
 
-###Example command
+### Example command
 This example command, using the configuration file above will retrieve 2
 minutes of data following each event. Data from station PFO, the entire RA
 array and any station with station code starting with C will be retrieved.
