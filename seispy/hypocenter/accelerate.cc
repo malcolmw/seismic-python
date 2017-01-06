@@ -6,7 +6,7 @@
 static PyObject *
 grid_search(PyObject *self, PyObject *args)
 {
-    PyObject* locator;
+    PyObject* ttgrid;
     PyObject* grid;
     PyObject* arrivals;
     PyObject* station;
@@ -35,18 +35,17 @@ grid_search(PyObject *self, PyObject *args)
     bool last_iteration = false;
 
     if ( !PyArg_ParseTuple(args, "OO!",
-                                  &locator,
+                                  &ttgrid,
                                   &PyTuple_Type, &arrivals) )
         return NULL;
-    grid = PyObject_GetAttrString(locator, "grid");
-    nr = (int) PyInt_AsLong(PyDict_GetItemString(grid, "nr"));
-    ntheta = (int) PyInt_AsLong(PyDict_GetItemString(grid, "ntheta"));
-    nphi = (int) PyInt_AsLong(PyDict_GetItemString(grid, "nphi"));
+    nr = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "nr"));
+    ntheta = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "ntheta"));
+    nphi = (int) PyInt_AsLong(PyObject_GetAttrString(ttgrid, "nphi"));
     narr = (int) PyTuple_Size(arrivals);
     for (iarr = 0; iarr < narr; iarr++){
  	temp1 = PyObject_GetAttrString(PyTuple_GetItem(arrivals, iarr), "time");
 	temp2 = PyObject_GetAttrString(temp1, "timestamp");
-      arrival_times.push_back(PyFloat_AsDouble(temp2));
+        arrival_times.push_back(PyFloat_AsDouble(temp2));
 	Py_DECREF(temp1);
 	Py_DECREF(temp2);
     }
@@ -76,16 +75,16 @@ grid_search(PyObject *self, PyObject *args)
                                                                       iarr),
                                                       "phase");
                        Py_DECREF(temp1);
-                       temp1 = PyObject_CallMethod(locator,
-            					    	     "_get_node_tt",
-            					    	     "OOiii",
-            					    	     station,
+                       temp1 = PyObject_CallMethod(ttgrid,
+            					   "get_node_tt",
+            					   "OOiii",
+            					   station,
                                                    phase,
-            					    	     ir,
-            					    	     itheta,
-            					    	     iphi);
+            					   ir,
+            					   itheta,
+            					   iphi);
                         tt = PyFloat_AsDouble(temp1);
-            		 Py_DECREF(temp1);
+            		Py_DECREF(temp1);
                         Py_DECREF(station);
                         Py_DECREF(phase);
                         travel_times.push_back(tt);
@@ -138,7 +137,6 @@ grid_search(PyObject *self, PyObject *args)
         phi_lb = (0 > (iphi0 - phi_range)) ? 0 : (iphi0 - phi_range);
         phi_ub = (nphi < (iphi0 + phi_range)) ? nphi : (iphi0 + phi_range);
     }
-    Py_DECREF(grid);
     return Py_BuildValue("iiif", ir0, itheta0, iphi0, t0);
 }
 

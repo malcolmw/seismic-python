@@ -356,6 +356,7 @@ class _MainPool(object):
         Start input process.
         """
         for i in range(self.parent.config_params['n_threads']):
+            print "starting processing thread #%d" % (i + 1)
             self.process_threads[i].start()
 
     def _target_wrapper(self, thread_id):
@@ -364,7 +365,12 @@ class _MainPool(object):
         the main processing function and place the resulting processed
         object on the output queue.
         """
+        ncpus = cpu_count() + 2
         while True:
+            load1, load5, load15 = get_loadavg()
+            while load1 > ncpus or load5 > ncpus or load15 > ncpus:
+                load1, load5, load15 = get_loadavg()
+                sleep(5)
             try:
                 obj = self.parent.input_q.get(timeout=0.1)
             except Empty:
@@ -372,16 +378,28 @@ class _MainPool(object):
                         self.conns[thread_id]['cconn'].recv() == 'KILL':
                     return
                 continue
-            self.parent.output_q.put(self.target(obj,
-                                                 *self.parent.extra_args['main_init_args'],
-                                                 **self.parent.extra_args['main_init_kwargs']))
+            for result in self.target(obj,
+                                      *self.parent.extra_args['main_init_args'],
+                                      **self.parent.extra_args['main_init_kwargs']):
+                self.parent.output_q.put(result)
+
 ##########################
 #                        #
 #  FUNCTION DEFINITIONS  #
 #                        #
 ##########################
 
-isfunction = lambda func: hasattr(func, '__call__')
+
+def isfunction(func):
+    return hasattr(func, '__call__')
+
+
+def get_loadavg():
+    infile = open("/proc/loadavg")
+    l1, l5, l15 = [float(v) for v in infile.readline().split()[:3]]
+    infile.close()
+    return l1, l5, l15
+
 
 def validate_time(time):
     if not isinstance(time, UTCDateTime) and\
@@ -394,8 +412,13 @@ def validate_time(time):
             time = UTCDateTime(time)
         if isinstance(time, int) and 1000000 <= time <= 9999999:
             time = UTCDateTime(year=time / 1000, julday=time % 1000)
-        elif isinstance(time, float) and time == -1.0:
-            time = UTCDateTime(year=3000, julday=365, hour=23, minute=59, second=59)
+        elif (isinstance(time, float) or isinstance(time, int))\
+                and time == -1.0:
+            time = UTCDateTime(year=3000,
+                               julday=365,
+                               hour=23,
+                               minute=59,
+                               second=59)
         else:
             time = UTCDateTime(time)
     return time

@@ -8,6 +8,7 @@ Created on Fri Oct 21 18:01:25 2016
 from seispy.util import validate_time
 import re
 
+from memory_profiler import profile
 
 class Channel:
     """
@@ -117,19 +118,34 @@ class ChannelSet:
     .. todo::
        document this class
     """
-    def __init__(self, *args):
-        if len(args) == 1:
-            self.chanV = args[0]
-            self.chanH1 = args[1]
-            self.chanH2 = args[2]
-        else:
-            self.chanV = args[0][0]
-            self.chanH1 = args[0][1]
-            self.chanH2 = args[0][2]
-        self.id = "%s:%s:%s".format(self.chanV.code,
-                                    self.chanH1.code,
-                                    self.chanH2.code)
+    def __init__(self, channels):
+        self.chanV = channels[0]
+        self.chanH1 = channels[1]
+        self.chanH2 = channels[2]
+        self.id = "%s:%s:%s" % (self.chanV.code,
+                                self.chanH1.code,
+                                self.chanH2.code)
 
+    def __iter__(self):
+        self.index = 0
+        return self
+
+    def __str__(self):
+        return self.id
+
+    def next(self):
+        if self.index > 2:
+            raise StopIteration()
+        elif self.index == 0:
+            self.index += 1
+            return self.chanV
+        elif self.index == 1:
+            self.index += 1
+            return self.chanH1
+        elif self.index == 2:
+            self.index += 1
+            return self.chanH2
+        
 
 class Station(object):
     def __init__(self,
@@ -178,11 +194,15 @@ class Station(object):
                             sample rate and instrument type
         :return tuple: a sorted tuple of 3 channels
         """
-        channels = ()
+        channels = (self.channels[code],)
         for channel in self.channels:
-            if channel.code[:2] == code:
+            channel = self.channels[channel]
+            if channel.code[2] != code[2]\
+                    and channel.code[2] in ("Z", "N", "E", "1", "2")\
+                    and channel.code[:2] == code[:2]\
+                    and channel.code[3:] == code[3:]:
                 channels += (channel,)
-        return sorted(channels)
+        return ChannelSet(sorted(channels))
 
 
 class TimeSpan(object):

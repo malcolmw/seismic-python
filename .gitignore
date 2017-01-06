@@ -3,3 +3,4 @@ seispy/*.pyc
 seispy/core/*.pyc
 seispy/util/*.pyc
 .spyproject
+install

@@ -3,9 +3,10 @@ from argparse import ArgumentParser
 from ConfigParser import RawConfigParser
 import os
 import shutil
+import tempfile
 from time import sleep
 from obspy.core import read
-from gazelle.datascope import Database
+from gazelle.datascope import closing, dbopen, Database
 from seispy.util import MultiThreadProcess
 
 
@@ -29,7 +30,10 @@ def parse_config(args):
     cfg["start_lead"] = config.getfloat("General", "start_lead")
     cfg["end_lag"] = config.getfloat("General", "end_lag")
     cfg["output_format"] = config.get("General", "output_format")
-    cfg["file_match"] = config.get("General", "file_match")
+    cfg["stations"] = config.get("General", "stations").split(",")
+    cfg["stations"] = [s.strip() for s in cfg["stations"]]
+    cfg["channels"] = config.get("General", "channels").split(",")
+    cfg["channels"] = [s.strip() for s in cfg["channels"]]
     return cfg
 
 def inputter(args):
@@ -122,67 +126,87 @@ def main_processor_detection_mode(time, args, cfg):
         shutil.rmtree(os.path.join(root, stryear, "continuous", strjulday))
     return None
 
-def main_processor(date, db, cfg, args):
-    year, day = date
-    jday = "%03d" % day
-    work_root = os.getcwd()
-    if not os.path.exists("%d" % year):
-        os.mkdir("%d" % year)
-    os.chdir("%d" % year)
-    if not os.path.exists("continuous"):
-        os.mkdir("continuous")
-    os.chdir("continuous")
-    if not os.path.exists(jday):
-        os.mkdir(jday)
-    os.chdir(jday)
-    subset = "time >= _%d%s_ && time < _%d%s_"\
-            % (year, jday, year, "%03d" % (day + 1))
-    if args.subset:
-        subset += " && " + args.subset
-    copy_flag = True
-    for origin in db.iterate_events(subset=subset,
-                                    parse_arrivals=False,
-                                    parse_magnitudes=False):
-        print origin
-        if copy_flag:
-            copy_flag = False
-            print "Copying data for %d/%s" % (year, jday)
-            cmd = "rsync -aP --whole-file %s/%d/%s/%s ./" % (cfg["rsync_server"], year, jday, cfg["file_match"])
-            os.system(cmd)
-            print "Data retrieved for %d/%s" % (year, jday)
-            os.chdir("../..")
-        if not os.path.exists("%d" % origin.evid):
-            os.mkdir("%d" % origin.evid)
-        os.chdir("%d" % origin.evid)
-        for wf_file in sorted(os.listdir("../continuous/%s" % jday)):
-            tr = read("../continuous/%s/%s" % (jday, wf_file))[0]
-            print "Writing file %s.%s.%d" % (tr.stats.station, tr.stats.channel, origin.evid)
-            tr.trim(starttime=origin.time - cfg["start_lead"], endtime=origin.time + cfg["end_lag"])
-            tr.write("%s.%s.%d" % (tr.stats.station,
-                                   tr.stats.channel,
-                                   origin.evid),
-                                   format=cfg["output_format"])
-    os.chdir(os.path.join(work_root, str(year)))
-    if os.path.exists("continuous/%s" % jday):
-        shutil.rmtree("continuous/%s" % jday)
-    os.chdir(work_root)
-    return None
+def build_wffiles(wffiles, time, cfg):
+    with closing(dbopen("/home/seismech-00/sjfzdb/anf/wfdiscs/%d" % time.year)) as wfdb:
+        try:
+            wffiles = open(wffiles, "w")
+            tbl_wfdisc = wfdb.lookup(table="wfdisc")
+            subset = "time >= _%d%03d_ && time < _%d%03d_"\
+                    % (time.year, time.julday, time.year, (time.julday + 1))
+            subset += "&& sta =~ /%s" % cfg["stations"][0]
+            for sta in cfg["stations"][1:]:
+                subset += "|%s" % sta
+            subset += "/ && chan =~ /%s" % cfg["channels"][0]
+            for chan in cfg["channels"]:
+                subset += "|%s" % chan
+            subset += "/"
+            view = tbl_wfdisc.subset(subset)
+            _tmp = view.sort(("sta", "chan", "time")); view.free(); view = _tmp
+            for record in view.iter_record():
+                ddir, dfile = record.getv("dir", "dfile")
+                dfile = os.path.join(ddir, dfile)
+                wffiles.write("%s\n" % dfile)
+        finally:
+            view.free()
+            wffiles.close()
 
-def outputter(obj):
-    pass
+def main_processor(time, cfg, args):
+    db = args.database
+    year, jday = str(time.year), "%03d" % time.julday
+    root = os.getcwd()
+    tmp_root = tempfile.mkdtemp()
+    try:
+        wffiles = os.path.join(tmp_root, "wffiles_%s.txt" % year)
+        build_wffiles(wffiles, time, cfg)
+        ddir = os.path.join(tmp_root, year, jday)
+        subset = "time >= _%s%s_ && time < _%s%03d_"\
+                % (year, jday, year, (time.julday + 1))
+        if args.subset:
+            subset += " && " + args.subset
+        copy_flag = True
+        for origin in db.iterate_events(subset=subset,
+                                        parse_arrivals=False,
+                                        parse_magnitudes=False):
+            if copy_flag:
+                copy_flag = False
+                print "Copying data for %s/%s" % (year, jday)
+                cmd = "rsync -aRP --whole-file %s -F --files-from=%s %s" % (cfg["rsync_server"], wffiles, tmp_root)
+                os.system(cmd)
+                print "Data retrieved for %s/%s" % (year, jday)
+            print origin
+            odir = os.path.join(root, year, "%06d" % origin.evid)
+            if not os.path.isdir(odir):
+                os.makedirs(odir)
+            for wf_file in sorted(os.listdir(ddir)):
+                tr = read(os.path.join(ddir, wf_file))[0]
+                print "Writing file %s.%s.%06d" % (tr.stats.station, tr.stats.channel, origin.evid)
+                tr.trim(starttime=origin.time - cfg["start_lead"], endtime=origin.time + cfg["end_lag"])
+                fname = os.path.join(odir, "%s.%s.%06d" % (tr.stats.station,
+                                                           tr.stats.channel,
+                                                           origin.evid))
+                yield (tr, fname)
+    finally:
+        shutil.rmtree(tmp_root)
+
+def outputter(obj, cfg):
+    tr, fname = obj
+    tr.write(fname, format=cfg["output_format"])
 
 def main():
     args = parse_args()
     cfg = parse_config(args)
     args.database = Database(os.path.abspath(args.database))
     extra_args = {"input_init_args": (args,),
-                  "main_init_args": (args, cfg)}
+                  "main_init_args": (cfg, args),
+                  "output_init_args": (cfg,)}
     config_params = {"n_threads": cfg["n_threads"],
                      "input_q_max_size": cfg["n_threads"]}
     if args.detection_mode:
-        main_processor = main_processor_detection_mode
+        main_proc = main_processor_detection_mode
+    else:
+        main_proc = main_processor
     mtp = MultiThreadProcess(inputter,
-                            main_processor,
+                            main_proc,
                             outputter,
                             extra_args=extra_args,
                             config_params=config_params)

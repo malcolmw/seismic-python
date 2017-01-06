@@ -10,8 +10,44 @@ import numpy as np
 import obspy.core
 from obspy.core.utcdatetime import UTCDateTime
 
-
 class Trace(obspy.core.Trace):
+    """
+    ... todo::
+        document this class
+    """
+    def __init__(self, database, station, channel, starttime, endtime):
+        starttime = validate_time(starttime)
+        endtime = validate_time(endtime)
+        if isinstance(station, sp.station.Station):
+            sta = station.name
+        if isinstance(channel, sp.station.Channel):
+            chan = channel.code
+        try:
+            groupd = database.wfdisc["grouped"]
+            groupd.record = groupd.find("sta =~ /%s/ && chan =~ /%s/"
+                                        % (sta, chan))
+        except Exception as e:
+            raise IOError("data not found")
+        rnge = groupd.get_range()
+        sortd = database.wfdisc["sorted"]
+        view = sortd.list2subset(range(rnge[0], rnge[1]))
+        _tmp = view.subset("endtime > _%f_ && time < _%f_"
+                           % (starttime.timestamp, endtime.timestamp))
+        view.free(); view = _tmp
+        st = obspy.core.Stream()
+        for record in view.iter_record():
+            st += obspy.core.read(record.filename()[1],
+                                  starttime=starttime,
+                                  endtime=endtime)[0]
+        view.free()
+        st.merge()
+        tr = st[0]
+        self.stats = tr.stats
+        self.stats.station = station
+        self.stats.channel = channel
+        self.data = tr.data
+
+class Trace_dep(obspy.core.Trace):
     """
     .. todo::
        document this class
@@ -45,10 +81,6 @@ class Trace(obspy.core.Trace):
                     raise ValueError("invalid keyword arguments - specify database")
             starttime = validate_time(kwargs['starttime'])
             endtime = validate_time(kwargs['endtime'])
-            if not isinstance(kwargs['station'], sp.station.Station):
-                raise TypeError("invalid type: %s" % type(kwargs['station']))
-            if not isinstance(kwargs['channel'], sp.station.Channel):
-                raise TypeError("inavlid type: %s" % type(kwargs['channel']))
             if 'database_path' in kwargs:
                 if not isfile("%s.wfdisc" % kwargs['database_path']):
                     raise IOError("file not found: %s" % kwargs['database_path'])
@@ -58,12 +90,21 @@ class Trace(obspy.core.Trace):
                 dbptr = kwargs['database_pointer']
             else:
                 raise ValueError("invalid keyword arguments")
+            if isinstance(kwargs['station'], sp.station.Station):
+                sta = kwargs["station"].name
+            else:
+                sta = kwargs["station"]
+            if isinstance(kwargs['channel'], sp.station.Channel):
+                chan = kwargs["channel"].code
+            else:
+                chan = kwargs["channel"]
             dbptr = dbptr.lookup(table='wfdisc')
             dbptr = dbptr.subset("sta =~ /%s/ && chan =~ /%s/ && "\
-                    "endtime > _%f_ && time < _%f_" % (kwargs['station'].name,
-                                                       kwargs['channel'].code,
-                                                       kwargs['starttime'],
-                                                       kwargs['endtime']))
+                                 "endtime > _%f_ && time < _%f_"
+                                 % (sta,
+                                    chan,
+                                    kwargs['starttime'],
+                                    kwargs['endtime']))
             if dbptr.record_count == 0:
                 raise IOError("no data found")
             st = obspy.core.Stream()

@@ -9,8 +9,8 @@ SPHERICAL
 Spherical coordinates are defined relative to the cartesian coordanets
 as:
 r - radial distance to point from origin
-theta - angular distance from z-axis to radial-axis [0, pi]
-phi - angular distance from x-axis to raidal-axis [0, 2 * pi]
+theta - polar angle [0, pi]
+phi - azimuthal angle 2 * pi]
 
 GEOGRAPHICAL
 ============
