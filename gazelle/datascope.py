@@ -11,6 +11,8 @@ if sp._ANTELOPE_DEFINED:
 if not sp._ANTELOPE_DEFINED:
     raise ImportError("Antelope environment not defined")
 
+from memory_profiler import profile
+
 class Database:
     def __init__(self, path, mode="r"):
         self.ptr = dbopen(path, mode)
@@ -35,10 +37,22 @@ class Database:
             grp_assoc = view_assoc.group("orid")
             self.groups["assoc"] = (grp_assoc, view_assoc)
 
+    def __exit__(self):
+        if hasattr(self, "wfdisc"):
+            self.wfdisc["sorted"].free()
+            self.wfdisc["grouped"].free()
+
     def __getattr__(self, name):
         if name == "virtual_network":
             self.virtual_network = self.parse_virtual_network()
             return self.virtual_network
+        elif name == "wfdisc":
+            sortd = self.ptr.lookup(table="wfdisc").sort(("sta", "chan", "time"))
+            groupd = sortd.group(("sta", "chan"))
+            self.wfdisc = {}
+            self.wfdisc["sorted"] = sortd
+            self.wfdisc["grouped"] = groupd
+            return self.wfdisc
         else:
             raise AttributeError("no attribute %s" % name)
 
@@ -47,13 +61,17 @@ class Database:
 
     def get_gather3c(self, station, channel_set, starttime, endtime):
         traces = []
-        for channel in channel_set:
-            traces += [seispy.trace.Trace(database_pointer=self.ptr,
-                             station=station.name,
-                             channel=channel.code,
-                             starttime=starttime,
-                             endtime=endtime)]
-        return seispy.gather.Gather3C(traces)
+        try:
+            for channel in channel_set:
+                traces += [seispy.trace.Trace(self,
+                                              station,
+                                              channel,
+                                              starttime,
+                                              endtime)]
+            gather = seispy.gather.Gather3C(traces)
+        except IndexError:
+            raise IOError("3C gather data not found")
+        return gather
 
     def get_prefor(self, evid, **kwargs):
         tbl_event = self.tables["event"]
@@ -74,26 +92,34 @@ class Database:
                          starttime=None,
                          endtime=None):
         detections = []
-        if starttime is None and endtime is None:
-            raise ValueError("starttime or endtime not provided")
-        starttime, endtime = validate_time(starttime), validate_time(endtime)
-        view = self.tables["detection"].subset("time >= _%f_ && time < _%f_"
-                                               % (starttime.timestamp,
-                                                  endtime.timestamp))
+        if starttime is not None:
+            starttime = validate_time(starttime)
+            if endtime is not None:
+                endtime = validate_time(endtime)
+                view = self.tables["detection"].subset("time >= _%f_ && "
+                                                       "time <= _%f_"
+                                                       % (starttime.timestamp,
+                                                          endtime.timestamp))
+            else:
+                view = self.tables["detection"].subset("time >= _%f_"
+                                                       % starttime.timestamp)
+            _view = view.sort("time"); view.free(); view = _view
+        elif endtime is not None:
+            endtime = validate_time(endtime)
+            view = self.tables["detection"].subset("time <= _%f_"
+                                                   % endtime.timestamp)
+            _view = view.sort("time"); view.free(); view = _view
+        else:
+            view = self.tables["detection"].sort("time")
         if subset is not None:
-            _view = view.subset(subset)
-            view.free()
-            view = _view
-        _view = view.sort("time")
-        view.free()
-        view = _view
+            _view = view.subset(subset); view.free(); view = _view
         for record in view.iter_record():
             station, channel, time, label = record.getv("sta",
                                                         "chan",
                                                         "time",
                                                         "state")
             station = self.virtual_network.stations[station]
-            channel = station.channels[channel]
+            # channel = station.channels[channel]
             detections += [seispy.event.Detection(station, channel, time, label)]
         return detections
 
