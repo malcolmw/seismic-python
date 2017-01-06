@@ -68,16 +68,15 @@ def getter(args):
                                          parse_magnitudes=False):
         yield origin
 
-
 def main_processor(origin, locator, cfg):
     if cfg['mode'] == 'relocate':
-        return locator.relocate(origin)
+        yield locator.relocate(origin)
     elif cfg['mode'] == 'locate':
         result = locator.locate(origin)
         if result is None:
-            return (False, origin)
+            yield (False, origin)
         else:
-            return (True, result)
+            yield (True, result)
     else:
         print "invalid mode: %s" % cfg['mode']
         exit()
