@@ -378,9 +378,11 @@ class _MainPool(object):
                         self.conns[thread_id]['cconn'].recv() == 'KILL':
                     return
                 continue
-            self.parent.output_q.put(self.target(obj,
-                                                 *self.parent.extra_args['main_init_args'],
-                                                 **self.parent.extra_args['main_init_kwargs']))
+            for result in self.target(obj,
+                                      *self.parent.extra_args['main_init_args'],
+                                      **self.parent.extra_args['main_init_kwargs']):
+                self.parent.output_q.put(result)
+
 ##########################
 #                        #
 #  FUNCTION DEFINITIONS  #
