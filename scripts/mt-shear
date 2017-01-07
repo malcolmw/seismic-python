@@ -5,7 +5,7 @@ import seispy as sp
 from obspy.core import Stream, read
 from obspy.core.utcdatetime import UTCDateTime
 from argparse import ArgumentParser
-from ConfigParser import RawConfigParser
+from multiprocessing import Process, Queue
 import os
 import shutil
 import tempfile
@@ -13,111 +13,145 @@ import tempfile
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("database", type=str, help="database")
-    parser.add_argument("config", type=str, help="configuration file")
     parser.add_argument("-n", "--n_threads",
                         type=int,
                         help="number of threads")
     return parser.parse_args()
 
-def parse_config(args):
-    parser = RawConfigParser()
-    parser.read(args.config)
-    cfg = {}
-    return cfg
-
-def inputter(args, cfg):
-    db = args.database
-    for subnet in db.virtual_network.subnets:
-        subnet = db.virtual_network.subnets[subnet]
-        for station in subnet.stations:
-            station = subnet.stations[station]
-            view = db.tables["detection"].subset("sta =~ /%s/ && state =~ /P/"
-                                                 % station.name)
-            if view.record_count > 0:
-                view.record = 0
-                year = sp.util.validate_time(view.getv("time")[0]).year
-                end = 366 if year % 4 == 0 else 365
-                for day in range(1, end):
-                    time = UTCDateTime(year=year, julday=day)
-                    day_view = view.subset("time >= _%d%03d_ && time < _%d%03d_"
-                                           % (time.year,
-                                              time.julday,
-                                              time.year,
-                                              time.julday + 1))
-                    yield (station,
-                           time, 
-                           [UTCDateTime(record.getv("time")[0])
-                                for record in day_view.iter_record()])
-                    day_view.free()
-                view.free()
+def inputter(args):
+    for record in args.detections["grouped"].iter_record():
+        sta, chan = record.getv("sta", "chan")
+        try:
+            station = args.database.virtual_network.stations[sta]
+        except KeyError:
+            continue
+        yield (station, chan)
 
 def main_processor(obj, args):
-    station, time, pdts = obj
-    swave_detections = []
-    #willy = sp.burrow.Groundhog()
-    tbl_wfdisc = args.database.ptr.lookup(table="wfdisc")
-    for channel in station.get_channels(match="[HBES][HN]Z.*"):
-        channel_set = station.get_channel_set(channel.code)
-        st0 = Stream()
-        try:
-            for channel in channel_set:
-                view = tbl_wfdisc.subset("sta =~ /%s/ && chan =~ /%s/ && "
-                                         "endtime > _%f_ && time < _%f_"
-                                         % (station.name,
-                                            channel.code,
-                                            time.timestamp,
-                                            time.timestamp + 86400))
-                if view.record_count == 0:
-                    raise IOError
-                for record in view.iter_record():
-                    dfile = record.extfile()[1]
-                    print dfile
-                    st0 += read(dfile)
-                #st0 += willy.fetch(station.name,
-                #                   channel.code,
-                #                   time,
-                #                   time + 86400)
-        except IOError:
+    station, chan = obj
+    channel_set = station.get_channel_set(chan)
+    sortd = args.detections["sorted"]
+    groupd = args.detections["grouped"]
+    groupd.record = groupd.find("sta =~ /%s/ && chan =~ /%s/"
+                                % (station.name, chan))
+    rnge = groupd.get_range()
+    sortd.record = rnge[0]
+    time = UTCDateTime(sortd.getv("time")[0])
+    buffr = Queue(3)
+    buffer_proc = Process(target=buffer_data,
+                          args=(buffr,
+                                args.database,
+                                station,
+                                channel_set,
+                                time))
+    buffer_proc.daemon = True
+    buffer_proc.start()
+    gather0 = buffr.get()
+    for sortd.record in range(rnge[0], rnge[1]):
+        time = UTCDateTime(sortd.getv("time")[0])
+        starttime = gather0.stats.starttime + 4.
+        endtime = gather0.stats.endtime - 16.0
+        if time < starttime:
             continue
-        st0.filter("bandpass", freqmin=3.0, freqmax=10.0)
-        st0.detrend("linear")
-        for pdt in pdts:
-            starttime = pdt - 4.0
-            endtime = pdt + 16.0
-            st = st0.copy()
-            st.trim(starttime=starttime, endtime=endtime)
-            gather = sp.gather.Gather3C(st)
+        elif time > endtime:
+            brk = False
+            while time > endtime:
+                gather0 = buffr.get()
+                if gather0 is None:
+                    brk = True
+                    break
+                starttime = gather0.stats.starttime + 4.
+                endtime = gather0.stats.endtime - 16.0
+            if brk is True:
+                print "no more data"
+                break
+        gather = gather0.copy()
+        gather.trim(starttime=time - 4.0, endtime=time + 16.0)
+        try:
             detection = gather.detect_swave(time)
-            swave_detections += [detection]
-    return swave_detections
-
-def outputter(obj, tbl):
-    for detection in obj:
+        except Exception:
+            continue
         if detection is not None:
-            print detection.station, detection.channel, detection.snr, detection.time
-            tbl.record = tbl.addnull()
-            tbl.putv(("sta", detection.station),
-                     ("chan", detection.channel),
-                     ("time", detection.time.timestamp),
-                     ("snr", detection.snr),
-                     ("state", "S"),
-                     ("filter", "BP 3-10"))
+            yield detection
+    buffer_proc.terminate()
+    buffer_proc.join()
+
+def get_24h_gather(database, station, channel_set, time):
+    t0 = time
+    time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
+    if time + 86400 - t0 < 16.:
+        gather = database.get_gather3c(station,
+                                     channel_set,
+                                     t0 - 4.,
+                                     time + 2 * 86400)
+    else:
+        gather = database.get_gather3c(station,
+                                       channel_set,
+                                       time,
+                                       time + 86400.)
+    gather.detrend("linear")
+    gather.filter("bandpass", freqmin=3.0, freqmax=10.0)
+    return gather
+
+def buffer_data(buffr, database, station, channel_set, time):
+    year = time.year
+    time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
+    while time.year == year:
+        try:
+            gather = get_24h_gather(database, station, channel_set, time)
+        except IOError:
+            print "no data", station, channel_set, time
+            time.julday += 1
+            continue
+        except NotImplementedError:
+            print "silently continue"
+            time.julday += 1
+            continue
+        buffr.put(gather)
+        time.julday += 1
+    buffr.put(None)
+    buffr.close()
+
+def outputter(detection, tbl):
+    if detection is not None:
+        print "S-wave:", detection.station.name, detection.channel.code, detection.time
+        tbl.record = tbl.addnull()
+        tbl.putv(("sta", detection.station.name),
+                 ("chan", detection.channel.code),
+                 ("time", detection.time.timestamp),
+                 ("snr", detection.snr),
+                 ("state", "S"),
+                 ("filter", "BP 3-10"))
+
+def init_args(args):
+    args.database = Database(args.database, mode="r+")
+    view = args.database.tables["detection"].subset("state =~ /P/")
+    _tmp = view.sort(("sta", "chan", "time")); view.free(); view = _tmp
+    args.detections = {"sorted": view}
+    args.detections["grouped"] = args.detections["sorted"].group(("sta", "chan"))
+    _ = args.database.wfdisc
+    return args
 
 def main():
     args = parse_args()
-    #cfg = parse_config(args)
-    cfg = None
-    args.database = Database(args.database, mode="r+")
-    extra_args = {"input_init_args": (args, cfg),
+    args = init_args(args)
+    extra_args = {"input_init_args": (args,),
                   "main_init_args": (args,),
                   "output_init_args": (args.database.tables["detection"],)}
-    config_params = {"n_threads": 1}
+    if args.n_threads is not None:
+        n_threads = args.n_threads
+    else:
+        n_threads = 1
+    config_params = {"n_threads": n_threads}
     mtp = sp.util.MultiThreadProcess(inputter,
                                      main_processor,
                                      outputter,
                                      extra_args=extra_args,
                                      config_params=config_params)
     mtp.start()
+    outfile.close()
+    args.detections["sorted"].free()
+    args.detections["grouped"].free()
 
 if __name__ == "__main__":
     main()
