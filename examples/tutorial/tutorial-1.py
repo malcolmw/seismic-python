@@ -19,7 +19,8 @@ trE = sp.trace.Trace("/home/seismech-00/sjfzdb/continuous_wfs_tmp/borehole"
 gather = sp.gather.Gather3C([trZ, trN, trE])
 
 # We still have all of our usual obspy.stream.Stream behavior.
-# gather.plot()
+gather.plot()
+print gather
 
 # Now let's make some detections.
 # First do some pre-processing.
