@@ -1,0 +1,126 @@
+#! /usr/bin/env python
+
+import gazelle as gz
+import seispy as sp
+from obspy.core import Stream, read
+from obspy.core.utcdatetime import UTCDateTime
+from argparse import ArgumentParser
+import logging
+from multiprocessing import Process, Queue
+import os
+import shutil
+import tempfile
+
+logger = sp.log.initialize_logging(__name__)
+
+def parse_args():
+    parser = ArgumentParser()
+    parser.add_argument("database", type=str, help="database")
+    parser.add_argument("-v", "--verbose", action="store_true", help="verbose")
+    return parser.parse_args()
+
+def generator(args):
+    for record in args.detections["grouped"].iter_record():
+        sta, chan = record.getv("sta", "chan")
+        try:
+            station = args.database.virtual_network.stations[sta]
+        except KeyError:
+            continue
+        yield (station, chan)
+
+def process(obj, args):
+    station, chan = obj
+    try:
+        channel_set = station.get_channel_set(chan)
+    except (KeyError, IndexError) as err:
+        logger.warning("invalid channel code %s for station %s" % (chan, station.name))
+        return
+    tbl_detection = args.database.tables["detection"]
+    sortd = args.detections["sorted"]
+    groupd = args.detections["grouped"]
+    groupd.record = groupd.find("sta =~ /%s/ && chan =~ /%s/"
+                                % (station.name, chan))
+    rnge = groupd.get_range()
+    logger.info("processing %s:%s, %d P-wave detections"
+                % (station.name, chan, (rnge[1] - rnge[0])))
+    sortd.record = rnge[0]
+    time = UTCDateTime(sortd.getv("time")[0])
+    sortd.record = rnge[1] - 1
+    endtime = UTCDateTime(sortd.getv("time")[0])
+    try:
+        gather0 = args.database.get_gather3c(station,
+                                             channel_set,
+                                             time,
+                                             endtime)
+    except Exception as err:
+        logger.warning("%s - %s" % (type(err), err))
+        return
+    for sortd.record in range(rnge[0], rnge[1]):
+        time = UTCDateTime(sortd.getv("time")[0])
+        gather = gather0.copy()
+        gather.trim(starttime=time - 4.0,
+                    endtime=time + 16.0)
+        if len(gather.V.data) == 0\
+                or len(gather.H1.data) == 0\
+                or len(gather.H2.data) == 0:
+            logger.warning("insufficient data for %s:%s %s"
+                           % (station.name, channel_set, time))
+            continue
+        try:
+            gather.filter("bandpass", freqmin=3.0, freqmax=10.0)
+            gather.detrend("linear")
+        except Exception as err:
+            logger.warning("%s - %s" % (type(err), err))
+            continue
+        try:
+            detection = gather.detect_swave(time)
+        except Exception as err:
+            logger.warning("%s - %s" % (type(err), err))
+            continue
+        if detection is not None:
+            logger.info("S-wave - %s" % detection.time)
+            if isinstance(detection.station, str):
+                sta = detection.station
+            else:
+                sta = detection.station.name
+            if isinstance(detection.channel, str):
+                chan = detection.channel
+            else:
+                chan = detection.channel.code
+            tbl_detection.record = tbl_detection.addnull()
+            tbl_detection.putv(("sta", sta),
+                               ("chan", chan),
+                               ("time", detection.time.timestamp),
+                               ("state", detection.label),
+                               ("snr", detection.snr))
+            
+
+def init_args(args):
+    logger.info("initializing args")
+    args.database = gz.datascope.Database(args.database, mode="r+")
+    view = args.database.tables["detection"].subset("state =~ /P/")
+    _tmp = view.sort(("sta", "chan", "time")); view.free(); view = _tmp
+    args.detections = {"sorted": view}
+    args.detections["grouped"] = args.detections["sorted"].group(("sta", "chan"))
+    _ = args.database.wfdisc
+    logger.info("args initialized")
+    return args
+
+def main():
+    args = parse_args()
+    if args.verbose:
+        sp.log.set_level(__name__, logging.DEBUG)
+        sp.log.set_level("seispy", logging.DEBUG)
+    args = init_args(args)
+    for (station, chan) in generator(args):
+        process((station, chan), args)
+
+if __name__ == "__main__":
+    logger.info("START - serial-shear")
+    try:
+        main()
+    except BaseException as err:
+        logger.error("failed with error - %s - %s" % (type(err), err))
+        exit(1)
+    logger.info("END - serial-shear")
+    exit(0)
