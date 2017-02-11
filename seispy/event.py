@@ -1,21 +1,20 @@
 # -*- coding: utf-8 -*-
-from math import ceil,\
-                 pi,\
-                 sqrt
 import seispy as sp
-import seispy.burrow
-from seispy.util import validate_time
-import matplotlib.cm as cm
-import matplotlib.pyplot as plt
-from matplotlib.gridspec import GridSpec
-from matplotlib.markers import MarkerStyle
-from matplotlib.transforms import Bbox
-from mpl_toolkits.basemap import Basemap
-import numpy as np
-from obspy.core import Stream
-from obspy.geodetics import gps2dist_azimuth
-
-from matplotlib.patches import Circle
+logger = sp.log.initialize_logging(__name__)
+try:
+    from math import ceil,\
+                     pi,\
+                     sqrt
+    import matplotlib.cm as cm
+    import matplotlib.pyplot as plt
+    from matplotlib.gridspec import GridSpec
+    from matplotlib.transforms import Bbox
+    from mpl_toolkits.basemap import Basemap
+    import numpy as np
+    from obspy.geodetics import gps2dist_azimuth
+except ImportError as err:
+    logger.error(err)
+    raise
 
 
 class Arrival(object):
@@ -32,7 +31,7 @@ class Arrival(object):
                  timeres=-999.000):
         self.station = station
         self.channel = channel
-        self.time = validate_time(time)
+        self.time = sp.util.validate_time(time)
         self.phase = phase
         self.arid = arid
         self.snr = snr
@@ -52,7 +51,7 @@ class Detection(object):
     def __init__(self, station, channel, time, label, snr=-1):
         self.station = station
         self.channel = channel
-        self.time = validate_time(time)
+        self.time = sp.util.validate_time(time)
         self.label = label
         self.snr = snr
 
@@ -101,7 +100,7 @@ class Origin(object):
         self.lat = lat
         self.lon = lon % 360.
         self.depth = depth
-        self.time = validate_time(time)
+        self.time = sp.util.validate_time(time)
         self.arrivals = ()
         self.magnitudes = ()
         self.stations = {}
@@ -177,7 +176,7 @@ class Origin(object):
         keyword, if it exists.
         """
         return None if len(self.magnitudes) == 0 else self.magnitudes[0]
-        
+
     def get_rms(self, ttgrid):
         r, theta, phi = sp.geometry.geo2sph(self.lat, self.lon, self.depth)
         tt = np.asarray([ttgrid.get_tt(arrival.station.name,
@@ -326,6 +325,68 @@ class Origin(object):
         else:
             plt.close()
 
+    def plot_ramona(self):
+        lat0, lon0 = 33.60362, 243.30115
+        extent = 0.85
+        m = Basemap(llcrnrlon=self.lon - extent,
+                    llcrnrlat=self.lat - extent,
+                    urcrnrlon=self.lon + extent,
+                    urcrnrlat=self.lat + extent,
+                    resolution='i')
+        m.arcgisimage(server='http://server.arcgisonline.com/arcgis',
+                      service='USA_Topo_Maps')
+
+        m.drawmapboundary()
+        # orient ticklabels
+        m.drawmeridians(np.arange(-180.0, 180.0, 0.5),
+                        labels=[1, 0, 0, 1],
+                        fontsize=10,
+                        rotation=15)
+        m.drawparallels(np.arange(-90.0, 90.0, 0.5),
+                        labels=[1, 0, 0, 1],
+                        fontsize=10)
+        m.plot(self.lon,
+               self.lat,
+               marker="*",
+               markersize=15.,
+               color=cm.hot(self.depth / 20.))
+        bbox_props = {"boxstyle": "round", "facecolor": "white", "alpha": 0.5}
+        x, y = m(self.lon - extent, self.lat + extent)
+        ax = plt.gca()
+        hdist = sp.geometry.hypocentral_distance
+        ax.text(x + 0.05 * extent, y - 0.05 * extent,
+                "{:>8s}: {:>7.2f}$^\circ$N\n"
+                "{:>8s}: {:>7.2f}$^\circ$W\n"
+                "{:>8s}: {:>7.2f} km\n"
+                "{:>8s}: {:>7.2f} km\n"
+                "{:>8s}: {:>7d}".format("lat",
+                                        self.lat,
+                                        "lon",
+                                        abs(self.lon - 360.),
+                                        "depth",
+                                        self.depth,
+                                        "distance",
+                                        hdist(self.lat, self.lon, 0,
+                                              lat0, lon0, 0),
+                                        "orid",
+                                        self.orid),
+                bbox=bbox_props,
+                horizontalalignment="left",
+                verticalalignment="top",
+                family="monospace")
+        m.plot(lon0, lat0,
+               marker="v",
+               markersize=5)
+        m.plot(243.2627, 33.5654,
+               color="r",
+               marker="v",
+               markersize=5)
+        m.plot(243.3191, 33.6192,
+               color="r",
+               marker="v",
+               markersize=5)
+        plt.show()
+
     def plot_map(self,
                  ax=None):
         X = [arrival.station.lon for arrival in self.arrivals]
@@ -352,24 +413,6 @@ class Origin(object):
         m.drawparallels(np.arange(-90.0, 90.0, 0.5),
                         labels=[1, 0, 0, 1],
                         fontsize=10)
-        # TEMPORARY HACK START
-        from matplotlib.patches import PathPatch
-        from matplotlib.path import Path
-        lonmin, lonmax, latmin, latmax = -117.5 % 360., -115.5 % 360., 32.75, 34.25
-        vertices = [(lonmin, latmin),
-                    (lonmax, latmin),
-                    (lonmax, latmax),
-                    (lonmin, latmax),
-                    (0, 0)]
-        alpha = 0.25
-        codes = [Path.MOVETO,
-                 Path.LINETO,
-                 Path.LINETO,
-                 Path.LINETO,
-                 Path.CLOSEPOLY]
-        path = Path(vertices, codes)
-        ax.add_patch(PathPatch(path, alpha=alpha))
-        # HACK END
         m.plot(self.lon,
                self.lat,
                marker="*",
@@ -401,16 +444,13 @@ class Origin(object):
         x, y = m(self.lon - extent, self.lat + extent)
         ax = plt.gca()
         ax.text(x + 0.05 * extent, y - 0.05 * extent,
-                "{:>7s}: {:>6s}\n"
-                "{:>7s}: {:>6.2f}\n"
-                "{:>7s}: {:>6.2f}\n"
-                "{:>7s}: {:>6.2f}\n"
-                "{:>7s}: {:>6d}".format("quality",
-                                        self.quality,
-                                        "lat",
+                "{:>7s}: {:>7.2f}$^\circ$ N\n"
+                "{:>7s}: {:>7.2f}$^\circ$ W\n"
+                "{:>7s}: {:>7.2f}\n"
+                "{:>7s}: {:>7d}".format("lat",
                                         self.lat,
                                         "lon",
-                                        self.lon - 360.,
+                                        abs(self.lon - 360.),
                                         "depth",
                                         self.depth,
                                         "orid",
@@ -423,12 +463,11 @@ class Origin(object):
 
 def test():
     import gazelle.datascope
-#    database = gazelle.datascope.Database("/home/shake/malcolcw/projects/SJFZ/"
-#                                          "dbs/2013-droptest/SJFZ_2013")
-    database = gazelle.datascope.Database("/home/shake/malcolcw/data/"
-                                          "ZR_catalog/anza_2013")
-    for origin in database.iterate_events(parse_magnitudes=False):
-        origin.plot(filter=(("highpass",), {"freq": 3.0}))
+    database = gazelle.datascope.Database("/home/shake/malcolcw/tmp/"
+                                          "junk/db/SJFZ_2016")
+    for orid in (156669, 156676, 156690, 156688, 156698, 156699):
+        origin = database.parse_origin(orid=orid)
+        origin.plot_ramona()
 
 if __name__ == "__main__":
     test()

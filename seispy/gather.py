@@ -5,8 +5,7 @@ Created on Fri Oct 21 18:04:04 2016
 
 @author: malcolcw
 """
-from seispy.event import Detection
-from seispy.signal.detect import detect_swave_cc
+import seispy as sp
 import matplotlib.pyplot as plt
 import obspy.core
 
@@ -30,16 +29,16 @@ class Gather3C(obspy.core.Stream):
         self.H2 = self[2]
         self.stats = deepcopy(traces[0].stats)
         channel_set = [tr.stats.channel for tr in traces]
-        if isinstance(channel_set[0], str):
-            self.stats.channel = "%s:%s%s%s" % (channel_set[0][:2],
-                                                channel_set[0][2],
-                                                channel_set[1][2],
-                                                channel_set[2][2])
-        else:
+        if isinstance(channel_set[0], sp.station.Channel):
             self.stats.channel = "%s:%s%s%s" % (channel_set[0].code[:2],
                                                 channel_set[0].code[2],
                                                 channel_set[1].code[2],
                                                 channel_set[2].code[2])
+        else:
+            self.stats.channel = "%s:%s%s%s" % (channel_set[0][:2],
+                                                channel_set[0][2],
+                                                channel_set[1][2],
+                                                channel_set[2][2])
         self.stats.channel_set = channel_set
 
     def detect_swave(self,
@@ -54,15 +53,15 @@ class Gather3C(obspy.core.Stream):
                 and len(self.H1.data) >= min_nsamp
                 and len(self.H2.data) >= min_nsamp):
             return None
-        output = detect_swave_cc(self.V.data,
-                                 self.H1.data,
-                                 self.H2.data,
-                                 self.stats.delta,
-                                 covariance_twin,
-                                 kurtosis_twin,
-                                 sta_twin,
-                                 lta_twin,
-                                 ppick_dbl)
+        output = sp.signal.detect.detect_swave_cc(self.V.data,
+                                                  self.H1.data,
+                                                  self.H2.data,
+                                                  self.stats.delta,
+                                                  covariance_twin,
+                                                  kurtosis_twin,
+                                                  sta_twin,
+                                                  lta_twin,
+                                                  ppick_dbl)
         lag1, lag2, snr1, snr2, S1, S2, K1, K2 = output
         if lag1 > 0 and lag2 > 0:
             if snr1 > snr2:
@@ -83,11 +82,11 @@ class Gather3C(obspy.core.Stream):
             channel = self.H2.stats.channel
         else:
             return None
-        return Detection(self.stats.station,
-                         channel,
-                         self.stats.starttime + lag,
-                         'S',
-                         snr=snr)
+        return sp.event.Detection(self.stats.station,
+                                  channel,
+                                  self.stats.starttime + lag,
+                                  'S',
+                                  snr=snr)
 
     def filter(self, *args, **kwargs):
         self.V.filter(*args, **kwargs)
