@@ -3,8 +3,10 @@ import seispy as sp
 import gazelle.datascope as ds
 import argparse
 import ConfigParser
+import logging
 import os
 
+logger = sp.log.initialize_logging(__name__)
 
 def parse_args():
     parser = argparse.ArgumentParser()
@@ -27,10 +29,11 @@ def parse_args():
                         help="plot all events",
                         metavar="output_directory")
     parser.add_argument("-s", "--subset", type=str)
+    parser.add_argument("-v", "--verbose", action='store_true', help='verbose')
     args = parser.parse_args()
     if args.plot is not False or args.plot_all is not False:
         if not args.plot and not args.plot_all and not args.display_plots:
-            print "no destination for plots"
+            logger.warning("no destination for plots")
             args.plot, args.plot_all = False, False
     args.db = os.path.abspath(args.db)
     args.config = os.path.abspath(args.config)
@@ -78,8 +81,8 @@ def main_processor(origin, locator, cfg):
         else:
             yield (True, result)
     else:
-        print "invalid mode: %s" % cfg['mode']
-        exit()
+        logger.error("invalid mode: %s" % cfg['mode'])
+        exit(1)
 
 
 def outputter(result, ttgrid, args, cfg):
@@ -87,7 +90,7 @@ def outputter(result, ttgrid, args, cfg):
     origin = result[1]
     # first, deal with convergent solutions
     if result[0]:
-        print origin
+        logger.info(origin)
         auth = cfg['author']
         origin.author = auth
         args.db.write_origin(origin)
@@ -153,6 +156,9 @@ def outputter(result, ttgrid, args, cfg):
 def main():
     args = parse_args()
     cfg = parse_config(args)
+    if args.verbose:
+        sp.log.set_level(__name__, logging.DEBUG)
+        sp.log.set_level("seispy", logging.DEBUG)
     args.db = ds.Database(args.db, mode='r+')
     config_params = {'n_threads': cfg['n_threads'],
                      'input_q_max_size': cfg['input_q_size'],
@@ -171,4 +177,11 @@ def main():
     args.db.close()
 
 if __name__ == "__main__":
-    main()
+    try:
+        logger.info("START - mt-3dloc")
+        main()
+    except BaseException as err:
+        logger.error("failed with %s - %s" % (type(err), err))
+        exit(1)
+    logger.info("END - mt-3dloc")
+    exit(0)

@@ -5,10 +5,10 @@ Created on Fri Oct 21 18:01:25 2016
 
 @author: malcolcw
 """
-from seispy.util import validate_time
+import seispy as sp
 import re
 
-from memory_profiler import profile
+logger = sp.log.initialize_logging(__name__)
 
 class Channel:
     """
@@ -17,8 +17,8 @@ class Channel:
     """
     def __init__(self, code, ondate, offdate):
         self.code = code
-        self.ondate = validate_time(ondate)
-        self.offdate = validate_time(offdate)
+        self.ondate = sp.util.validate_time(ondate)
+        self.offdate = sp.util.validate_time(offdate)
         self.inactive_periods = ()
         self.sample_rates = {'E': 0, 'H': 1, 'B': 2, 'L': 3}
         self.instruments = {'H': 0, 'N': 1}
@@ -161,8 +161,8 @@ class Station(object):
         self.lat = lat
         self.elev = elev
         self.network = network
-        self.ondate = validate_time(ondate)
-        self.offdate = validate_time(offdate)
+        self.ondate = sp.util.validate_time(ondate)
+        self.offdate = sp.util.validate_time(offdate)
         self.channels = {}
 
     def __str__(self):
@@ -207,8 +207,8 @@ class Station(object):
 
 class TimeSpan(object):
     def __init__(self, starttime, endtime):
-        self.starttime = validate_time(starttime)
-        self.endtime = validate_time(endtime)
+        self.starttime = sp.util.validate_time(starttime)
+        self.endtime = sp.util.validate_time(endtime)
 
 #######################
 #                     #

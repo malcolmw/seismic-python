@@ -7,10 +7,12 @@ Created on Fri Oct 21 18:04:04 2016
 """
 from seispy.event import Detection
 from seispy.signal.detect import detect_swave_cc
-from copy import deepcopy
 import matplotlib.pyplot as plt
 import obspy.core
 
+from copy import deepcopy
+import logging
+logger = logging.getLogger(__name__)
 
 class Gather3C(obspy.core.Stream):
     """
@@ -28,10 +30,16 @@ class Gather3C(obspy.core.Stream):
         self.H2 = self[2]
         self.stats = deepcopy(traces[0].stats)
         channel_set = [tr.stats.channel for tr in traces]
-        self.stats.channel = "%s:%s%s%s" % (channel_set[0].code[:2],
-                                            channel_set[0].code[2],
-                                            channel_set[1].code[2],
-                                            channel_set[2].code[2])
+        if isinstance(channel_set[0], str):
+            self.stats.channel = "%s:%s%s%s" % (channel_set[0][:2],
+                                                channel_set[0][2],
+                                                channel_set[1][2],
+                                                channel_set[2][2])
+        else:
+            self.stats.channel = "%s:%s%s%s" % (channel_set[0].code[:2],
+                                                channel_set[0].code[2],
+                                                channel_set[1].code[2],
+                                                channel_set[2].code[2])
         self.stats.channel_set = channel_set
 
     def detect_swave(self,
@@ -85,6 +93,7 @@ class Gather3C(obspy.core.Stream):
         self.V.filter(*args, **kwargs)
         self.H1.filter(*args, **kwargs)
         self.H2.filter(*args, **kwargs)
+
 
     def trim(self, *args, **kwargs):
         super(self.__class__, self).trim(*args, **kwargs)

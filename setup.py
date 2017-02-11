@@ -25,6 +25,7 @@ kwargs = {'name': 'seispy',
                          'seispy.geoid',
                          'seispy.geometry',
                          'seispy.locate',
+                         'seispy.log',
                          'seispy.network',
                          'seispy.station',
                          'seispy.trace',
@@ -37,6 +38,7 @@ kwargs = {'name': 'seispy',
                       'scripts/mt-shear',
                       'scripts/mt-synth',
                       'scripts/plot_events',
+                      'scripts/serial-shear',
                       'scripts/synthetics2db']}
 
 # Get some information about BLAS and LAPACK libraries.

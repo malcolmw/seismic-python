@@ -9,6 +9,9 @@ from time import sleep
 #import 3rd party package functionality
 from obspy.core import UTCDateTime
 
+import logging
+logger = logging.getLogger(__name__)
+
 #######################
 #                     #
 #  CLASS DEFINITIONS  #
@@ -209,8 +212,12 @@ class _InputProcess(object):
         A wrapper to place objects from ``target`` generator on
         ``input_q``.
         """
-        for obj in self.target(*self.args, **self.kwargs):
-            self.input_q.put(obj)
+        try:
+            for obj in self.target(*self.args, **self.kwargs):
+                self.input_q.put(obj)
+        except Exception as err:
+            logger.error("%s - %s" % (type(err), err))
+            raise
 
     def join(self):
         """
@@ -292,7 +299,11 @@ class _OutputProcess(object):
                 if self.cconn.poll() and self.cconn.recv() == 'KILL':
                     return
                 continue
-            self.target(obj, *self.args, **self.kwargs)
+            try:
+                self.target(obj, *self.args, **self.kwargs)
+            except Exception as err:
+                logger.error("%s - %s" % (type(err), err))
+                raise
 
 class _MainPool(object):
     """
@@ -356,7 +367,7 @@ class _MainPool(object):
         Start input process.
         """
         for i in range(self.parent.config_params['n_threads']):
-            print "starting processing thread #%d" % (i + 1)
+            logger.info("starting processing thread #%d" % (i + 1))
             self.process_threads[i].start()
 
     def _target_wrapper(self, thread_id):
@@ -365,12 +376,8 @@ class _MainPool(object):
         the main processing function and place the resulting processed
         object on the output queue.
         """
-        ncpus = cpu_count() + 2
+        ncpus = cpu_count()
         while True:
-            load1, load5, load15 = get_loadavg()
-            while load1 > ncpus or load5 > ncpus or load15 > ncpus:
-                load1, load5, load15 = get_loadavg()
-                sleep(5)
             try:
                 obj = self.parent.input_q.get(timeout=0.1)
             except Empty:
@@ -378,10 +385,18 @@ class _MainPool(object):
                         self.conns[thread_id]['cconn'].recv() == 'KILL':
                     return
                 continue
-            for result in self.target(obj,
-                                      *self.parent.extra_args['main_init_args'],
-                                      **self.parent.extra_args['main_init_kwargs']):
-                self.parent.output_q.put(result)
+            try:
+                for result in self.target(obj,
+                                          *self.parent.extra_args['main_init_args'],
+                                          **self.parent.extra_args['main_init_kwargs']):
+                    load1, load5, load15 = get_loadavg()
+                    while load1 > 2 * ncpus or load5 > 1.75 * ncpus or load15 > ncpus * 1.5:
+                        load1, load5, load15 = get_loadavg()
+                        sleep(5)
+                    self.parent.output_q.put(result)
+            except Exception as err:
+                logger.error("%s - %s" % (type(err), err))
+                raise
 
 ##########################
 #                        #
