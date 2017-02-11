@@ -1,1 +1,2 @@
 import statistics
+import detect

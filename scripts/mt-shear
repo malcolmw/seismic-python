@@ -10,6 +10,12 @@ import os
 import shutil
 import tempfile
 
+import logging
+sp.log.initialize_logging(__name__)
+sp.log.add_file_handler(__name__, "mt-shear.log")
+logger = logging.getLogger(__name__)
+sp.log.add_file_handler("seispy", "mt-shear.log")
+
 def parse_args():
     parser = ArgumentParser()
     parser.add_argument("database", type=str, help="database")
@@ -24,6 +30,7 @@ def inputter(args):
         try:
             station = args.database.virtual_network.stations[sta]
         except KeyError:
+            logger.error("%s not found in dbmaster" % sta)
             continue
         yield (station, chan)
 
@@ -35,15 +42,20 @@ def main_processor(obj, args):
     groupd.record = groupd.find("sta =~ /%s/ && chan =~ /%s/"
                                 % (station.name, chan))
     rnge = groupd.get_range()
+    logger.info("processing %s:%s, %d P-wave detections"
+                % (station.name, chan, (rnge[1] - rnge[0])))
     sortd.record = rnge[0]
     time = UTCDateTime(sortd.getv("time")[0])
+    sortd.record = rnge[1] - 1
+    endtime = UTCDateTime(sortd.getv("time")[0])
     buffr = Queue(3)
     buffer_proc = Process(target=buffer_data,
                           args=(buffr,
                                 args.database,
                                 station,
                                 channel_set,
-                                time))
+                                time,
+                                endtime))
     buffer_proc.daemon = True
     buffer_proc.start()
     gather0 = buffr.get()
@@ -63,13 +75,20 @@ def main_processor(obj, args):
                 starttime = gather0.stats.starttime + 4.
                 endtime = gather0.stats.endtime - 16.0
             if brk is True:
-                print "no more data"
+                logger.warning("no more data for %s:%s %s" % (station.name,
+                                                              channel_set,
+                                                              time))
                 break
         gather = gather0.copy()
         gather.trim(starttime=time - 4.0, endtime=time + 16.0)
+        gather.detrend("linear")
         try:
             detection = gather.detect_swave(time)
-        except Exception:
+        except Exception as err:
+            logger.error("%s - %s:%s %s" % (err,
+                                            station.name,
+                                            channel_set,
+                                            time))
             continue
         if detection is not None:
             yield detection
@@ -89,32 +108,44 @@ def get_24h_gather(database, station, channel_set, time):
                                        channel_set,
                                        time,
                                        time + 86400.)
-    gather.detrend("linear")
     gather.filter("bandpass", freqmin=3.0, freqmax=10.0)
     return gather
 
-def buffer_data(buffr, database, station, channel_set, time):
+def buffer_data(buffr, database, station, channel_set, time, endtime):
+    logger.debug("starting buffer for %s:%s" % (station.name,
+                                                channel_set))
+    logger.debug("%s %s-%s" % (station.name, time, endtime))
     year = time.year
     time.hour, time.minute, time.second, time.microsecond = 0, 0, 0, 0
-    while time.year == year:
+    while time < endtime:
         try:
             gather = get_24h_gather(database, station, channel_set, time)
         except IOError:
-            print "no data", station, channel_set, time
+            logger.warning("no data for %s:%s %s" % (station.name,
+                                                     channel_set,
+                                                     time))
             time.julday += 1
             continue
-        except NotImplementedError:
-            print "silently continue"
+        except NotImplementedError as err:
+            logger.warning("%s - %s:%s %s" % (err,
+                                              station.name,
+                                              channel_set,
+                                              time))
             time.julday += 1
             continue
         buffr.put(gather)
         time.julday += 1
+    logger.debug("closing buffer for %s:%s with %d items" % (station.name,
+                                                             channel_set,
+                                                             buffr.qsize()))
     buffr.put(None)
     buffr.close()
 
 def outputter(detection, tbl):
     if detection is not None:
-        print "S-wave:", detection.station.name, detection.channel.code, detection.time
+        logger.info("S-wave: %s:%s %s" % (detection.station.name,
+                                          detection.channel.code,
+                                          detection.time))
         tbl.record = tbl.addnull()
         tbl.putv(("sta", detection.station.name),
                  ("chan", detection.channel.code),
@@ -124,16 +155,20 @@ def outputter(detection, tbl):
                  ("filter", "BP 3-10"))
 
 def init_args(args):
+    logger.info("initializing args")
     args.database = Database(args.database, mode="r+")
     view = args.database.tables["detection"].subset("state =~ /P/")
     _tmp = view.sort(("sta", "chan", "time")); view.free(); view = _tmp
     args.detections = {"sorted": view}
     args.detections["grouped"] = args.detections["sorted"].group(("sta", "chan"))
     _ = args.database.wfdisc
+    logger.info("args initialized")
     return args
 
 def main():
     args = parse_args()
+    dbname = args.database
+    logger.info("mt-shear - START - %s" % dbname)
     args = init_args(args)
     extra_args = {"input_init_args": (args,),
                   "main_init_args": (args,),
@@ -143,15 +178,16 @@ def main():
     else:
         n_threads = 1
     config_params = {"n_threads": n_threads}
+    logger.info("configuring with %d processing thread(s)" % n_threads)
     mtp = sp.util.MultiThreadProcess(inputter,
                                      main_processor,
                                      outputter,
                                      extra_args=extra_args,
                                      config_params=config_params)
     mtp.start()
-    outfile.close()
     args.detections["sorted"].free()
     args.detections["grouped"].free()
+    logger.info("mt-shear - END - %s" % dbname)
 
 if __name__ == "__main__":
     main()

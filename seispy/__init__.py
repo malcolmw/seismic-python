@@ -6,7 +6,11 @@ import importlib
 import os
 import sys
 
+import seispy.log
+log.initialize_logging(__name__)
+
 __all__ = []
+
 
 submodules = ["burrow",
               "event",
@@ -15,6 +19,7 @@ submodules = ["burrow",
               "geometry",
               "locate",
               "network",
+              "signal",
               "station",
               "trace",
               "ttgrid",
@@ -35,3 +40,4 @@ for module in submodules:
 __all__ += submodules
 
 __all__ += ["_ANTELOPE_DEFINED"]
+

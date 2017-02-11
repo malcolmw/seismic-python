@@ -29,15 +29,14 @@ from math import acos,\
                  atan2,\
                  cos,\
                  degrees,\
-                 pi,\
                  radians,\
                  sin,\
                  sqrt
 import numpy as np
-#from obspy.core.util.geodetics import gps2DistAzimuth
 from obspy.geodetics.base import gps2dist_azimuth
 
 EARTH_RADIUS = 6371.
+
 
 def geo2sph(lat, lon, z):
     """
@@ -52,10 +51,11 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
+
 def hypocentral_distance(lat1, lon1, z1, lat2, lon2, z2):
-    #return sqrt((gps2DistAzimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
-    return sqrt((gps2dist_azimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2\
-                + (z1 - z2) ** 2)
+    return sqrt((gps2dist_azimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2 +
+                (z1 - z2) ** 2)
+
 
 def sph2geo(r, theta, phi):
     z = EARTH_RADIUS - r
@@ -63,6 +63,7 @@ def sph2geo(r, theta, phi):
     lon = degrees(phi)
     lon %= 360.
     return lat, lon, z
+
 
 def sph2xyz(r, theta, phi):
     x = r * sin(theta) * cos(phi)
@@ -128,7 +129,8 @@ class Vector(np.ndarray):
         return u
 
     def rotate(self, axis, theta):
-        return self.__new__(self.__class__, rotation_matrix(axis, theta).dot(self))
+        return self.__new__(self.__class__,
+                            rotation_matrix(axis, theta).dot(self))
 
     def translate(self, v):
         u = self.__new__(self.__class__, [0 for i in range(len(v))])

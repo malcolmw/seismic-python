@@ -1,9 +1,9 @@
 import seispy as sp
-import seispy.event
-import seispy.gather
-import seispy.network
-import seispy.station
-from seispy.util import validate_time
+#import seispy.event
+#import seispy.gather
+#import seispy.network
+#import seispy.station
+#from seispy.util import validate_time
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 if sp._ANTELOPE_DEFINED:
@@ -63,12 +63,12 @@ class Database:
         traces = []
         try:
             for channel in channel_set:
-                traces += [seispy.trace.Trace(self,
-                                              station,
-                                              channel,
-                                              starttime,
-                                              endtime)]
-            gather = seispy.gather.Gather3C(traces)
+                traces += [sp.trace.Trace(self,
+                                          station,
+                                          channel,
+                                          starttime,
+                                          endtime)]
+            gather = sp.gather.Gather3C(traces)
         except IndexError:
             raise IOError("3C gather data not found")
         return gather
@@ -80,7 +80,7 @@ class Database:
         return self.parse_origin(prefor, **kwargs)
 
     def load_trace(self, station, channel, starttime, endtime):
-        trace = seispy.trace.Trace(database_pointer=self.ptr,
+        trace = sp.trace.Trace(database_pointer=self.ptr,
                       station=station,
                       channel=channel,
                       starttime=starttime,
@@ -93,9 +93,9 @@ class Database:
                          endtime=None):
         detections = []
         if starttime is not None:
-            starttime = validate_time(starttime)
+            starttime = sp.util.validate_time(starttime)
             if endtime is not None:
-                endtime = validate_time(endtime)
+                endtime = sp.util.validate_time(endtime)
                 view = self.tables["detection"].subset("time >= _%f_ && "
                                                        "time <= _%f_"
                                                        % (starttime.timestamp,
@@ -105,7 +105,7 @@ class Database:
                                                        % starttime.timestamp)
             _view = view.sort("time"); view.free(); view = _view
         elif endtime is not None:
-            endtime = validate_time(endtime)
+            endtime = sp.util.validate_time(endtime)
             view = self.tables["detection"].subset("time <= _%f_"
                                                    % endtime.timestamp)
             _view = view.sort("time"); view.free(); view = _view
@@ -120,7 +120,7 @@ class Database:
                                                         "state")
             station = self.virtual_network.stations[station]
             # channel = station.channels[channel]
-            detections += [seispy.event.Detection(station, channel, time, label)]
+            detections += [sp.event.Detection(station, channel, time, label)]
         return detections
 
     def iterate_events(self,
@@ -132,12 +132,12 @@ class Database:
         tbl_event = self.tables["event"]
         view = tbl_event.join("origin")
         if starttime is not None:
-            starttime = validate_time(starttime)
+            starttime = sp.util.validate_time(starttime)
             _view = view.subset("time >= _%f_" % starttime.timestamp)
             view.free()
             view = _view
         if endtime is not None:
-            endtime = validate_time(endtime)
+            endtime = sp.util.validate_time(endtime)
             _view = view.subset("endtime < _%f_" % endtime.timestamp)
             view.free()
             view = _view
@@ -149,9 +149,12 @@ class Database:
         view.free()
         for event in event_view.iter_record():
             prefor = event.getv("prefor")[0]
-            yield self.parse_origin(prefor,
-                                    parse_arrivals=parse_arrivals,
-                                    parse_magnitudes=parse_magnitudes)
+            try:
+                yield self.parse_origin(prefor,
+                                        parse_arrivals=parse_arrivals,
+                                        parse_magnitudes=parse_magnitudes)
+            except IOError:
+                continue
         event_view.free()
 
     def iterate_origins(self,
@@ -173,9 +176,12 @@ class Database:
             is_view = False
         for record in ptr.iter_record():
             orid = record.getv("orid")[0]
-            yield self.parse_origin(orid,
-                                    parse_arrivals=parse_arrivals,
-                                    parse_magnitudes=parse_magnitudes)
+            try:
+                yield self.parse_origin(orid,
+                                        parse_arrivals=parse_arrivals,
+                                        parse_magnitudes=parse_magnitudes)
+            except IOError:
+                continue
         if is_view:
             ptr.free()
 
@@ -194,7 +200,7 @@ class Database:
             origins += (self.parse_origin(orid,
                                           parse_arrivals=parse_arrivals,
                                           parse_magnitudes=parse_magnitudes), )
-        event = seispy.event.Event(evid, origins=origins, prefor=prefor)
+        event = sp.event.Event(evid, origins=origins, prefor=prefor)
         view.free()
         return event
 
@@ -231,7 +237,7 @@ class Database:
                                      "nass",
                                      "ndef",
                                      "auth")
-        origin = seispy.event.Origin(lat0, lon0, z0, time0,
+        origin = sp.event.Origin(lat0, lon0, z0, time0,
                         orid=orid,
                         evid=evid,
                         nass=nass,
@@ -253,8 +259,8 @@ class Database:
                 try:
                     channel = station.channels[channel]
                 except KeyError:
-                    channel = seispy.station.Channel(channel, -1, -1)
-                arrivals += (seispy.event.Arrival(station,
+                    channel = sp.station.Channel(channel, -1, -1)
+                arrivals += (sp.event.Arrival(station,
                                      channel,
                                      time,
                                      phase,
@@ -273,13 +279,13 @@ class Database:
                 magid, mag, magtype = netmag_row.getv("magid",
                                                       "magnitude",
                                                       "magtype")
-                magnitudes += (seispy.event.Magnitude(magtype, mag, magid=magid), )
+                magnitudes += (sp.event.Magnitude(magtype, mag, magid=magid), )
             netmag_view.free()
             origin.add_magnitudes(magnitudes)
         return origin
 
     def parse_network(self, net_code):
-        network = seispy.network.Network(net_code)
+        network = sp.network.Network(net_code)
         tbl_snetsta = self.tables["snetsta"]
         view = tbl_snetsta.subset("snet =~ /%s/" % net_code)
         _view = view.sort("sta", unique=True)
@@ -306,7 +312,7 @@ class Database:
                                                          "elev",
                                                          "ondate",
                                                          "offdate")
-        station = seispy.station.Station(name,
+        station = sp.station.Station(name,
                           lon,
                           lat,
                           elev,
@@ -317,12 +323,12 @@ class Database:
             code, ondate, offdate = record.getv("chan", "ondate", "offdate")
             if not code[1] == "H" and not code[1] == "N":
                 continue
-            channel = seispy.station.Channel(code, ondate, offdate)
+            channel = sp.station.Channel(code, ondate, offdate)
             station.add_channel(channel)
         return station
 
     def parse_virtual_network(self):
-        virtual_network = seispy.network.VirtualNetwork("ZZ")
+        virtual_network = sp.network.VirtualNetwork("ZZ")
         tbl_snetsta = self.tables["snetsta"]
         view = tbl_snetsta.sort("snet", unique=True)
         for record in view.iter_record():
@@ -337,7 +343,7 @@ class Database:
                     resolution="c",
                     savefig=False,
                     show=True):
-        gather = seispy.gather.Gather()
+        gather = sp.gather.Gather()
         for arrival in origin.arrivals:
             try:
                 gather += self.load_trace(arrival.station,
@@ -402,10 +408,10 @@ class Database:
             view = table.sort("time")
         view.record = 0
         time = view.getv("time")[0]
-        starttime = validate_time(time)
+        starttime = sp.util.validate_time(time)
         view.record = view.record_count - 1
         time = view.getv("time")[0]
-        endtime = validate_time(time)
+        endtime = sp.util.validate_time(time)
         return starttime, endtime
 
     def write_origin(self, origin):

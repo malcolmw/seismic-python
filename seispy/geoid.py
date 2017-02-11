@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.interpolate import LinearNDInterpolator
 
-class Geoid(object):
+class Geoid:
     def __init__(self,
                  infile="/home/shake/malcolcw/data/mapping/ANZA/anza.xyz"):
         """
