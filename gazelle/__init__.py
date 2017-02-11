@@ -8,6 +8,7 @@ from antelope import brttpkt,\
                      orb,\
                      Pkt,\
                      stock
+import datascope
 __all__ = ["brttpkt",
            "coords",
            "datascope",
