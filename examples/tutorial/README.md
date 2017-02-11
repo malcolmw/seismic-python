@@ -1,4 +1,4 @@
-# Tutorial
+# Tutorial-1
 ## Running the S-wave detector
 ```python
 """
@@ -24,7 +24,7 @@ gather = sp.gather.Gather3C([trZ, trN, trE])
 # We still have all of our usual obspy.stream.Stream behavior.
 gather.plot()
 ```
-![alt text](https://github.com/malcolmw/SeismicPython/tree/master/examples/tutorial/figure_1.png "24-hour 3C-gather")
+![raw wfs](https://github.com/malcolmw/SeismicPython/blob/master/examples/tutorial/figure_1.png "24-hour 3C-gather")
 ```python
 # Now let's make some detections.
 # First do some pre-processing.
@@ -55,4 +55,4 @@ for sample_on, sample_off in obspy.signal.trigger.trigger_onset(cft.data, 6, 2):
         ax.axvline(time_S, color="b", linewidth=2)
         plt.show()
 ```
-![alt text](https://github.com/malcolmw/SeismicPython/tree/master/examples/tutorial/figure_2.png "P/S-wave detections")
+![detections](https://github.com/malcolmw/SeismicPython/blob/master/examples/tutorial/figure_2.png "P/S-wave detections")
