@@ -1,13 +1,15 @@
 import seispy as sp
 import matplotlib.pyplot as plt
 import numpy as np
-import obspy
+import obspy as op
+import os
 import scipy
+import struct
 
 logger = sp.log.initialize_logging(__name__)
 
 
-class Trace(obspy.core.Trace):
+class Trace(op.core.Trace):
     """
     ... todo::
         document this class
@@ -48,11 +50,29 @@ class Trace(obspy.core.Trace):
                            % (starttime.timestamp, endtime.timestamp))
         view.free()
         view = _tmp
-        st = obspy.core.Stream()
+        st = op.core.Stream()
         for record in view.iter_record():
-            st += obspy.core.read(record.filename()[1],
-                                  starttime=starttime,
-                                  endtime=endtime)[0]
+            data_type = record.getv("datatype")[0]
+            dpath = record.filename()[1]
+            if data_type == "u4" or data_type == "f4":
+                sta, chan, time, samprate = record.getv("sta",
+                                                        "chan",
+                                                        "time",
+                                                        "samprate")
+                n = os.path.getsize(dpath) / 4
+                dfile = open(dpath, "rb")
+                data = struct.unpack("%df" % n, dfile.read())
+                tr = op.core.Trace(np.asarray(data))
+                tr.stats.station = sta
+                tr.stats.channel = chan
+                tr.stats.starttime = op.core.utcdatetime.UTCDateTime(time)
+                tr.stats.sampling_rate = samprate
+                tr.trim(starttime=starttime, endtime=endtime)
+                st += tr
+            else:
+                st += op.core.read(dpath,
+                                      starttime=starttime,
+                                      endtime=endtime)[0]
         view.free()
         st.merge()
         tr = st[0]
@@ -62,7 +82,7 @@ class Trace(obspy.core.Trace):
         self.data = tr.data
 
     def __init_from_wffile(self, *args):
-        tr = obspy.core.read(*args)[0]
+        tr = op.core.read(*args)[0]
         self.stats = tr.stats
         self.data = tr.data
 
@@ -104,7 +124,7 @@ class Trace(obspy.core.Trace):
         kt = params["kurtosis_twin"]
         st = params["skewness_twin"]
         MAGIC_NUMBER = 0.03
-        trigger_onset = obspy.signal.trigger.trigger_onset
+        trigger_onset = op.signal.trigger.trigger_onset
         # Now make a first pick attempt from the STA/LTA.
         cft = self.copy()
         cft.trigger("recstalta",
@@ -188,7 +208,7 @@ class Trace(obspy.core.Trace):
         #
         # Now a check to verify that head-wave pick is within
         # appropriate neighbourhood of P-wave pick.
-        st = obspy.core.Stream(traces=[self, cft])
+        st = op.core.Stream(traces=[self, cft])
         fig = st.plot(handle=True, equal_scale=False)
         ax = fig.axes[0]
         ts = self.stats.starttime
@@ -214,7 +234,7 @@ class Trace(obspy.core.Trace):
         return cft_sample_on, cft_alternate, kcft_sample_on, scft_sample_on
 
 
-class Trace_dep(obspy.core.Trace):
+class Trace_dep(op.core.Trace):
     """
     .. todo::
        document this class

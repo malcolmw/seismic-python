@@ -1,5 +1,6 @@
 from math import cos,\
                  degrees,\
+                 floor,\
                  pi,\
                  radians,\
                  sin
@@ -12,13 +13,7 @@ from numpy import linspace,\
                   ndarray,\
                   zeros
 from scipy import ndimage
-#from geometry import EARTH_RADIUS,\
-from seispy.geoid import Geoid
-from seispy.geometry import EARTH_RADIUS,\
-                            geo2sph,\
-                            sph2geo,\
-                            sph2xyz,\
-                            Vector
+import seispy as sp
 
 
 class VelocityModel(object):
@@ -30,18 +25,18 @@ class VelocityModel(object):
     .. todo::
        document this class.
     """
-    def __init__(self, infile, topo=None, fmt='fang'):
+    def __init__(self, infile, topo, fmt='fang'):
         if fmt.upper() == 'FANG':
             self._read_fang(infile, topo)
 
     def _read_fang(self, infile, topo_infile):
         #initialize a Geoid object with topography
-        self.geoid = Geoid(topo_infile)
+        self.geoid = sp.geoid.Geoid(topo_infile)
         #Read grid nodes.
         infile = open(infile)
         phi_nodes = [radians(float(lon) % 360.) for lon in infile.readline().split()]
         theta_nodes = [radians(90. - float(lat)) for lat in infile.readline().split()]
-        r_nodes = [EARTH_RADIUS - float(z) for z in infile.readline().split()]
+        r_nodes = [sp.geometry.EARTH_RADIUS - float(z) for z in infile.readline().split()]
         R, T, P = np.meshgrid(r_nodes, theta_nodes, phi_nodes, indexing='ij')
         self.nodes = {'r': R, 'theta': T, 'phi': P}
         self.nodes['nr'] = R.shape[0]
@@ -84,20 +79,28 @@ class VelocityModel(object):
                      'Vs': 1.0}
 
     def _get_V_trilinear_interpolation(self, r, theta, phi, phase):
-        #Make sure phi is a postive number < 2 * pi.
+        # Make sure phi is a postive number < 2 * pi.
         phi %= (2 * pi)
-        #If the position requested is above the surface, return the
-        #velocity of air for Vp and a NULL value, -1, for Vs.
+        # If the position requested is above the surface, return the
+        # velocity of air for Vp and a NULL value, -1, for Vs.
         if r > self.geoid(theta, phi):
             return self._air[phase]
-        #If the location requested is below the grid, return the
-        #basement velocity.
-        if r < self.nodes['r_min']:
-            return self._basement[phase]
-        #If the location requested is outside the grid laterally,
-        if not (self.nodes['theta_min'] <= theta <= self.nodes['theta_max'])\
-                or not (self.nodes['phi_min'] <= phi <= self.nodes['phi_max']):
-            return self._default[phase]
+        # Constrain point to lie within volume or on boundary.
+        r = max(r, self.nodes['r_min'])
+        theta = min(max(theta,
+                        self.nodes['theta_min']),
+                    self.nodes['theta_max'])
+        phi = min(max(phi,
+                      self.nodes['phi_min']),
+                  self.nodes['phi_max'])
+        # If the location requested is below the grid, return the
+        # basement velocity.
+        #if r < self.nodes['r_min']:
+        #    return self._basement[phase]
+        ## If the location requested is outside the grid laterally,
+        #if not (self.nodes['theta_min'] <= theta <= self.nodes['theta_max'])\
+        #        or not (self.nodes['phi_min'] <= phi <= self.nodes['phi_max']):
+        #    return self._default[phase]
         ir0 = (r - self.nodes['r_min']) / self.nodes['dr']
         delta_r = ir0 % 1
         ir0 = int(ir0)
@@ -145,15 +148,20 @@ class VelocityModel(object):
         return ndimage.map_coordinates(self.values[phase], [[ir], [itheta], [iphi]], order=4)[0]
         #return float(self._interpolator[phase](r, theta, phi))
 
+    def get_center(self):
+        return ((self.nodes["r_max"] + self.nodes["r_min"]) / 2.0,
+            (self.nodes["theta_max"] + self.nodes["theta_min"]) / 2.0,
+            (self.nodes["phi_max"] + self.nodes["phi_min"]) / 2.0)
+
     def get_Vp(self, lat, lon, depth, interpolation_method='linear'):
-        r, theta, phi = geo2sph(lat, lon, depth)
+        r, theta, phi = sp.geometry.geo2sph(lat, lon, depth)
         if interpolation_method == 'linear':
             return self._get_V_trilinear_interpolation(r, theta, phi, 'Vp')
         elif interpolation_method == 'spline':
             return self._get_V_spline_interpolation(r, theta, phi, 'Vp')
 
     def get_Vs(self, lat, lon, depth, interpolation_method='linear'):
-        r, theta, phi = geo2sph(lat, lon, depth)
+        r, theta, phi = sp.geometry.geo2sph(lat, lon, depth)
         if interpolation_method == 'linear':
             return self._get_V_trilinear_interpolation(r, theta, phi, 'Vs')
         elif interpolation_method == 'spline':
@@ -168,7 +176,7 @@ class VelocityModel(object):
             title = "Depth horizon - %.1f [km]" % depth
             xlabel = "Distance from %.2f [km]" % degrees(phim)
             ylabel = "Distance from %.2f [km]" % (90 - degrees(thetam))
-            r = EARTH_RADIUS - depth
+            r = sp.geometry.EARTH_RADIUS - depth
             theta_nodes = linspace(self.nodes['theta_min'],
                                    self.nodes['theta_max'],
                                    ny)
@@ -203,7 +211,7 @@ class VelocityModel(object):
                     theta = X[i, j]
                     V[i, j] = self._get_V(r, theta, phi, phase)
                     X[i, j] = r * sin(theta - thetam)
-                    Y[i, j] = r * cos(theta - thetam) - EARTH_RADIUS
+                    Y[i, j] = r * cos(theta - thetam) - sp.geometry.EARTH_RADIUS
         elif lon == -999 and depth == -999:
             title = "Vertical, latitudinal slice %.2f" % lat
             xlabel = "Distance from %.2f [km]" % degrees(phim)
@@ -222,7 +230,7 @@ class VelocityModel(object):
                     V[i, j] = self._get_V(Y[i, j], theta, X[i, j], phase)
                     phi, r = X[i, j], Y[i, j]
                     X[i, j] = r * cos(pi / 2 - (phi - phim))
-                    Y[i, j] = r * sin(pi / 2 - (phi - phim)) - EARTH_RADIUS
+                    Y[i, j] = r * sin(pi / 2 - (phi - phim)) - sp.geometry.EARTH_RADIUS
         Vair = self._air[phase]
         V = np.ma.masked_inside(V, Vair - 0.1 * Vair, Vair + 0.1 * Vair)
         fig = plt.figure()
@@ -260,7 +268,7 @@ class VelocityModel(object):
         pnr, pnlat, pnlon =  grid['nr'], grid['nlat'], grid['nlon']
         pdr, pdlat, pdlon = grid['dr'], radians(grid['dlat']), radians(grid['dlon'])
         ph0, plat0, plon0 = grid['h0'], radians(grid['lat0']), radians(grid['lon0'] % 360.)
-        pr0 = EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
+        pr0 = sp.geometry.EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
         i = (pnr - 1) % size_ratio
         pnr = pnr + (size_ratio - i) if i > 0 else pnr
         i = (pnlat - 1) % size_ratio
@@ -288,7 +296,7 @@ class VelocityModel(object):
                     lon = lon0 + dlon * ilon
                     _lon = degrees(lon) % 360.
                     r = r0 + dr * ir
-                    depth = EARTH_RADIUS - r
+                    depth = sp.geometry.EARTH_RADIUS - r
                     outfileP.write("%f\n" % self.get_Vp(_lat, _lon, depth))
                     outfileS.write("%f\n" % self.get_Vs(_lat, _lon, depth))
         outfileP.close()
@@ -315,9 +323,9 @@ class VelocityModel(object):
         outfile.write("%.4f %.4f\n" % (lat0, lon0))
         for interface in ('top', 'bottom'):
             if interface == 'top':
-                R = lambda lat, lon: EARTH_RADIUS + 5.
+                R = lambda lat, lon: sp.geometry.EARTH_RADIUS + 5.
             elif interface == 'bottom':
-                R = lambda lat, lon: EARTH_RADIUS - basement
+                R = lambda lat, lon: sp.geometry.EARTH_RADIUS - basement
             for ilat in range(nlat):
                 lat = lat0 + ilat * dlat
                 _lat = degrees(lat)
@@ -339,11 +347,61 @@ class VelocityModel(object):
         outfile.write("5 10")
         outfile.close()
 
+    def write_simulps(self, outfile):
+        k2d = 360. / (2 * pi * sp.geometry.EARTH_RADIUS)
+        d2k = 1. / k2d
+        lat0, lon0, d0 = sp.geometry.sph2geo(*(self.get_center()))
+        lat_min, lon_min, d_min = sp.geometry.sph2geo(self.nodes["r_max"],
+                                                      self.nodes["theta_max"],
+                                                      self.nodes["phi_min"])
+        lat_max, lon_max, d_max = sp.geometry.sph2geo(self.nodes["r_min"],
+                                                      self.nodes["theta_min"],
+                                                      self.nodes["phi_max"])
+        nx, ny, nz = 19, 19, 19
+        dx = int((lon_max - lon_min) * d2k / float(nx - 2))
+        dy = int((lat_max - lat_min) * d2k / float(ny - 2))
+        dz = max(int((d_max - d_min) / float(nz - 2)), 1.)
+        xn = [-790.] + range(-dx * (nx / 2 - 1), dx * (nx / 2), dx) + [790.]
+        yn = [-790.] + range(-dy * (ny / 2 - 1), dy * (ny / 2), dy) + [790.]
+        #zn = [-150.] + range(int(d_min), int(d_min) + dz * (nz - 2), dz) + [150.]
+        zn = [-150.] + range(-1, 11) + range(12, 22, 2) + [150.]
+        outfile = open(outfile, "w")
+        outfile.write("1.0 %3d %3d %3d\n" % (nx, ny, nz))
+        outfile.write(" ".join(["%.1f" % v for v in xn]) + "\n")
+        outfile.write(" ".join(["%.1f" % v for v in yn]) + "\n")
+        outfile.write(" ".join(["%.1f" % v for v in zn]) + "\n")
+        outfile.write("0 0 0\n")
+        outfile.write("0 0 0\n")
+        for iz in zn:
+            depth = iz
+            for iy in yn:
+                lat = lat0 + iy * k2d
+                s = ""
+                for ix in xn:
+                    lon = lon0 + ix * k2d
+                    vp = self.get_Vp(lat, lon, depth)
+                    s = " ".join([s, "%.2f" % vp])
+                outfile.write("%s\n" % s)
+        for iz in zn:
+            depth = iz
+            for iy in yn:
+                lat = lat0 + iy * k2d
+                s = ""
+                for ix in xn:
+                    lon = lon0 + ix * k2d
+                    vp = self.get_Vp(lat, lon, depth)
+                    vs = self.get_Vs(lat, lon, depth)
+                    s = " ".join([s, "%.2f" % (vp / vs)])
+                outfile.write("%s\n" % s)
+                    
+        
+        
+
     def model_1D(self, phase='Vp'):
         V = []
         for ir in range(self.nodes['nr']):
             v = np.median(np.concatenate(self.values[phase][ir]))
-            z = EARTH_RADIUS - (self.nodes['r'][0, 0, 0] + ir * self.nodes['dr'])
+            z = sp.geometry.EARTH_RADIUS - (self.nodes['r'][0, 0, 0] + ir * self.nodes['dr'])
             V += [(z, v)]
         return V
 

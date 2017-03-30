@@ -1,5 +1,5 @@
 import seispy as sp
-from seispy.hypocenter import accelerate
+#from seispy.hypocenter import accelerate
 
 import numpy as np
 from obspy.core.utcdatetime import UTCDateTime
@@ -10,11 +10,13 @@ class Locator:
     def __init__(self,
                  ttgrid,
                  cfg,
-                 geoid=sp.geoid.Geoid("/home/shake/malcolcw/data/mapping/"
-                                      "ANZA/anza.xyz")):
+                 geoid=None):
         self.ttgrid = ttgrid
         self.cfg = cfg
-        self.geoid = geoid
+        if geoid is not None:
+            self.geoid=sp.geoid.Geoid(geoid)
+        else:
+            self.geoid = lambda theta, phi: 6371.
 
     def locate(self, origin):
         arrivals = tuple([arrival for arrival in origin.arrivals
@@ -115,8 +117,8 @@ class Locator:
         return True
 
     def _grid_search(self, arrivals):
-        ir0, itheta0, iphi0, t0 = accelerate.grid_search(self.ttgrid,
-                                                         arrivals)
+        ir0, itheta0, iphi0, t0 = sp.hypocenter.accelerate.grid_search(self.ttgrid,
+                                                                       arrivals)
         return self.ttgrid.nodes['r'][ir0, itheta0, iphi0],\
             self.ttgrid.nodes['theta'][ir0, itheta0, iphi0],\
             self.ttgrid.nodes['phi'][ir0, itheta0, iphi0],\
