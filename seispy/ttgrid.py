@@ -171,7 +171,7 @@ def test():
     ttg = TTGrid("/home/shake/malcolcw/data/fm3d_ttimes")
     from seispy.geometry import geo2sph
     r, theta, phi = geo2sph(33.2, -116.6, 12)
-    print ttg.get_ttgradient("PFO", "P", r, theta, phi)
+    print(ttg.get_ttgradient("PFO", "P", r, theta, phi))
 
 if __name__ == "__main__":
     test()

@@ -40,7 +40,7 @@ class Locator:
         r0, theta0, phi0, t0 = h0
         while r0 > self.geoid(theta0, phi0):
             r = self.geoid(theta0, phi0)
-            # print "solution above surface (%.2f > %.2f), iterating..." % (r0, r)
+            # print("solution above surface (%.2f > %.2f), iterating..." % (r0, r))
             bounds[0] = (r - 1., r)
             h0 = self._iterate(h0, arrivals, bounds)
             r0, theta0, phi0, t0 = h0
@@ -69,7 +69,7 @@ class Locator:
         return r0, theta0, phi0, t0
 
     def locate_dep(self, origin, P_only=False):
-        # print "locating event #%d" % origin.evid
+        # print("locating event #%d" % origin.evid)
         arrivals = tuple([arrival for arrival in origin.arrivals
                           if arrival.station.name in self.ttgrid.mmttf])
         if P_only:
@@ -226,7 +226,7 @@ def test():
             continue
         else:
             i += 1
-            print "%d/%d - %d" % (i, j, k), origin
+            print("%d/%d - %d" % (i, j, k), origin)
             db.write_origin(origin)
     db.close()
 
@@ -253,7 +253,7 @@ def main():
         if origin is None:
             continue
         else:
-            print origin
+            print(origin)
             db.write_origin(origin)
     db.close()
 

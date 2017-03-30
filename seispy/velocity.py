@@ -51,9 +51,9 @@ class VelocityModel(object):
         self.nodes['phi_min'] = min(phi_nodes)
         self.nodes['phi_max'] = max(phi_nodes)
         self.nodes['dphi'] = (self.nodes['phi_max'] - self.nodes['phi_min']) / (self.nodes['nphi'] - 1)
-        #print self.nodes['nr'], self.nodes['r_min'], self.nodes['r_max'], self.nodes['dr']
-        #print self.nodes['ntheta'], self.nodes['theta_min'], self.nodes['theta_max'], self.nodes['dtheta']
-        #print self.nodes['nphi'], self.nodes['phi_min'], self.nodes['phi_max'], self.nodes['dphi']
+        #print(self.nodes['nr'], self.nodes['r_min'], self.nodes['r_max'], self.nodes['dr'])
+        #print(self.nodes['ntheta'], self.nodes['theta_min'], self.nodes['theta_max'], self.nodes['dtheta'])
+        #print(self.nodes['nphi'], self.nodes['phi_min'], self.nodes['phi_max'], self.nodes['dphi'])
         #exit()
         self.values = {'Vp': np.empty(shape=(len(r_nodes), len(theta_nodes), len(phi_nodes))),
                        'Vs': np.empty(shape=(len(r_nodes), len(theta_nodes), len(phi_nodes)))}
@@ -393,9 +393,6 @@ class VelocityModel(object):
                     vs = self.get_Vs(lat, lon, depth)
                     s = " ".join([s, "%.2f" % (vp / vs)])
                 outfile.write("%s\n" % s)
-                    
-        
-        
 
     def model_1D(self, phase='Vp'):
         V = []
@@ -429,4 +426,4 @@ if __name__ == "__main__":
     s += "\n"
     for v in [Vp[i][1]/Vs[i][1] for i in range(len(Vp))][-1::-1]:
         s += "%.2f " % v
-    print s
+    print(s)

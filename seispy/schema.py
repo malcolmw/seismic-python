@@ -136,7 +136,7 @@ class Schema:
         if 'path' in kwargs:
             self.token_parser = TokenParser(kwargs['path'])
         elif 'schema' in kwargs:
-            print _datadir + kwargs['schema']
+            print(_datadir + kwargs['schema'])
             self.token_parser = TokenParser(_datadir + kwargs['schema'])
         else:
             raise InitializationError("specify either 'path' or 'schema' "\

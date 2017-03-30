@@ -79,15 +79,15 @@ kwargs['package_dir'] = {'seispy': 'seispy'}
 try:
     antelope_dir = os.environ['ANTELOPE']
 except KeyError:
-    print "INFO:: $ANTELOPE environment variable not detected."
-    print "INFO:: Installing Antelope independent components only."
+    print( "INFO:: $ANTELOPE environment variable not detected.")
+    print( "INFO:: Installing Antelope independent components only.")
     setup(**kwargs)
     exit()
 
 # If $ANTELOPE environment variable is initialized, install the portions
 # the distribution that depend on Antelope.
-print "INFO:: $ANTELOPE environment variable detected (%s)" % antelope_dir
-print "INFO:: Installing all components."
+print( "INFO:: $ANTELOPE environment variable detected (%s)" % antelope_dir)
+print( "INFO:: Installing all components.")
 kwargs['packages'] += ['gazelle']
 kwargs['package_dir']['gazelle'] = 'gazelle'
 kwargs['ext_modules'] += [Extension("gazelle.response",
