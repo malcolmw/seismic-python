@@ -33,8 +33,6 @@ class Topography(object):
         itheta0 = np.argmin(np.absolute(self.theta - theta))
         iphi0 = np.argmin(np.absolute(self.phi - phi))
         dtheta, dphi = self.theta[itheta0] % 1., self.phi[iphi0] % 1.
-        print(dtheta, dphi)
-        print(self.theta[itheta0], theta)
         itheta1 = min(itheta0 + 1, self.ntheta - 1)
         iphi1 = min(iphi0 + 1, self.nphi - 1)
         T00 = self.radius[itheta0, iphi0]
