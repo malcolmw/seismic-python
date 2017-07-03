@@ -10,10 +10,12 @@ kwargs = {"name": "seismic-python",
           "description": "Seismic data analysis tools",
           "download_url": "https://github.com/malcolmw/seismic-python.git",
           "platforms": ["linux", "osx"],
-          "requires": ["obspy", "sqlite"],
-          "py_modules": ["seispy.geometry",
+          "requires": ["obspy", "sqlite3"],
+          "py_modules": ["seispy.constants",
+                         "seispy.geometry",
                          "seispy.topography",
-                         "seispy.ttgrid"]}
+                         "seispy.ttgrid",
+                         "seispy.velocity"]}
 
 kwargs["packages"] = ["seispy"]
 

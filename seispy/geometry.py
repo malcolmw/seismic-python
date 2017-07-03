@@ -34,9 +34,9 @@ from math import acos,\
                  sqrt
 import numpy as np
 from obspy.geodetics.base import gps2dist_azimuth
+import seispy
 
-EARTH_RADIUS = 6371.
-
+EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
 def geo2sph(lat, lon, z):
     """
