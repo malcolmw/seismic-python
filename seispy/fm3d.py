@@ -3,22 +3,17 @@ from math import degrees,\
                  radians
 import seispy
 
-def print_fm3d(vm, phase, propgrid, stretch=1.01, size_ratio=2, basement=30):
+def print_fm3d(vm, phase, propgrid):
     return(print_propgrid(propgrid),
            print_vgrid(vm,
                        phase,
-                       propgrid,
-                       stretch=stretch,
-                       size_ratio=2),
-           print_interfaces(propgrid,
-                            stretch=stretch,
-                            size_ratio=size_ratio,
-                            basement=basement))
+                       propgrid),
+           print_interfaces(propgrid))
 
 def print_frechet():
     return("0")
 
-def print_interfaces(propgrid, stretch=1.01, size_ratio=2, basement=30):
+def print_interfaces(propgrid):
     igrid = _calculate_grid_parameters(propgrid)
     nlat, nlon = igrid["nlat"], igrid["nlon"]
     dlat, dlon = igrid["dlat"], igrid["dlon"]
@@ -88,7 +83,7 @@ def print_sources(lat, lon, depth):
            "0 1\n"\
            "1".format(depth, lat, lon))
 
-def print_vgrid(vm, phase, propgrid, stretch=1.01, size_ratio=2):
+def print_vgrid(vm, phase, propgrid):
     vgrid = _calculate_grid_parameters(propgrid)
     nr, nlat, nlon = vgrid["nr"], vgrid["nlat"], vgrid["nlon"]
     dr, dlat, dlon = vgrid["dr"], vgrid["dlat"], vgrid["dlon"]
@@ -109,7 +104,7 @@ def print_vgrid(vm, phase, propgrid, stretch=1.01, size_ratio=2):
         blob += "{:f}\n".format(vm(phase, lat, lon, depth))
     return(blob.rstrip())
 
-def _calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
+def _calculate_grid_parameters(grid):
     pnr, pnlat, pnlon = grid["nr"], grid["nlat"], grid["nlon"]
     pdr, pdlat, pdlon = grid["dr"], radians(grid["dlat"]), radians(grid["dlon"])
     ph0, plat0, plon0 = grid["h0"], radians(grid["lat0"]), radians(grid["lon0"])
