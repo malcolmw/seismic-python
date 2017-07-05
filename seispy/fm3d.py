@@ -96,8 +96,8 @@ def _calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
     pr0 = seispy.geometry.EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
     r0 = pr0 - pdr * 2
     lat0 = plat0 - pdlat * 2
-    return({"nr": nr + 4, "nlat": nlat + 4, "nlon": nlon + 4,
-            "dr": dr, "dlat": dlat, "dlon": dlon,
+    return({"nr": pnr + 4, "nlat": pnlat + 4, "nlon": pnlon + 4,
+            "dr": pdr, "dlat": pdlat, "dlon": pdlon,
             "r0": pr0 - pdr * 2,
             "lat0": plat0 - pdlat * 2,
             "lon0": plon0 - pdlon * 2})
