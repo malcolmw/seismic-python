@@ -15,6 +15,9 @@ def print_fm3d(vm, phase, propgrid, stretch=1.01, size_ratio=2, basement=30):
                             size_ratio=size_ratio,
                             basement=basement))
 
+def print_frechet():
+    return("0")
+
 def print_interfaces(propgrid, stretch=1.01, size_ratio=2, basement=30):
     igrid = _calculate_grid_parameters(propgrid)
     nlat, nlon = igrid["nlat"], igrid["nlon"]
@@ -67,6 +70,24 @@ def print_propgrid(grid):
                          grid["dr"], grid["dlat"], grid["dlon"],
                          grid["h0"], grid["lat0"], grid["lon0"] % 360))
 
+def print_receivers(lat, lon, depth):
+    return("1\n"\
+           "{} {} {}\n"\
+           "1\n"\
+           "1\n"\
+           "1".format(depth,
+                      lat,
+                      lon))
+
+def print_sources(lat, lon, depth):
+    return("1\n"\
+           "0\n"\
+           "{} {} {}\n"\
+           "1\n"\
+           "1\n"\
+           "0 1\n"\
+           "1".format(depth, lat, lon))
+
 def print_vgrid(vm, phase, propgrid, stretch=1.01, size_ratio=2):
     vgrid = _calculate_grid_parameters(propgrid)
     nr, nlat, nlon = vgrid["nr"], vgrid["nlat"], vgrid["nlon"]
@@ -101,29 +122,3 @@ def _calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
             "r0": pr0 - pdr * 2,
             "lat0": plat0 - pdlat * 2,
             "lon0": plon0 - pdlon * 2})
-
-
-def __calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
-    pnr, pnlat, pnlon = grid["nr"], grid["nlat"], grid["nlon"]
-    pdr, pdlat, pdlon = grid["dr"], radians(grid["dlat"]), radians(grid["dlon"])
-    ph0, plat0, plon0 = grid["h0"], radians(grid["lat0"]), radians(grid["lon0"])
-    plon0 %= 2 * pi
-    pr0 = seispy.geometry.EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
-    i = (pnr - 1) % size_ratio
-    pnr = pnr + (size_ratio - i) if i > 0 else pnr
-    i = (pnlat - 1) % size_ratio
-    pnlat = pnlat + (size_ratio - i) if i > 0 else pnlat
-    i = (pnlon - 1) % size_ratio
-    pnlon = pnlon + (size_ratio - i) if i > 0 else pnlon
-    nr = int((pnr - 1) / size_ratio) + 3
-    nlat = int((pnlat - 1) / size_ratio) + 3
-    nlon = int((pnlon - 1) / size_ratio) + 3
-    dr = stretch * pdr * size_ratio
-    dlat = stretch * pdlat * size_ratio
-    dlon = stretch * pdlon * size_ratio
-    r0 = pr0 - dr - (nr - 1) * dr * (stretch - 1.0) / 2
-    lat0 = plat0 - dlat - (nlat - 1) * dlat * (stretch - 1.0) / 2
-    lon0 = plon0 - dlon - (nlon - 1) * dlon * (stretch - 1.0) / 2
-    return({"nr": nr, "nlat": nlat, "nlon": nlon,
-            "dr": dr, "dlat": dlat, "dlon": dlon,
-            "r0": r0, "lat0": lat0, "lon0": lon0})
