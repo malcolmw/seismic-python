@@ -94,6 +94,21 @@ def _calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
     ph0, plat0, plon0 = grid["h0"], radians(grid["lat0"]), radians(grid["lon0"])
     plon0 %= 2 * pi
     pr0 = seispy.geometry.EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
+    r0 = pr0 - pdr * 2
+    lat0 = plat0 - pdlat * 2
+    return({"nr": nr + 4, "nlat": nlat + 4, "nlon": nlon + 4,
+            "dr": dr, "dlat": dlat, "dlon": dlon,
+            "r0": pr0 - pdr * 2,
+            "lat0": plat0 - pdlat * 2,
+            "lon0": plon0 - pdlon * 2})
+
+
+def __calculate_grid_parameters(grid, stretch=1.01, size_ratio=2):
+    pnr, pnlat, pnlon = grid["nr"], grid["nlat"], grid["nlon"]
+    pdr, pdlat, pdlon = grid["dr"], radians(grid["dlat"]), radians(grid["dlon"])
+    ph0, plat0, plon0 = grid["h0"], radians(grid["lat0"]), radians(grid["lon0"])
+    plon0 %= 2 * pi
+    pr0 = seispy.geometry.EARTH_RADIUS + ph0 - ((pnr - 1) * pdr)
     i = (pnr - 1) % size_ratio
     pnr = pnr + (size_ratio - i) if i > 0 else pnr
     i = (pnlat - 1) % size_ratio
