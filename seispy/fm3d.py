@@ -58,6 +58,7 @@ def print_mode_set(file_mode=False,
                                               save_timefields_mode))
 
 def print_propgrid(grid):
+    print(grid)
     return("{:d} {:d} {:d}\n"\
            "{:.6f} {:.6f} {:.6f}\n"\
            "{:.6f} {:.6f} {:.6f}\n"\
@@ -72,7 +73,7 @@ def print_receivers(lat, lon, depth):
            "1\n"\
            "1".format(depth,
                       lat,
-                      lon))
+                      lon%360))
 
 def print_sources(lat, lon, depth):
     return("1\n"\
@@ -81,7 +82,7 @@ def print_sources(lat, lon, depth):
            "1\n"\
            "1\n"\
            "0 1\n"\
-           "1".format(depth, lat, lon))
+           "1".format(depth, lat, lon%360))
 
 def print_vgrid(vm, phase, propgrid):
     vgrid = _calculate_grid_parameters(propgrid)
