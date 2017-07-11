@@ -14,6 +14,7 @@ kwargs = {"name": "seismic-python",
           "py_modules": ["seispy.constants",
                          "seispy.fm3d",
                          "seispy.geometry",
+                         "seispy.sqlschemas",
                          "seispy.topography",
                          "seispy.ttgrid",
                          "seispy.velocity"]}
