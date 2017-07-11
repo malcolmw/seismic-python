@@ -46,7 +46,7 @@ class Database(object):
             inf = open("%s.origin" % path)
             for line in inf:
                 data = line.split()
-                data = [float(v) for d in data[:4] +\
+                data = [float(v) for d in data[:4]] +\
                        [int(v) for d in data[4:6]] +\
                        [int(data[7])] +\
                        [data[23]]
