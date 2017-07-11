@@ -24,10 +24,11 @@ class Database(object):
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS wfdisc
-                         (stacode TEXT PRIMARY KEY, channel TEXT PRIMARY KEY,
-                         time REAL PRIMARY KEY, endtime REAL PRIMARY KEY,
+                         (stacode TEXT, channel TEXT,
+                         time REAL, endtime REAL,
                          dir TEXT, file TEXT, datatype TEXT, nsamples INT,
-                         samplerate REAL, author TEXT)
+                         samplerate REAL, author TEXT,
+                         PRIMARY KEY (stacode, channel, time, endtime))
                          """)
 
     def read_antelope(self, path):
