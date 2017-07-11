@@ -8,24 +8,24 @@ class Database(object):
         self.cur = self.conn.cursor()
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS event
-                         (originid INT, eventid INT PRIMARY, author TEXT)
+                         (originid INT, eventid INT PRIMARY KEY, author TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS origin
                          (latitude REAL, longitude REAL, depth REAL,
-                         time REAL, originid INT PRIMARY, eventid INT,
+                         time REAL, originid INT PRIMARY KEY, eventid INT,
                          narrivals INT, author TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS station
-                         (stacode TEXT PRIMARY, latitude REAL, longitude REAL,
+                         (stacode TEXT PRIMARY KEY, latitude REAL, longitude REAL,
                          elevation REAL, time REAL, endtime REAL, netcode TEXT,
                          arraycode TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS wfdisc
-                         (stacode TEXT PRIMARY, channel TEXT PRIMARY,
-                         time REAL PRIMARY, endtime REAL PRIMARY,
+                         (stacode TEXT PRIMARY KEY, channel TEXT PRIMARY KEY,
+                         time REAL PRIMARY KEY, endtime REAL PRIMARY KEY,
                          dir TEXT, file TEXT, datatype TEXT, nsamples INT,
                          samplerate REAL, author TEXT)
                          """)
