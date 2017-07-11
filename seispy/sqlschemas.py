@@ -8,27 +8,25 @@ class Database(object):
         self.cur = self.conn.cursor()
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS event
-                         (originid INT, eventid INT PRIMARY KEY, author TEXT)
+                         (originid INT, eventid INT, author TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS origin
                          (latitude REAL, longitude REAL, depth REAL,
-                         time REAL, originid INT PRIMARY KEY, eventid INT,
+                         time REAL, originid INT, eventid INT,
                          narrivals INT, author TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS station
-                         (stacode TEXT PRIMARY KEY, latitude REAL, longitude REAL,
+                         (stacode TEXT, latitude REAL, longitude REAL,
                          elevation REAL, time REAL, endtime REAL, netcode TEXT,
                          arraycode TEXT)
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS wfdisc
-                         (stacode TEXT, channel TEXT,
-                         time REAL, endtime REAL,
+                         (stacode TEXT, channel TEXT, time REAL, endtime REAL,
                          dir TEXT, file TEXT, datatype TEXT, nsamples INT,
-                         samplerate REAL, author TEXT,
-                         PRIMARY KEY (stacode, channel, time, endtime))
+                         samplerate REAL, author TEXT)
                          """)
 
     def read_antelope(self, path):
