@@ -51,6 +51,36 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
+def get_line_endpoints(lon0, lat0, strike, length):
+    strike %= 360
+    l2 = 0.5*length / 111.
+    if 0 < strike < 90:
+        theta = radians(strike)
+        dx = l2 * sin(theta)
+        dy = l2 * cos(theta)
+        p1 = (lon0 + dx, lat0 + dy)
+        p2 = (lon0 - dx, lat0 - dy)
+    elif 90 < strike < 180:
+        theta = radians(strike - 90)
+        dx = l2 * sin(theta)
+        dy = l2 * cos(theta)
+        p1 = (lon0 + dx, lat0 - dy)
+        p2 = (lon0 - dx, lat0 + dy)
+    elif 180 < strike < 270:
+        theta = radians(strike - 180)
+        dx = l2 * sin(theta)
+        dy = l2 * cos(theta)
+        p1 = (lon0 - dx, lat0 - dy)
+        p2 = (lon0 + dx, lat0 + dy)
+    elif 270 < strike < 360:
+        theta = radians(360. - strike)
+        dx = l2 * sin(theta)
+        dy = l2 * cos(theta)
+        p1 = (lon0 - dx, lat0 + dy)
+        p2 = (lon0 + dx, lat0 - dy)
+    else:
+        raise ValueError("invalid strike")
+    return p1, p2
 
 def hypocentral_distance(lat1, lon1, z1, lat2, lon2, z2):
     return sqrt((gps2dist_azimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2 +
