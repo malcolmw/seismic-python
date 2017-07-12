@@ -51,6 +51,41 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
+def get_azimuth_distance(x1, y1, x2, y2):
+    dx = x2 - x1
+    dy = y2 - y1
+    D = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
+    # account for quadrant
+    # quadrant 1
+    if dx > 0 and dy > 0:
+        theta = atan(dy / dx) + (pi / 2.)
+    # quadrant 2
+    elif dx < 0 and dy > 0:
+        theta = pi - atan(dy / dx) - (pi / 2.)
+    # quadrant 3
+    elif dx < 0 and dy < 0:
+        theta = pi + atan(dy / dx) - (pi / 2.)
+    # quadrant 4
+    elif dx > 0 and dy < 0:
+        theta = 2 * pi - atan(dy / dx) + (pi / 2.)
+    elif dx == 0:
+        if dy > 0:
+            theta = pi / 2
+        elif dy < 0:
+            theta = 3 * pi / 2
+        else:
+            theta = 0
+    elif dy == 0:
+        if dx > 0:
+            theta = 0
+        elif dx < 0:
+            theta = pi
+        else:
+            theta = 0
+    else:
+        theta = 0
+    return degrees(theta), D
+
 def get_line_endpoints(lon0, lat0, strike, length):
     strike %= 360
     l2 = 0.5*length / 111.
