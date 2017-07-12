@@ -39,6 +39,7 @@ import seispy
 
 EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
+
 def geo2sph(lat, lon, z):
     """
     Convert geographic coordinates to spherical coordinates.
@@ -52,47 +53,25 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
-def get_azimuth_distance(x1, y1, x2, y2):
-    dx = x2 - x1
-    dy = y2 - y1
-    D = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2) * 111.
-    return (degrees(atan2(dy, dx)), D)
+def azimuth(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
 
-def get_line_endpoints(lon0, lat0, strike, length):
-    strike %= 360
-    l2 = 0.5*length / 111.
-    if 0 <= strike < 90:
-        theta = radians(strike)
-        dx = l2 * sin(theta)
-        dy = l2 * cos(theta)
-        p1 = (lon0 - dx, lat0 - dy)
-        p2 = (lon0 + dx, lat0 + dy)
-    elif 90 <= strike < 180:
-        theta = radians(strike - 90)
-        dx = l2 * sin(theta)
-        dy = l2 * cos(theta)
-        p1 = (lon0 - dx, lat0 + dy)
-        p2 = (lon0 + dx, lat0 - dy)
-    elif 180 <= strike < 270:
-        theta = radians(strike - 180)
-        dx = l2 * sin(theta)
-        dy = l2 * cos(theta)
-        p1 = (lon0 + dx, lat0 + dy)
-        p2 = (lon0 - dx, lat0 - dy)
-    elif 270 <= strike < 360:
-        theta = radians(360. - strike)
-        dx = l2 * sin(theta)
-        dy = l2 * cos(theta)
-        p1 = (lon0 + dx, lat0 - dy)
-        p2 = (lon0 - dx, lat0 + dy)
-    else:
-        raise ValueError("invalid strike")
-    return p1, p2
+def distance(u, v):
+    if len(u) != len(v):
+        raise(ValueError("vectors u and v must have same length"))
+    u = np.asarray(u)
+    v = np.asarray(v)
+    return(sqrt(sum((u - v) ** 2)))
 
-def hypocentral_distance(lat1, lon1, z1, lat2, lon2, z2):
-    return sqrt((gps2dist_azimuth(lat1, lon1, lat2, lon2)[0]/1000.) ** 2 +
-                (z1 - z2) ** 2)
-
+def get_line_endpoints(lat0, lon0, az, length):
+    phi = radians(az % 360)
+    l2 = 0.5 * length / 111
+    theta1 = -phi + pi/2
+    theta2 = -phi - pi/2
+    return((lon0 + l2 * cos(theta2), lat0 + l2 * sin(theta2)),
+           (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
 
 def sph2geo(r, theta, phi):
     z = EARTH_RADIUS - r
