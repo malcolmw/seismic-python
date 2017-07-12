@@ -29,6 +29,7 @@ from math import acos,\
                  atan2,\
                  cos,\
                  degrees,\
+                 pi,\
                  radians,\
                  sin,\
                  sqrt
@@ -84,7 +85,7 @@ def get_azimuth_distance(x1, y1, x2, y2):
             theta = 0
     else:
         theta = 0
-    return degrees(theta), D
+    return degrees(theta), atan2(dy, dx), D
 
 def get_line_endpoints(lon0, lat0, strike, length):
     strike %= 360
