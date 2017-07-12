@@ -26,6 +26,7 @@ Let's align our cartesian coordinates so the x-axis corresponds to the
 lon = 0 axis and the z-axis aligns with North pole lat=90.
 """
 from math import acos,\
+                 atan,\
                  atan2,\
                  cos,\
                  degrees,\
