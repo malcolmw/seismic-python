@@ -61,7 +61,7 @@ def get_azimuth_distance(x1, y1, x2, y2):
 def get_line_endpoints(lon0, lat0, strike, length):
     strike %= 360
     l2 = 0.5*length / 111.
-    if 0 < strike < 90:
+    if 0 <= strike < 90:
         theta = radians(strike)
         dx = l2 * sin(theta)
         dy = l2 * cos(theta)
