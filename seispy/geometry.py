@@ -26,7 +26,6 @@ Let's align our cartesian coordinates so the x-axis corresponds to the
 lon = 0 axis and the z-axis aligns with North pole lat=90.
 """
 from math import acos,\
-                 atan,\
                  atan2,\
                  cos,\
                  degrees,\
@@ -57,7 +56,7 @@ def get_azimuth_distance(x1, y1, x2, y2):
     dx = x2 - x1
     dy = y2 - y1
     D = sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
-    return degrees(theta), degrees(atan2(dy, dx)), D
+    return (degrees(atan2(dy, dx)), D)
 
 def get_line_endpoints(lon0, lat0, strike, length):
     strike %= 360
