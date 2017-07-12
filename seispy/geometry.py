@@ -67,19 +67,19 @@ def get_line_endpoints(lon0, lat0, strike, length):
         dy = l2 * cos(theta)
         p1 = (lon0 - dx, lat0 - dy)
         p2 = (lon0 + dx, lat0 + dy)
-    elif 90 < strike < 180:
+    elif 90 <= strike < 180:
         theta = radians(strike - 90)
         dx = l2 * sin(theta)
         dy = l2 * cos(theta)
         p1 = (lon0 - dx, lat0 + dy)
         p2 = (lon0 + dx, lat0 - dy)
-    elif 180 < strike < 270:
+    elif 180 <= strike < 270:
         theta = radians(strike - 180)
         dx = l2 * sin(theta)
         dy = l2 * cos(theta)
         p1 = (lon0 + dx, lat0 + dy)
         p2 = (lon0 - dx, lat0 - dy)
-    elif 270 < strike < 360:
+    elif 270 <= strike < 360:
         theta = radians(360. - strike)
         dx = l2 * sin(theta)
         dy = l2 * cos(theta)
