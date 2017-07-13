@@ -7,6 +7,15 @@ class SeismicDB(object):
         self.conn = sqlite3.connect(path)
         self.cur = self.conn.cursor()
         self.cur.execute("""
+                         CREATE TABLE IF NOT EXISTS arrival
+                         (arrivalid INT, stacode TEXT, channel TEXT, time REAL,
+                         phase TEXT, author TEXT)
+                         """)
+        self.cur.execute("""
+                         CREATE TABLE IF NOT EXISTS assoc
+                         (arrivalid INT, originid INT, residual REAL)
+                         """)
+        self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS event
                          (originid INT, eventid INT, author TEXT)
                          """)
@@ -29,7 +38,30 @@ class SeismicDB(object):
                          samplerate REAL, author TEXT)
                          """)
 
-    def read_antelope(self, path):
+    def convert_antelope(self, path):
+        if os.path.isfile("%s.arrival" % path):
+            inf = open("%s.arrival" % path)
+            for line in inf:
+                data = line.split()
+                data = [int(data[2]), data[0], data[5], float(data[1]), data[8],
+                        data[2]]
+                self.cur.execute("""
+                                 INSERT INTO arrival
+                                 (arrivalid, stacode, channel, time, phase,
+                                 author)
+                                 VALUES ({}, '{}', '{}', {}, '{}', '{}');
+                                 """.format(*d))
+            inf.close()
+        if os.path.isfile("%s.assoc" % path):
+            inf = open("%s.assoc" % path)
+            for line in inf:
+                data = line.split()
+                data = [int(data[0]), int(data[1])]
+                self.cur.execute("""
+                                 INSERT INTO assoc
+                                 (arrivalid, originid)
+                                 """.format(*d)
+            inf.close()
         if os.path.isfile("%s.event" % path):
             inf = open("%s.event" % path)
             for line in inf:
