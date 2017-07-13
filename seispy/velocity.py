@@ -15,7 +15,7 @@ class VelocityModel(object):
 
     def _read_fang(self, infile, topo):
         if topo is None:
-            self.topo = lambda: seispy.constants.EARTH_RADIUS
+            self.topo = lambda _, __: seispy.constants.EARTH_RADIUS
         else:
             self.topo = topo
         inf = open(infile)
@@ -104,22 +104,24 @@ class VelocityModel(object):
                 (self.nodes["theta_max"] + self.nodes["theta_min"]) / 2,
                 (self.nodes["phi_max"] + self.nodes["phi_min"]) / 2)
 
-    def slice(phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
-        (lat1, lon1), (lat2, lon2) = seispy.geometry.get_line_endpoints(lat0,
+    def slice(self, phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
+        (lon1, lat1), (lon2, lat2) = seispy.geometry.get_line_endpoints(lat0,
                                                                         lon0,
                                                                         azimuth,
                                                                         length)
-        V = np.empty(shape=(nd, nx))
+        DEPTH = np.linspace(dmin, dmax, nd)
+        LAT = np.linspace(lat1, lat2, nx)
+        LON = np.linspace(lon1, lon2, nx)
+        V = np.empty(shape=(len(DEPTH), len(LAT)))
         X = np.empty(shape=V.shape)
         Y = np.empty(shape=V.shape)
-        for lat in np.linspace(lat1, lat2, nx):
-            for lon in np.linspace(lon1, lon2, nx):
-                for depth in np.linspace(dmin, dmax, nd):
-                    V[i, j] = self(phase, lat, lon, depth)
-                    X[i, j] = seispy.geometry.distance((lat1, lon1), (lat, lon))
-                    Y[i, j] = depth
-
-
+        for i in range(nx):
+            for j in range(nd):
+                lat, lon, depth = LAT[i], LON[i], DEPTH[j]
+                V[i, j] = self(phase, lat, lon, depth)
+                X[i, j] = seispy.geometry.distance((lat1, lon1), (lat, lon))
+                Y[i, j] = depth
+        return(X, Y, V)
 
 def _verify_phase(phase):
     if phase.upper() == "P" or  phase.upper() == "VP":
