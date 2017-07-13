@@ -3,6 +3,7 @@ import numpy as np
 class FaultCollection(object):
     def __init__(self, infile):
         inf = open(infile)
+        #: Doc comment for instance attribute data
         self.data = np.array([
                                 np.array([[float(coord) for coord in pair.split()]
                                  for pair in chunk.strip().split("\n")
