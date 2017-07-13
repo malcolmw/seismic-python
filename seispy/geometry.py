@@ -37,6 +37,7 @@ import numpy as np
 from obspy.geodetics.base import gps2dist_azimuth
 import seispy
 
+
 EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
 
@@ -53,10 +54,12 @@ def geo2sph(lat, lon, z):
     r = EARTH_RADIUS - z
     return r, theta, phi
 
+
 def azimuth(p1, p2):
     x1, y1 = p1
     x2, y2 = p2
     return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
+
 
 def distance(u, v):
     if len(u) != len(v):
@@ -65,6 +68,7 @@ def distance(u, v):
     v = np.asarray(v)
     return(sqrt(sum((u - v) ** 2)))
 
+
 def get_line_endpoints(lat0, lon0, az, length):
     phi = radians(az % 360)
     l2 = 0.5 * length / 111
@@ -72,6 +76,7 @@ def get_line_endpoints(lat0, lon0, az, length):
     theta2 = -phi - pi/2
     return((lon0 + l2 * cos(theta2), lat0 + l2 * sin(theta2)),
            (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
+
 
 def sph2geo(r, theta, phi):
     z = EARTH_RADIUS - r
