@@ -104,6 +104,23 @@ class VelocityModel(object):
                 (self.nodes["theta_max"] + self.nodes["theta_min"]) / 2,
                 (self.nodes["phi_max"] + self.nodes["phi_min"]) / 2)
 
+    def slice(phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
+        (lat1, lon1), (lat2, lon2) = seispy.geometry.get_line_endpoints(lat0,
+                                                                        lon0,
+                                                                        azimuth,
+                                                                        length)
+        V = np.empty(shape=(nd, nx))
+        X = np.empty(shape=V.shape)
+        Y = np.empty(shape=V.shape)
+        for lat in np.linspace(lat1, lat2, nx):
+            for lon in np.linspace(lon1, lon2, nx):
+                for depth in np.linspace(dmin, dmax, nd):
+                    V[i, j] = self(phase, lat, lon, depth)
+                    X[i, j] = seispy.geometry.distance((lat1, lon1), (lat, lon))
+                    Y[i, j] = depth
+
+
+
 def _verify_phase(phase):
     if phase.upper() == "P" or  phase.upper() == "VP":
         phase = "Vp"
