@@ -43,7 +43,7 @@ class SeismicDB(object):
             inf = open("%s.arrival" % path)
             for line in inf:
                 data = line.split()
-                data = [int(data[2]), data[0], data[5], float(data[1]), data[8],
+                data = [int(data[2]), data[0], data[5], float(data[1]), data[7],
                         data[2]]
                 print("""
                       INSERT INTO arrival
