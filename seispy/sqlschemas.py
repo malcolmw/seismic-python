@@ -45,46 +45,69 @@ class SeismicDB(object):
                 data = line.split()
                 data = [int(data[2]), data[0], data[5], float(data[1]), data[8],
                         data[2]]
+                print("""
+                      INSERT INTO arrival
+                      (arrivalid, stacode, channel, time, phase,
+                      author)
+                      VALUES ({}, '{}', '{}', {}, '{}', '{}');
+                      """.format(*data))
                 self.cur.execute("""
                                  INSERT INTO arrival
                                  (arrivalid, stacode, channel, time, phase,
                                  author)
                                  VALUES ({}, '{}', '{}', {}, '{}', '{}');
-                                 """.format(*d))
+                                 """.format(*data))
             inf.close()
         if os.path.isfile("%s.assoc" % path):
             inf = open("%s.assoc" % path)
             for line in inf:
                 data = line.split()
                 data = [int(data[0]), int(data[1])]
+                print("""
+                      INSERT INTO assoc
+                      (arrivalid, originid)
+                      VALUES ({}, {});
+                      """.format(*data))
                 self.cur.execute("""
                                  INSERT INTO assoc
                                  (arrivalid, originid)
-                                 """.format(*d)
+                                 VALUES ({}, {});
+                                 """.format(*data))
             inf.close()
         if os.path.isfile("%s.event" % path):
             inf = open("%s.event" % path)
             for line in inf:
                 data = line.split()
                 data = [int(data[0]), int(data[2]), data[3]]
+                print("""
+                      INSERT INTO event
+                      (eventid, originid, author)
+                      VALUES ({}, {}, '{}')
+                      """.format(*data))
                 self.cur.execute("""
                                  INSERT INTO event
                                  (eventid, originid, author)
-                                 VALUES ({}, {}, '{}')
+                                 VALUES ({}, {}, '{}');
                                  """.format(*data))
             inf.close()
         if os.path.isfile("%s.origin" % path):
             inf = open("%s.origin" % path)
             for line in inf:
                 data = line.split()
-                data = [float(v) for d in data[:4]] +\
-                       [int(v) for d in data[4:6]] +\
+                data = [float(v) for v in data[:4]] +\
+                       [int(v) for v in data[4:6]] +\
                        [int(data[7])] +\
                        [data[23]]
+                print("""
+                      INSERT INTO origin
+                      (latitude, longitude, depth, time, originid,
+                      eventid, narrivals, author)
+                      VALUES ({}, {}, {}, {}, {}, {}, {}, '{}')
+                      """.format(*data))
                 self.cur.execute("""
                                  INSERT INTO origin
                                  (latitude, longitude, depth, time, originid,
                                   eventid, narrivals, author)
-                                 VALUES ({}, {}, {}, {}, {}, {}, {}, '{}')
+                                 VALUES ({}, {}, {}, {}, {}, {}, {}, '{}');
                                  """.format(*data))
             inf.close()
