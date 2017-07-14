@@ -1,29 +1,6 @@
 """
 This module provides basic geometric utility functions to facilitate
-working in differenct coordinate systems.
-
-Coordinate systems
-
-SPHERICAL
-=========
-Spherical coordinates are defined relative to the cartesian coordanets
-as:
-r - radial distance to point from origin
-theta - polar angle [0, pi]
-phi - azimuthal angle 2 * pi]
-
-GEOGRAPHICAL
-============
-Geographical coordinates are assumed to be in degrees and are defined
-as:
-lat - latitude [90, -90]
-lon - longitude [0, 360)
-z - depth from surface
-
-CARTESIAN
-=========
-Let's align our cartesian coordinates so the x-axis corresponds to the
-lon = 0 axis and the z-axis aligns with North pole lat=90.
+working in different coordinate systems.
 """
 from math import acos,\
                  atan2,\
@@ -42,22 +19,123 @@ EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
 
 def azimuth(p1, p2):
+    """
+    Return the azimuth of the line connecting points **p1**\=(x1, y1)
+    and **p2**\=(x2, y2).
+
+    :param p1: (x, y) coordinates of point 1.
+    :type p1: (float, float)
+    :param p2: (x, y) coordinates of point 2.
+    :type p2: (float, float)
+    :returns: Azimuth of the line connecting points **p1** and **p2**
+              {**Units**: degrees, **Range**: [0, 360)}.
+    :rtype: float
+    """
     x1, y1 = p1
     x2, y2 = p2
     return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
 
 
 def azimuth2radians(azimuth):
+    """
+    Convert azimuth value (measured clockwise from North in degrees) to
+    a value measured in radians counter-clockwise from East.
+
+    :param float azimuth: azimuth in degrees
+    :returns: equivalent of azimuth in radians
+    :rtype: float
+    """
     return(pi/2 - radians(azimuth))
 
 
-az2rad = azimuth2radians
+def az2rad(azimuth):
+    """
+    Convenience wrapper of :func:`azimuth2radians`.
+    """
+    return(azimuth2radians(azimuth))
+
+
+def coordinates(lat0, lon0, azimuth, distance):
+    """
+    Return coordinates of point **distance** degrees from
+    (**lat0**, **lon0**) along **azimuth**.
+
+    :param float lat0: latitude of starting point
+    :param float lon0: longitude of starting point
+    :param float azimuth: azimuth of path to traverse **{Units:**
+                          *Degrees*, **Range:** *(-inf, inf)*\ **}**
+    :param float distance: distance along path to traverse **{Units**:
+                           *Degrees*\ **}**
+    :returns: geographic coordinates **distance** degrees from
+              (**lat0**, **lon0**) along **azimuth**
+    :rtype: (float, float)
+    :raises ValueError: if resulting coordinates are invalid
+    """
+    phi = az2rad(azimuth)
+    dlat = sin(phi) * distance
+    dlon = cos(phi) * distance
+    lat, lon = lat0+dlat, lon0+dlon
+    validate_geographic_coords(lat, lon)
+    return(lat, lon)
+
+
+def distance(u, v):
+    """
+    Return the Euclidean distance between vectors **u** and **v**.
+
+    :param u: Vector 1.
+    :type u: list, tuple or other iterable
+    :param v: Vector 2.
+    :type v: list, tuple or other iterable
+    :returns: Euclidean distance between vectors **u** and **v**
+    :rtype: float
+    """
+    if len(u) != len(v):
+        raise(ValueError("vectors u and v must have same length"))
+    u = np.asarray(u)
+    v = np.asarray(v)
+    return(sqrt(sum((u - v) ** 2)))
+
+
+def get_line_endpoints(lat0, lon0, azimuth, length):
+    """
+    Return the geographic coordinates (latitude, longitude) of a length=\
+    **length** line passing through coordinates **lat0** **lon0** with
+    strike=\ **strike**.
+
+    :param float lat0: latitude coordinate of line center {**Units**:
+                       degrees, **Range**: [-90, 90]}
+    :param float lon0: longitude coordinate of line center {**Units**:
+                       degrees, **Range**: [-180, 360]}
+    :param float azimuth: azimuth of line {**Units**: degrees,
+                          **Range**: [0, 360]}
+    :param float length: length of line **{Units:** *degrees*\ **}**
+    :returns: geographic coordinates of length=\ **length** line
+              passing through (**lat0**, **lon0**) with strike=
+              **strike**
+    :rtype: ((float, float), (float, float))
+    """
+    phi = radians(azimuth % 360)
+    l2 = 0.5 * length
+    theta1 = -phi + pi/2
+    theta2 = -phi - pi/2
+    return((lon0 + l2 * cos(theta2), lat0 + l2 * sin(theta2)),
+           (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
 
 
 def geo2sph(lat, lon, z):
     """
     Convert geographic coordinates to spherical coordinates.
-    Returns r, theta, phi.
+
+    :param float lat: latitude coordinate {**Units**: degrees,
+                      **Range**: [-90, 90]}
+    :param float lon: longitude coordinate {**Units**: degrees,
+                      **Range**: [-180, 360]}
+    :param float depth: depth from surface {**Units**: km,
+                        **Range**: (-inf, inf)}
+    :returns: spherical coordinate conversion *(r, theta, phi)* of
+              geographic coordinates
+    :rtype: (float, float, float)
     """
     if not (-90. <= lat <= 90.) or not (-180. < lon < 360.):
         raise ValueError("invalid geographic coordinates")
@@ -68,55 +146,40 @@ def geo2sph(lat, lon, z):
     return r, theta, phi
 
 
-def coordinates(lat0, lon0, azimuth, length):
-    phi = az2rad(azimuth)
-    dlat = sin(phi) * length
-    dlon = cos(phi) * length
-    return(lat0+dlat, lon0+dlon)
-
-def _coordinates(lat0, lon0, azimuth, length):
-
-    # Calculate the y-intercept.
-    B = y0 - m*x0
-    # Calculate quadratic polynomial coefficients.
-    a = (1 + m**2)
-    b = 2* (B*m - x0 - y0*m)
-    c = x0**2 + y0**2 + B**2 - 2*y0*B - l**2
-    # Calculate both possible x-coordinates and corresponding
-    # y-coordinates.
-    x1 = (-b + sqrt(b**2 - 4*a*c)) / (2*a)
-    y1 = m*x1 + B
-    x2 = (-b - sqrt(b**2 - 4*a*c)) / (2*a)
-    y2 = m*x2 + B
-    return((x1, y1), (x2, y2))
-
-
-
-def distance(u, v):
-    if len(u) != len(v):
-        raise(ValueError("vectors u and v must have same length"))
-    u = np.asarray(u)
-    v = np.asarray(v)
-    return(sqrt(sum((u - v) ** 2)))
-
-
-def get_line_endpoints(lat0, lon0, az, length):
-    phi = radians(az % 360)
-    l2 = 0.5 * length / 111
-    theta1 = -phi + pi/2
-    theta2 = -phi - pi/2
-    return((lon0 + l2 * cos(theta2), lat0 + l2 * sin(theta2)),
-           (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
-
-
 def radians2azimuth(theta):
+    """
+    Convert value in radians measured counter-clockwise from East to
+    azimuth value measured in degrees clockwise from North.
+
+    :param float theta: value in radians measured clockwise from East
+    :returns: azimuth equivalent of **theta** measured in degrees
+              clockwise from North
+    :rtype: float
+    """
     return(degrees(pi/2 - theta))
 
 
-rad2az = radians2azimuth
+def rad2az(theta):
+    """
+    Convenience wrapper for :func:`radians2azimuth`.
+    """
+    return(radians2azimuth(theta))
 
 
 def sph2geo(r, theta, phi):
+    """
+    Convert spherical coordinates to geographic coordinates.
+
+    :param float r: radial distance from coordinate system origin
+                    {**Units**: km, **Range**: [0, inf)}
+    :param float theta: polar angle {**Units**: radians, **Range**: [0,
+                        pi]}
+    :param float phi: azimuthal angle {**Units**: radians, **Range**:
+                      [0, 2*pi]}
+    :returns: geographic coordinate conversion *(lat, lon, depth)* of
+              spherical coordinates
+    :rtype: (float, float, float)
+    """
     z = EARTH_RADIUS - r
     lat = 90 - degrees(theta)
     lon = degrees(phi)
@@ -125,6 +188,19 @@ def sph2geo(r, theta, phi):
 
 
 def sph2xyz(r, theta, phi):
+    """
+    Convert spherical coordinates to cartesian coordinates.
+
+    :param float r: radial distance from coordinate system origin
+                    {**Units**: km, **Range**: [0, inf)}
+    :param float theta: polar angle {**Units**: radians, **Range**: [0,
+                        pi]}
+    :param float phi: azimuthal angle {**Units**: radians, **Range**:
+                      [0, 2*pi]}
+    :returns: cartesian coordinate conversion *(x, y, z)* of spherical
+              coordinates
+    :rtype: (float, float, float)
+    """
     x = r * sin(theta) * cos(phi)
     y = r * sin(theta) * sin(phi)
     z = r * cos(theta)
@@ -132,6 +208,19 @@ def sph2xyz(r, theta, phi):
 
 
 def xyz2sph(x, y, z):
+    """
+    Convert cartesian coordinates to spherical coordinates.
+
+    :param float x: cartesian x-coordinate {**Units**: km, **Range**:
+                    [0, inf)}
+    :param float y: cartesian y-coordinate {**Units**: km, **Range**:
+                    [0, inf)}
+    :param float z: cartesian z-coordinate {**Units**: km, **Range**:
+                    [0, inf)}
+    :returns: spherical coordinate conversion *(r, theta, phi)* of
+              cartesian coordinates
+    :rtype: (float, float, float)
+    """
     r = sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = acos(z / r)
     phi = atan2(y, x)
@@ -139,10 +228,6 @@ def xyz2sph(x, y, z):
 
 
 def rotation_matrix(axis, theta):
-    """
-    Return the rotation matrix associated with counterclockwise rotation about
-    the given axis by theta radians.
-    """
     if axis == 1 or axis == 'x' or axis == 'X':
         return np.array([[1, 0, 0],
                          [0, cos(theta), -sin(theta)],
@@ -159,40 +244,8 @@ def rotation_matrix(axis, theta):
         raise ValueError("invalid axis")
 
 
-def quadrant_coverage(source, receivers):
-    q1, q2, q3, q4 = False, False, False, False
-    lon0, lat0 = source.lon, source.lat
-    for rx in receivers:
-        rlon, rlat = rx.lon, rx.lat
-        if lat0 < rlat and lon0 < rlon:
-            q1 = True
-        elif lat0 < rlat and rlon < lon0:
-            q2 = True
-        elif rlat < lat0 and rlon < lon0:
-            q3 = True
-        elif rlat < lat0 and lon0 < rlon:
-            q4 = True
-    coverage = 0.0
-    for q in q1, q2, q3, q4:
-        if q:
-            coverage += 1.0
-    return coverage / 4.0
-
-
-class Vector(np.ndarray):
-
-    def __new__(cls, v):
-        u = np.ndarray.__new__(cls, len(v))
-        for i in range(len(v)):
-            u[i] = v[i]
-        return u
-
-    def rotate(self, axis, theta):
-        return self.__new__(self.__class__,
-                            rotation_matrix(axis, theta).dot(self))
-
-    def translate(self, v):
-        u = self.__new__(self.__class__, [0 for i in range(len(v))])
-        for i in range(len(v)):
-            u[i] = self[i] - v[i]
-        return u
+def validate_geographic_coords(lat, lon):
+    if not -90 <= lat <= 90:
+        raise(ValueError("latitude must be in range [-90, 90]: %f" % lat))
+    if not -180 <= lon < 360:
+        raise(ValueError("longitude must be in range [-180, 360): %f" % lon))

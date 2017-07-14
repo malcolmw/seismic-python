@@ -6,14 +6,43 @@ import seispy
 
 class VelocityModel(object):
     def __init__(self, infile, fmt, topo=None):
+        """
+        A callable class providing a queryable container for seismic
+        velocities in a 3D volume.
+
+        :param str infile: path to input file containing phase velocity
+                           data
+        :param str fmt: format of input file
+        """
         if fmt.upper() == "FANG":
             self._read_fang(infile, topo)
 
     def __call__(self, phase, lat, lon, depth):
+        """
+        Return **phase**-velocity at given coordinates. A NULL value
+        (-1) is returned for points above the surface.
+
+        :param str phase: phase
+        :param float lat: latitude
+        :param float lon: longitude
+        :param float depth: depth
+        :returns: **phase**-velocity at (**lat**, **lon**, **depth**)
+        :rtype: float
+        """
+
         r, theta, phi = seispy.geometry.geo2sph(lat, lon, depth)
         return(self._get_V(r, theta, phi, phase))
 
     def _read_fang(self, infile, topo):
+        """
+        Initialize velocity model from data in Fang et al. (2016)
+        format file.
+
+        :param str infile: path to input file containing phase velocity
+                           data
+        :param `seispy.topography.Topography` topo: surface elevation
+                                                    data
+        """
         if topo is None:
             self.topo = lambda _, __: seispy.constants.EARTH_RADIUS
         else:
@@ -62,13 +91,22 @@ class VelocityModel(object):
             self.values[phase] = self.values[phase][:,::-1]
 
     def _get_V(self, r, theta, phi, phase):
+        """
+        Return `phase` velocity at spherical coordinates (`r`, `theta`,
+        `phi`).  Geographic coordinates can be converted to spherical
+        coordinates using `seispy.geometry.geo2sph`.
+
+        :param float r: Radial distance from coordinate system origin.
+        :param float theta: Polar angle [0, pi].
+        :param float phi: Azimuthal angle [0, 2*pi].
+        :param str phase: Seismic phase ["P", "S", "Vp", "Vs"].
+        """
         phase = _verify_phase(phase)
         # Make sure 0 <= phi < 2*pi
         phi %= 2 * pi
-        if r > self.topo(theta, phi):
-            # Return P-wave velocity in air if requested point is above
-            # surface.
-            return(0.323)
+        if r > self.topo(*seispy.geometry.sph2geo(r, theta, phi)[:2]):
+            # Return a null value if requested point is above surface.
+            return(-1)
         r = max(r, self.nodes["r_min"])
         theta = min(max(theta, self.nodes["theta_min"]),
                     self.nodes["theta_max"])
@@ -100,11 +138,66 @@ class VelocityModel(object):
         return(V0 + (V1 - V0) * dphi)
 
     def get_grid_center(self):
+        """
+        Return the center of the velocity model in spherical
+        coordinates (r, theta, phi).
+
+        :returns: coordinates of velocity model center in spherical
+                  coordinates
+        :rtype: (float, float, float)
+
+        """
         return ((self.nodes["r_max"] + self.nodes["r_min"]) / 2,
                 (self.nodes["theta_max"] + self.nodes["theta_min"]) / 2,
                 (self.nodes["phi_max"] + self.nodes["phi_min"]) / 2)
 
     def slice(self, phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
+        """
+        Return a vertical slice from velocity model with
+        section-parallel offset and depth coordinates.
+
+        :param str phase: phase velocity to retrieve
+        :param float lat0: latitude of center point of section trace
+                           **{Units:** *degrees*, **Range:** *[-90, 90]*\
+                           **}**
+        :param float lon0: longitude of center point of section trace
+                           **{Units:** *degrees*, **Range:** *[-180,
+                           360)*\ **}**
+        :param float azimuth: azimuth of section trace **{Units:**
+                              *degrees*, **Range:** *(-inf, inf)*\ **}**
+        :param float length: length of section trace **{Units:**
+                             *degrees*\ **}**
+        :param float dmin: minimum depth of section **{Units:** *km*\
+                           **}**
+        :param float dmax: maximum depth of section **{Units:** *km*\
+                           **}**
+        :param int nx: number of nodes in section-parallel direction
+        :param int nd: number of nodes in depth
+        :returns: phase velocity values and coordinates of vertical
+                  section
+        :rtype: (`numpy.ndarray`, `numpy.ndarray`, `numpy.ndarray`)
+
+        .. code-block:: python
+
+            import matplotlib.pyplot as plt
+            topo = seispy.topography.Topography("data/anza.xyz")
+            vm = seispy.velocity.VelocityModel("data/vmodel.dat",
+                                               "FANG",
+                                               topo=topo)
+            X, Y, V = vm.slice("P", 33.5, -116.0, 302, 150/111, -5, 25, 100, 100)
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1)
+            im = ax.pcolormesh(X, Y, V, cmap=plt.get_cmap("hsv"))
+            ax.set_xlabel("Section-parallel offset [degrees]")
+            ax.set_ylabel("Depth [km]")
+            ax.invert_yaxis()
+            cbar = ax.get_figure().colorbar(im, ax=ax)
+            cbar.set_label("Vp [km/s]")
+            plt.show()
+
+        .. image:: VelocityModel.png
+        """
+
         (lon1, lat1), (lon2, lat2) = seispy.geometry.get_line_endpoints(lat0,
                                                                         lon0,
                                                                         azimuth,
@@ -121,6 +214,7 @@ class VelocityModel(object):
                 V[i, j] = self(phase, lat, lon, depth)
                 X[i, j] = seispy.geometry.distance((lat1, lon1), (lat, lon))
                 Y[i, j] = depth
+        V = np.ma.masked_equal(V, -1)
         return(X, Y, V)
 
 def _verify_phase(phase):
