@@ -41,6 +41,19 @@ import seispy
 EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
 
+def azimuth(p1, p2):
+    x1, y1 = p1
+    x2, y2 = p2
+    return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
+
+
+def azimuth2radians(azimuth):
+    return(pi/2 - radians(azimuth))
+
+
+az2rad = azimuth2radians
+
+
 def geo2sph(lat, lon, z):
     """
     Convert geographic coordinates to spherical coordinates.
@@ -55,10 +68,28 @@ def geo2sph(lat, lon, z):
     return r, theta, phi
 
 
-def azimuth(p1, p2):
-    x1, y1 = p1
-    x2, y2 = p2
-    return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
+def coordinates(lat0, lon0, azimuth, length):
+    phi = az2rad(azimuth)
+    dlat = sin(phi) * length
+    dlon = cos(phi) * length
+    return(lat0+dlat, lon0+dlon)
+
+def _coordinates(lat0, lon0, azimuth, length):
+
+    # Calculate the y-intercept.
+    B = y0 - m*x0
+    # Calculate quadratic polynomial coefficients.
+    a = (1 + m**2)
+    b = 2* (B*m - x0 - y0*m)
+    c = x0**2 + y0**2 + B**2 - 2*y0*B - l**2
+    # Calculate both possible x-coordinates and corresponding
+    # y-coordinates.
+    x1 = (-b + sqrt(b**2 - 4*a*c)) / (2*a)
+    y1 = m*x1 + B
+    x2 = (-b - sqrt(b**2 - 4*a*c)) / (2*a)
+    y2 = m*x2 + B
+    return((x1, y1), (x2, y2))
+
 
 
 def distance(u, v):
@@ -76,6 +107,13 @@ def get_line_endpoints(lat0, lon0, az, length):
     theta2 = -phi - pi/2
     return((lon0 + l2 * cos(theta2), lat0 + l2 * sin(theta2)),
            (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
+
+
+def radians2azimuth(theta):
+    return(degrees(pi/2 - theta))
+
+
+rad2az = radians2azimuth
 
 
 def sph2geo(r, theta, phi):
