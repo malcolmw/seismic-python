@@ -1,8 +1,10 @@
 import importlib
 
 submodules = ["constants",
+              "faults",
               "fm3d",
               "geometry",
+              "mapping",
               "sqlschemas",
               "topography",
               "ttgrid",
