@@ -1,0 +1,492 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>geometry &#8212; Seismic Python 1.0a0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0a0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="sqlschemas" href="../sqlschemas/index.html" />
+    <link rel="prev" title="fm3d" href="fm3d.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../sqlschemas/index.html" title="sqlschemas"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="fm3d.html" title="fm3d"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">modules</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="module-seispy.geometry">
+<span id="geometry"></span><h1>geometry<a class="headerlink" href="#module-seispy.geometry" title="Permalink to this headline">¶</a></h1>
+<p>This module provides basic geometric utility functions to facilitate
+working in different coordinate systems.</p>
+<dl class="function">
+<dt id="seispy.geometry.az2rad">
+<code class="descclassname">seispy.geometry.</code><code class="descname">az2rad</code><span class="sig-paren">(</span><em>azimuth</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.az2rad" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience wrapper of <a class="reference internal" href="#seispy.geometry.azimuth2radians" title="seispy.geometry.azimuth2radians"><code class="xref py py-func docutils literal"><span class="pre">azimuth2radians()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.azimuth">
+<code class="descclassname">seispy.geometry.</code><code class="descname">azimuth</code><span class="sig-paren">(</span><em>p1</em>, <em>p2</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.azimuth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the azimuth of the line connecting points <strong>p1</strong>=(x1, y1)
+and <strong>p2</strong>=(x2, y2).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>p1</strong> (<em>(</em><em>float</em><em>, </em><em>float</em><em>)</em>) – (x, y) coordinates of point 1.</li>
+<li><strong>p2</strong> (<em>(</em><em>float</em><em>, </em><em>float</em><em>)</em>) – (x, y) coordinates of point 2.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Azimuth of the line connecting points <strong>p1</strong> and <strong>p2</strong>
+{<strong>Units</strong>: degrees, <strong>Range</strong>: [0, 360)}.</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.azimuth2radians">
+<code class="descclassname">seispy.geometry.</code><code class="descname">azimuth2radians</code><span class="sig-paren">(</span><em>azimuth</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.azimuth2radians" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert azimuth value (measured clockwise from North in degrees) to
+a value measured in radians counter-clockwise from East.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>azimuth</strong> (<em>float</em>) – azimuth in degrees</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">equivalent of azimuth in radians</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.coordinates">
+<code class="descclassname">seispy.geometry.</code><code class="descname">coordinates</code><span class="sig-paren">(</span><em>lat0</em>, <em>lon0</em>, <em>azimuth</em>, <em>distance</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.coordinates" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return coordinates of point <strong>distance</strong> degrees from
+(<strong>lat0</strong>, <strong>lon0</strong>) along <strong>azimuth</strong>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lat0</strong> (<em>float</em>) – latitude of starting point</li>
+<li><strong>lon0</strong> (<em>float</em>) – longitude of starting point</li>
+<li><strong>azimuth</strong> (<em>float</em>) – azimuth of path to traverse <strong>{Units:</strong>
+<em>Degrees</em>, <strong>Range:</strong> <em>(-inf, inf)</em><strong>}</strong></li>
+<li><strong>distance</strong> (<em>float</em>) – distance along path to traverse <strong>{Units</strong>:
+<em>Degrees</em><strong>}</strong></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">geographic coordinates <strong>distance</strong> degrees from
+(<strong>lat0</strong>, <strong>lon0</strong>) along <strong>azimuth</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first">(float, float)</p>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Raises:</th><td class="field-body"><p class="first last"><strong>ValueError</strong> – if resulting coordinates are invalid</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.distance">
+<code class="descclassname">seispy.geometry.</code><code class="descname">distance</code><span class="sig-paren">(</span><em>u</em>, <em>v</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.distance" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the Euclidean distance between vectors <strong>u</strong> and <strong>v</strong>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>u</strong> (<em>list</em><em>, </em><em>tuple</em><em> or </em><em>other iterable</em>) – Vector 1.</li>
+<li><strong>v</strong> (<em>list</em><em>, </em><em>tuple</em><em> or </em><em>other iterable</em>) – Vector 2.</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">Euclidean distance between vectors <strong>u</strong> and <strong>v</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.geo2sph">
+<code class="descclassname">seispy.geometry.</code><code class="descname">geo2sph</code><span class="sig-paren">(</span><em>lat</em>, <em>lon</em>, <em>z</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.geo2sph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert geographic coordinates to spherical coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lat</strong> (<em>float</em>) – latitude coordinate {<strong>Units</strong>: degrees,
+<strong>Range</strong>: [-90, 90]}</li>
+<li><strong>lon</strong> (<em>float</em>) – longitude coordinate {<strong>Units</strong>: degrees,
+<strong>Range</strong>: [-180, 360]}</li>
+<li><strong>depth</strong> (<em>float</em>) – depth from surface {<strong>Units</strong>: km,
+<strong>Range</strong>: (-inf, inf)}</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">spherical coordinate conversion <em>(r, theta, phi)</em> of
+geographic coordinates</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(float, float, float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.get_line_endpoints">
+<code class="descclassname">seispy.geometry.</code><code class="descname">get_line_endpoints</code><span class="sig-paren">(</span><em>lat0</em>, <em>lon0</em>, <em>azimuth</em>, <em>length</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.get_line_endpoints" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the geographic coordinates (latitude, longitude) of a length=    <strong>length</strong> line passing through coordinates <strong>lat0</strong> <strong>lon0</strong> with
+strike=<strong>strike</strong>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>lat0</strong> (<em>float</em>) – latitude coordinate of line center {<strong>Units</strong>:
+degrees, <strong>Range</strong>: [-90, 90]}</li>
+<li><strong>lon0</strong> (<em>float</em>) – longitude coordinate of line center {<strong>Units</strong>:
+degrees, <strong>Range</strong>: [-180, 360]}</li>
+<li><strong>azimuth</strong> (<em>float</em>) – azimuth of line {<strong>Units</strong>: degrees,
+<strong>Range</strong>: [0, 360]}</li>
+<li><strong>length</strong> (<em>float</em>) – length of line <strong>{Units:</strong> <em>degrees</em><strong>}</strong></li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">geographic coordinates of length=<strong>length</strong> line
+passing through (<strong>lat0</strong>, <strong>lon0</strong>) with strike=
+<strong>strike</strong></p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">((float, float), (float, float))</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.rad2az">
+<code class="descclassname">seispy.geometry.</code><code class="descname">rad2az</code><span class="sig-paren">(</span><em>theta</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.rad2az" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convenience wrapper for <a class="reference internal" href="#seispy.geometry.radians2azimuth" title="seispy.geometry.radians2azimuth"><code class="xref py py-func docutils literal"><span class="pre">radians2azimuth()</span></code></a>.</p>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.radians2azimuth">
+<code class="descclassname">seispy.geometry.</code><code class="descname">radians2azimuth</code><span class="sig-paren">(</span><em>theta</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.radians2azimuth" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert value in radians measured counter-clockwise from East to
+azimuth value measured in degrees clockwise from North.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><strong>theta</strong> (<em>float</em>) – value in radians measured clockwise from East</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body">azimuth equivalent of <strong>theta</strong> measured in degrees
+clockwise from North</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body">float</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.sph2geo">
+<code class="descclassname">seispy.geometry.</code><code class="descname">sph2geo</code><span class="sig-paren">(</span><em>r</em>, <em>theta</em>, <em>phi</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.sph2geo" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert spherical coordinates to geographic coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>r</strong> (<em>float</em>) – radial distance from coordinate system origin
+{<strong>Units</strong>: km, <strong>Range</strong>: [0, inf)}</li>
+<li><strong>theta</strong> (<em>float</em>) – polar angle {<strong>Units</strong>: radians, <strong>Range</strong>: [0,
+pi]}</li>
+<li><strong>phi</strong> (<em>float</em>) – azimuthal angle {<strong>Units</strong>: radians, <strong>Range</strong>:
+[0, 2*pi]}</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">geographic coordinate conversion <em>(lat, lon, depth)</em> of
+spherical coordinates</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(float, float, float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.sph2xyz">
+<code class="descclassname">seispy.geometry.</code><code class="descname">sph2xyz</code><span class="sig-paren">(</span><em>r</em>, <em>theta</em>, <em>phi</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.sph2xyz" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert spherical coordinates to cartesian coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>r</strong> (<em>float</em>) – radial distance from coordinate system origin
+{<strong>Units</strong>: km, <strong>Range</strong>: [0, inf)}</li>
+<li><strong>theta</strong> (<em>float</em>) – polar angle {<strong>Units</strong>: radians, <strong>Range</strong>: [0,
+pi]}</li>
+<li><strong>phi</strong> (<em>float</em>) – azimuthal angle {<strong>Units</strong>: radians, <strong>Range</strong>:
+[0, 2*pi]}</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">cartesian coordinate conversion <em>(x, y, z)</em> of spherical
+coordinates</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(float, float, float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="function">
+<dt id="seispy.geometry.xyz2sph">
+<code class="descclassname">seispy.geometry.</code><code class="descname">xyz2sph</code><span class="sig-paren">(</span><em>x</em>, <em>y</em>, <em>z</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.geometry.xyz2sph" title="Permalink to this definition">¶</a></dt>
+<dd><p>Convert cartesian coordinates to spherical coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>x</strong> (<em>float</em>) – cartesian x-coordinate {<strong>Units</strong>: km, <strong>Range</strong>:
+[0, inf)}</li>
+<li><strong>y</strong> (<em>float</em>) – cartesian y-coordinate {<strong>Units</strong>: km, <strong>Range</strong>:
+[0, inf)}</li>
+<li><strong>z</strong> (<em>float</em>) – cartesian z-coordinate {<strong>Units</strong>: km, <strong>Range</strong>:
+[0, inf)}</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">spherical coordinate conversion <em>(r, theta, phi)</em> of
+cartesian coordinates</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(float, float, float)</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<div class="section" id="coordinate-systems">
+<h2>Coordinate systems<a class="headerlink" href="#coordinate-systems" title="Permalink to this headline">¶</a></h2>
+<p>For all coordinate systems, the coordinate system origin is at the center of the
+Earth.</p>
+<div class="section" id="geographic">
+<h3>Geographic<a class="headerlink" href="#geographic" title="Permalink to this headline">¶</a></h3>
+<p>The geographic coordinate system describes the position of a point relative to
+the center of the Earth with latitude, longitude and depth coordinates.</p>
+<ul class="simple">
+<li>Latitude - The latitude above/below the equator.<ul>
+<li>Abbreviation: lat</li>
+<li>Units: degrees</li>
+<li>Range: [-90, 90]</li>
+</ul>
+</li>
+<li>Longitude - The longitude East/West of the Prime Meridian.<ul>
+<li>Abbreviation: lon</li>
+<li>Units: degrees</li>
+<li>Range: [-180, 360]</li>
+</ul>
+</li>
+<li>Depth - The depth below the <em>(idealized)</em> surface of the Earth. Use a negative
+depth for points above the surface.<ul>
+<li>Units: km</li>
+<li>Range: (-inf, seispy.constants.EARTH_RADIUS]</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="spherical">
+<h3>Spherical<a class="headerlink" href="#spherical" title="Permalink to this headline">¶</a></h3>
+<p>The spherical coordinate system describes the position of a point relative to
+the center of the Earth with radial distance, polar angle and azimuthal angle
+coordinates. The polar angle is measured relative to the geographic North pole
+(i.e. lat=90) and the azimuthal angle is measure relative to the geographic
+Prime Meridian (i.e. lon=0).</p>
+<ul class="simple">
+<li>Radial coordinate - The radial distance from the center of the Earth.<ul>
+<li>Abbreviation: r</li>
+<li>Units: km</li>
+<li>Range: [0, inf)</li>
+</ul>
+</li>
+<li>Polar coordinate - The angle subtended by a line connecting the center of the
+Earth to the North pole and a line connecting the coordinate system origin to
+the point described.<ul>
+<li>Abbreviation: theta, θ</li>
+<li>Units: Radians</li>
+<li>Range: [0, π]</li>
+</ul>
+</li>
+<li>Azimuthal coordinate - The angle subtended by a line connecting the coordinate
+system origin to the intersection of the Prime Meridian and Equator and the line
+connecting the origin with the point being described.<ul>
+<li>Abbreviation: phi, φ</li>
+<li>Units: Radians</li>
+<li>Range: [0, 2π]</li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="section" id="cartesian">
+<h3>Cartesian<a class="headerlink" href="#cartesian" title="Permalink to this headline">¶</a></h3>
+<p>The cartesian coordinate system describes the position of a point relative
+to the center of the Earth with familiar (x, y, z) coordinates.</p>
+<ul class="simple">
+<li>The x-axis pierces the intersection of the Prime Meridian and Equator
+(point (0, 0, 0) in geographic coordinates).</li>
+<li>The y-axis pierces the the point with geographic coordinates (0, 90, 0).</li>
+<li>The z-axis pierces the North pole (point (90, 0, 0) in geographic coordinates).</li>
+</ul>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">geometry</a><ul>
+<li><a class="reference internal" href="#coordinate-systems">Coordinate systems</a><ul>
+<li><a class="reference internal" href="#geographic">Geographic</a></li>
+<li><a class="reference internal" href="#spherical">Spherical</a></li>
+<li><a class="reference internal" href="#cartesian">Cartesian</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="fm3d.html"
+                        title="previous chapter">fm3d</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../sqlschemas/index.html"
+                        title="next chapter">sqlschemas</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/seispy/modules/geometry.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../sqlschemas/index.html" title="sqlschemas"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="fm3d.html" title="fm3d"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >modules</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Malcolm White.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

@@ -1,0 +1,297 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>VelocityModel &#8212; Seismic Python 1.0a0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0a0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="modules" href="../modules/index.html" />
+    <link rel="prev" title="TTGrid - Travel-Time Grid" href="TTGrid.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../modules/index.html" title="modules"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="TTGrid.html" title="TTGrid - Travel-Time Grid"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">classes</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="velocitymodel">
+<h1>VelocityModel<a class="headerlink" href="#velocitymodel" title="Permalink to this headline">¶</a></h1>
+<dl class="class">
+<dt id="seispy.velocity.VelocityModel">
+<em class="property">class </em><code class="descclassname">seispy.velocity.</code><code class="descname">VelocityModel</code><span class="sig-paren">(</span><em>infile</em>, <em>fmt</em>, <em>topo=None</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel" title="Permalink to this definition">¶</a></dt>
+<dd><dl class="method">
+<dt id="seispy.velocity.VelocityModel.__call__">
+<code class="descname">__call__</code><span class="sig-paren">(</span><em>phase</em>, <em>lat</em>, <em>lon</em>, <em>depth</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel.__call__" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return <strong>phase</strong>-velocity at given coordinates. A NULL value
+(-1) is returned for points above the surface.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phase</strong> (<em>str</em>) – phase</li>
+<li><strong>lat</strong> (<em>float</em>) – latitude</li>
+<li><strong>lon</strong> (<em>float</em>) – longitude</li>
+<li><strong>depth</strong> (<em>float</em>) – depth</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first"><strong>phase</strong>-velocity at (<strong>lat</strong>, <strong>lon</strong>, <strong>depth</strong>)</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">float</p>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="seispy.velocity.VelocityModel.__init__">
+<code class="descname">__init__</code><span class="sig-paren">(</span><em>infile</em>, <em>fmt</em>, <em>topo=None</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel.__init__" title="Permalink to this definition">¶</a></dt>
+<dd><p>A callable class providing a queryable container for seismic
+velocities in a 3D volume.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>infile</strong> (<em>str</em>) – path to input file containing phase velocity
+data</li>
+<li><strong>fmt</strong> (<em>str</em>) – format of input file</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="attribute">
+<dt id="seispy.velocity.VelocityModel.__weakref__">
+<code class="descname">__weakref__</code><a class="headerlink" href="#seispy.velocity.VelocityModel.__weakref__" title="Permalink to this definition">¶</a></dt>
+<dd><p>list of weak references to the object (if defined)</p>
+</dd></dl>
+
+<dl class="method">
+<dt id="seispy.velocity.VelocityModel._get_V">
+<code class="descname">_get_V</code><span class="sig-paren">(</span><em>r</em>, <em>theta</em>, <em>phi</em>, <em>phase</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel._get_V" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return <cite>phase</cite> velocity at spherical coordinates (<cite>r</cite>, <cite>theta</cite>,
+<cite>phi</cite>).  Geographic coordinates can be converted to spherical
+coordinates using <cite>seispy.geometry.geo2sph</cite>.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>r</strong> (<em>float</em>) – Radial distance from coordinate system origin.</li>
+<li><strong>theta</strong> (<em>float</em>) – Polar angle [0, pi].</li>
+<li><strong>phi</strong> (<em>float</em>) – Azimuthal angle [0, 2*pi].</li>
+<li><strong>phase</strong> (<em>str</em>) – Seismic phase [“P”, “S”, “Vp”, “Vs”].</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="seispy.velocity.VelocityModel._read_fang">
+<code class="descname">_read_fang</code><span class="sig-paren">(</span><em>infile</em>, <em>topo</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel._read_fang" title="Permalink to this definition">¶</a></dt>
+<dd><p>Initialize velocity model from data in Fang et al. (2016)
+format file.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>infile</strong> (<em>str</em>) – path to input file containing phase velocity
+data</li>
+<li><strong>topo</strong> (<a class="reference internal" href="Topography.html#seispy.topography.Topography" title="seispy.topography.Topography"><em>seispy.topography.Topography</em></a>) – surface elevation
+data</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="seispy.velocity.VelocityModel.get_grid_center">
+<code class="descname">get_grid_center</code><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel.get_grid_center" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return the center of the velocity model in spherical
+coordinates (r, theta, phi).</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Returns:</th><td class="field-body">coordinates of velocity model center in spherical
+coordinates</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Return type:</th><td class="field-body">(float, float, float)</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<dl class="method">
+<dt id="seispy.velocity.VelocityModel.slice">
+<code class="descname">slice</code><span class="sig-paren">(</span><em>phase</em>, <em>lat0</em>, <em>lon0</em>, <em>azimuth</em>, <em>length</em>, <em>dmin</em>, <em>dmax</em>, <em>nx</em>, <em>nd</em><span class="sig-paren">)</span><a class="headerlink" href="#seispy.velocity.VelocityModel.slice" title="Permalink to this definition">¶</a></dt>
+<dd><p>Return a vertical slice from velocity model with
+section-parallel offset and depth coordinates.</p>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first simple">
+<li><strong>phase</strong> (<em>str</em>) – phase velocity to retrieve</li>
+<li><strong>lat0</strong> (<em>float</em>) – latitude of center point of section trace
+<strong>{Units:</strong> <em>degrees</em>, <strong>Range:</strong> <em>[-90, 90]</em>                           <strong>}</strong></li>
+<li><strong>lon0</strong> (<em>float</em>) – longitude of center point of section trace
+<strong>{Units:</strong> <em>degrees</em>, <strong>Range:</strong> <em>[-180,
+360)</em><strong>}</strong></li>
+<li><strong>azimuth</strong> (<em>float</em>) – azimuth of section trace <strong>{Units:</strong>
+<em>degrees</em>, <strong>Range:</strong> <em>(-inf, inf)</em><strong>}</strong></li>
+<li><strong>length</strong> (<em>float</em>) – length of section trace <strong>{Units:</strong>
+<em>degrees</em><strong>}</strong></li>
+<li><strong>dmin</strong> (<em>float</em>) – minimum depth of section <strong>{Units:</strong> <em>km</em>                           <strong>}</strong></li>
+<li><strong>dmax</strong> (<em>float</em>) – maximum depth of section <strong>{Units:</strong> <em>km</em>                           <strong>}</strong></li>
+<li><strong>nx</strong> (<em>int</em>) – number of nodes in section-parallel direction</li>
+<li><strong>nd</strong> (<em>int</em>) – number of nodes in depth</li>
+</ul>
+</td>
+</tr>
+<tr class="field-even field"><th class="field-name">Returns:</th><td class="field-body"><p class="first">phase velocity values and coordinates of vertical
+section</p>
+</td>
+</tr>
+<tr class="field-odd field"><th class="field-name">Return type:</th><td class="field-body"><p class="first last">(<cite>numpy.ndarray</cite>, <cite>numpy.ndarray</cite>, <cite>numpy.ndarray</cite>)</p>
+</td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-python"><div class="highlight"><pre><span></span><span class="kn">import</span> <span class="nn">matplotlib.pyplot</span> <span class="kn">as</span> <span class="nn">plt</span>
+<span class="n">topo</span> <span class="o">=</span> <span class="n">seispy</span><span class="o">.</span><span class="n">topography</span><span class="o">.</span><span class="n">Topography</span><span class="p">(</span><span class="s2">&quot;data/anza.xyz&quot;</span><span class="p">)</span>
+<span class="n">vm</span> <span class="o">=</span> <span class="n">seispy</span><span class="o">.</span><span class="n">velocity</span><span class="o">.</span><span class="n">VelocityModel</span><span class="p">(</span><span class="s2">&quot;data/vmodel.dat&quot;</span><span class="p">,</span>
+                                   <span class="s2">&quot;FANG&quot;</span><span class="p">,</span>
+                                   <span class="n">topo</span><span class="o">=</span><span class="n">topo</span><span class="p">)</span>
+<span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">V</span> <span class="o">=</span> <span class="n">vm</span><span class="o">.</span><span class="n">slice</span><span class="p">(</span><span class="s2">&quot;P&quot;</span><span class="p">,</span> <span class="mf">33.5</span><span class="p">,</span> <span class="o">-</span><span class="mf">116.0</span><span class="p">,</span> <span class="mi">302</span><span class="p">,</span> <span class="mi">150</span><span class="o">/</span><span class="mi">111</span><span class="p">,</span> <span class="o">-</span><span class="mi">5</span><span class="p">,</span> <span class="mi">25</span><span class="p">,</span> <span class="mi">100</span><span class="p">,</span> <span class="mi">100</span><span class="p">)</span>
+<span class="n">fig</span> <span class="o">=</span> <span class="n">plt</span><span class="o">.</span><span class="n">figure</span><span class="p">()</span>
+<span class="n">ax</span> <span class="o">=</span> <span class="n">fig</span><span class="o">.</span><span class="n">add_subplot</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">im</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">pcolormesh</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">V</span><span class="p">,</span> <span class="n">cmap</span><span class="o">=</span><span class="n">plt</span><span class="o">.</span><span class="n">get_cmap</span><span class="p">(</span><span class="s2">&quot;hsv&quot;</span><span class="p">))</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_xlabel</span><span class="p">(</span><span class="s2">&quot;Section-parallel offset [degrees]&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">set_ylabel</span><span class="p">(</span><span class="s2">&quot;Depth [km]&quot;</span><span class="p">)</span>
+<span class="n">ax</span><span class="o">.</span><span class="n">invert_yaxis</span><span class="p">()</span>
+<span class="n">cbar</span> <span class="o">=</span> <span class="n">ax</span><span class="o">.</span><span class="n">get_figure</span><span class="p">()</span><span class="o">.</span><span class="n">colorbar</span><span class="p">(</span><span class="n">im</span><span class="p">,</span> <span class="n">ax</span><span class="o">=</span><span class="n">ax</span><span class="p">)</span>
+<span class="n">cbar</span><span class="o">.</span><span class="n">set_label</span><span class="p">(</span><span class="s2">&quot;Vp [km/s]&quot;</span><span class="p">)</span>
+<span class="n">plt</span><span class="o">.</span><span class="n">show</span><span class="p">()</span>
+</pre></div>
+</div>
+<img alt="../../_images/VelocityModel.png" src="../../_images/VelocityModel.png" />
+</dd></dl>
+
+</dd></dl>
+
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="TTGrid.html"
+                        title="previous chapter">TTGrid - Travel-Time Grid</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="../modules/index.html"
+                        title="next chapter">modules</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/seispy/classes/VelocityModel.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="../modules/index.html" title="modules"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="TTGrid.html" title="TTGrid - Travel-Time Grid"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >classes</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Malcolm White.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

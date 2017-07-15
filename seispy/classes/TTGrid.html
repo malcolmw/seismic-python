@@ -1,0 +1,190 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>TTGrid - Travel-Time Grid &#8212; Seismic Python 1.0a0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0a0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="VelocityModel" href="VelocityModel.html" />
+    <link rel="prev" title="Topography" href="Topography.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="VelocityModel.html" title="VelocityModel"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="Topography.html" title="Topography"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">classes</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="ttgrid-travel-time-grid">
+<h1>TTGrid - Travel-Time Grid<a class="headerlink" href="#ttgrid-travel-time-grid" title="Permalink to this headline">¶</a></h1>
+<p>A class to contain and provide queryable access to source-to-station
+travel-time information.</p>
+<div class="section" id="constructor">
+<h2>Constructor<a class="headerlink" href="#constructor" title="Permalink to this headline">¶</a></h2>
+<dl class="class">
+<dt id="seispy.ttgrid.TTGrid">
+<em class="property">class </em><code class="descclassname">seispy.ttgrid.</code><code class="descname">TTGrid</code><a class="headerlink" href="#seispy.ttgrid.TTGrid" title="Permalink to this definition">¶</a></dt>
+<dd></dd></dl>
+
+</div>
+<div class="section" id="public-methods">
+<h2>Public methods<a class="headerlink" href="#public-methods" title="Permalink to this headline">¶</a></h2>
+</div>
+<div class="section" id="storage-ttg-file-format">
+<h2>Storage - .ttg file format<a class="headerlink" href="#storage-ttg-file-format" title="Permalink to this headline">¶</a></h2>
+<ul class="simple">
+<li><strong>Header</strong> - <em>ASCII format</em><ul>
+<li>Line 1: Phase type (P or S)</li>
+<li>Line 2: Grid origin coordinates<ul>
+<li>Latitude [degrees]</li>
+<li>Longitude [degrees]</li>
+<li>Depth [km]</li>
+</ul>
+</li>
+<li>Line 3: Grid node intervals<ul>
+<li>Column 1: Grid node spacing along latitudinal axis [degrees]</li>
+<li>Column 2: Grid node spacing along longitudinal axis [degrees]</li>
+<li>Column 3: Grid node spacing along depth axis [degrees]</li>
+</ul>
+</li>
+<li>Line 4: Number of grid nodes<ul>
+<li>Column 1: Number of grid nodes along latitudinal axis</li>
+<li>Column 2: Number of grid nodes along longitudinal axis</li>
+<li>Column 3: Number of grid nodes along depth axis</li>
+</ul>
+</li>
+<li>Line 5: Number of stations</li>
+<li>Lines 6+: Station metadata (1 line per station)<ul>
+<li>Column 1: Station code</li>
+<li>Column 2: Station latitude [degrees]</li>
+<li>Column 3: Station longitude [degrees]</li>
+<li>Column 4: Station elevation [km]</li>
+</ul>
+</li>
+</ul>
+</li>
+<li><strong>Body</strong> - <em>Binary format</em><ul>
+<li>1 block per station listed on lines 6+. Blocks in same order as stations
+listed on lines 6+.<ul>
+<li>4-byte floating-point travel-times of node-to-station travel-times. First
+value corresponds to origin node. Node coordinates vary fastest along
+latitudinal axis and slowest along depth axis.</li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">TTGrid - Travel-Time Grid</a><ul>
+<li><a class="reference internal" href="#constructor">Constructor</a></li>
+<li><a class="reference internal" href="#public-methods">Public methods</a></li>
+<li><a class="reference internal" href="#storage-ttg-file-format">Storage - .ttg file format</a></li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="Topography.html"
+                        title="previous chapter">Topography</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="VelocityModel.html"
+                        title="next chapter">VelocityModel</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/seispy/classes/TTGrid.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="VelocityModel.html" title="VelocityModel"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="Topography.html" title="Topography"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >classes</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Malcolm White.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>

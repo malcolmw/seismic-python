@@ -1,0 +1,177 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>fm3d &#8212; Seismic Python 1.0a0 documentation</title>
+    
+    <link rel="stylesheet" href="../../_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="../../_static/pygments.css" type="text/css" />
+    
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '../../',
+        VERSION:     '1.0a0',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true,
+        SOURCELINK_SUFFIX: '.txt'
+      };
+    </script>
+    <script type="text/javascript" src="../../_static/jquery.js"></script>
+    <script type="text/javascript" src="../../_static/underscore.js"></script>
+    <script type="text/javascript" src="../../_static/doctools.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.0/MathJax.js?config=TeX-AMS-MML_HTMLorMML"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="geometry" href="geometry.html" />
+    <link rel="prev" title="constants" href="constants.html" /> 
+  </head>
+  <body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geometry.html" title="geometry"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="constants.html" title="constants"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" accesskey="U">modules</a> &#187;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <div class="section" id="fm3d">
+<h1>fm3d<a class="headerlink" href="#fm3d" title="Permalink to this headline">¶</a></h1>
+<p>A module to provide I/O functionality for files formatted for input to FM3D.</p>
+<span class="target" id="module-fm3d"></span><div class="section" id="public-functions">
+<h2>Public functions<a class="headerlink" href="#public-functions" title="Permalink to this headline">¶</a></h2>
+<dl class="function">
+<dt id="fm3d.generate_ttgrid">
+<code class="descclassname">fm3d.</code><code class="descname">generate_ttgrid</code><span class="sig-paren">(</span><em>vel_mod</em>, <em>stations</em>, <em>phase</em>, <em>grid</em><span class="sig-paren">)</span><a class="headerlink" href="#fm3d.generate_ttgrid" title="Permalink to this definition">¶</a></dt>
+<dd><table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field-odd field"><th class="field-name">Parameters:</th><td class="field-body"><ul class="first last simple">
+<li><strong>vel_mod</strong> (<a class="reference internal" href="../classes/VelocityModel.html#seispy.velocity.VelocityModel" title="seispy.velocity.VelocityModel"><em>seispy.velocity.VelocityModel</em></a>) – Velocity model to use for
+calculating travel-times.</li>
+<li><strong>stations</strong> (<em>list</em>) – List of <cite>seispy.metadata.Station</cite> objects. Calculate
+travel-times to these stations.</li>
+<li><strong>phase</strong> (<em>str</em>) – Seismic phase to calculate travel-times for [“P”, “S”, “Vp”, Vs”].</li>
+<li><strong>grid</strong> (<em>dict</em>) – Dictionary of grid parameters. Calculate node-to-station
+travel-times for nodes on the grid. Click
+<a class="reference internal" href="#fm3d-grid-parameters"><span class="std std-ref">here</span></a> for an explanation of the
+grid parameters.</li>
+</ul>
+</td>
+</tr>
+</tbody>
+</table>
+</dd></dl>
+
+<div class="section" id="grid-parameters">
+<span id="fm3d-grid-parameters"></span><h3>Grid parameters<a class="headerlink" href="#grid-parameters" title="Permalink to this headline">¶</a></h3>
+<blockquote>
+<div><ul class="simple">
+<li><strong>lat0</strong>: Grid origin latitude [degrees].</li>
+<li><strong>lon0</strong>: Grid origin longitude [degrees].</li>
+<li><strong>h0</strong>: Grid origin elevation (above surface) [km].</li>
+<li><strong>dlat</strong>: Grid node interval along latitudinal axis [degrees].</li>
+<li><strong>dlon</strong>: Grid node interval along longitudinal axis [degrees].</li>
+<li><strong>dr</strong>: Grid node interval along depth axis [km].</li>
+<li><strong>nlat</strong>: Number of grid nodes along latitudinal axis.</li>
+<li><strong>nlon</strong>: Number of grid nodes along longitudinal axis.</li>
+<li><strong>nr</strong>: Number of grid nodes along depth axis.</li>
+</ul>
+</div></blockquote>
+</div>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <h3><a href="../../index.html">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#">fm3d</a><ul>
+<li><a class="reference internal" href="#public-functions">Public functions</a><ul>
+<li><a class="reference internal" href="#grid-parameters">Grid parameters</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+  <h4>Previous topic</h4>
+  <p class="topless"><a href="constants.html"
+                        title="previous chapter">constants</a></p>
+  <h4>Next topic</h4>
+  <p class="topless"><a href="geometry.html"
+                        title="next chapter">geometry</a></p>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="../../_sources/seispy/modules/fm3d.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3>Quick search</h3>
+    <form class="search" action="../../search.html" method="get">
+      <div><input type="text" name="q" /></div>
+      <div><input type="submit" value="Go" /></div>
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="../../genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="../../py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li class="right" >
+          <a href="geometry.html" title="geometry"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="constants.html" title="constants"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="../../index.html">Seismic Python 1.0a0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="../index.html" >seispy</a> &#187;</li>
+          <li class="nav-item nav-item-2"><a href="index.html" >modules</a> &#187;</li> 
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2017, Malcolm White.
+      Created using <a href="http://sphinx-doc.org/">Sphinx</a> 1.6.2.
+    </div>
+  </body>
+</html>
