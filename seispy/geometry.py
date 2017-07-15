@@ -18,22 +18,21 @@ import seispy
 EARTH_RADIUS = seispy.constants.EARTH_RADIUS
 
 
-def azimuth(p1, p2):
+def azimuth(lat1, lon1, lat2, lon2):
     """
-    Return the azimuth of the line connecting points **p1**\=(x1, y1)
-    and **p2**\=(x2, y2).
+    Return the azimuth of the line connecting points **(lat1, lon1)**
+    and **(x2, y2)**.
 
-    :param p1: (x, y) coordinates of point 1.
-    :type p1: (float, float)
-    :param p2: (x, y) coordinates of point 2.
-    :type p2: (float, float)
-    :returns: Azimuth of the line connecting points **p1** and **p2**
-              {**Units**: degrees, **Range**: [0, 360)}.
+    :param float lat1: latitude coordinate of point 1
+    :param float lon1: longitude coordinate of point 1
+    :param float lat2: latitude coordinate of point 2
+    :param float lon2: longitude coordinate of point 2
+    :returns: azimuth of the line connecting points **(lat1, lon1)**
+              and **(lat2, lon2)** **{Units:** degrees, **Range:** [0,
+              360)}.
     :rtype: float
     """
-    x1, y1 = p1
-    x2, y2 = p2
-    return((90 - degrees(atan2(y2 - y1, x2 - x1))) % 360)
+    return((90 - degrees(atan2(lat2 - lat1, lon2 - lon1))) % 360)
 
 
 def azimuth2radians(azimuth):
