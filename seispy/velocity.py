@@ -137,6 +137,32 @@ class VelocityModel(object):
         V1 = V01 + (V11 - V01) * dtheta
         return(V0 + (V1 - V0) * dphi)
 
+    def fit_propagation_grid(self,
+                             nr=None,
+                             nlat=None,
+                             nlon=None):
+        import math
+        if nr is None:
+            nr = self.nodes["nr"]
+        if nlat is None:
+            nlat = self.nodes["ntheta"]
+        if nlon is None:
+            nlon = self.nodes["nphi"]
+        h0 = self.nodes["r_max"] - seispy.constants.EARTH_RADIUS -\
+                1.01 * self.nodes["dr"]
+        hf = self.nodes["r_min"] - seispy.constants.EARTH_RADIUS +\
+                1.01 * self.nodes["dr"]
+        lat0 = math.pi / 2 - (self.nodes["theta_max"] - 1.01 * self.nodes["dtheta"])
+        latf = math.pi / 2 - (self.nodes["theta_min"] + 1.01 * self.nodes["dtheta"])
+        lon0 = self.nodes["phi_min"] + 1.01 * self.nodes["dphi"]
+        lonf = self.nodes["phi_max"] - 1.01 * self.nodes["dphi"]
+        dr = abs((hf-h0)/(nr-1))
+        dlat = (latf-lat0)/(nlat-1)
+        dlon = (lonf-lon0)/(nlon-1)
+        return({"h0": h0, "dr": dr, "nr": nr,
+                "lat0": lat0, "dlat": dlat, "nlat": nlat,
+                "lon0": lon0, "dlon": dlon, "nlon": nlon})
+
     def get_grid_center(self):
         """
         Return the center of the velocity model in spherical
