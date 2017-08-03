@@ -112,15 +112,50 @@ class VelocityModel(object):
                     self.nodes["theta_max"])
         phi = min(max(phi, self.nodes["phi_min"]),
                   self.nodes["phi_max"])
-        ir0 = (r - self.nodes["r_min"]) / self.nodes["dr"]
-        dr = ir0 % 1.
-        ir0 = int(ir0)
-        itheta0 = (theta - self.nodes["theta_min"]) / self.nodes["dtheta"]
-        dtheta = itheta0 % 1.
-        itheta0 = int(itheta0)
-        iphi0 = (phi - self.nodes["phi_min"]) / self.nodes["dphi"]
-        dphi = iphi0 % 1.
-        iphi0 = int(iphi0)
+        # Get indices of closest node to 'below' the point
+        cond = lambda v, bounds: bounds[0] < v < bounds[1]
+        r_nodes = self.nodes["r"][:,0,0]
+        if r <= r_nodes[0]:
+            ir0 = 0
+            dr = 0
+        elif r >= r_nodes[-1]:
+            ir0 = len(r_nodes) - 1
+            dr = 0
+        elif r in r_nodes:
+            ir0 = list(r_nodes).index(r)
+            dr = 0
+        else:
+            ir0 = [True if cond(r, b) else False for b in
+                    list(zip(r_nodes[:-1], r_nodes[1:]))].index(True)
+            dr = r - r_nodes[ir0]
+
+        theta_nodes = self.nodes["theta"][0,:,0]
+        if theta <= theta_nodes[0]:
+            itheta0 = 0
+            dtheta = 0
+        elif theta >= theta_nodes[-1]:
+            itheta0 = len(theta_nodes) - 1
+            dtheta = 0
+        elif theta in theta_nodes:
+            itheta0 = list(theta_nodes).index(theta)
+        else:
+            itheta0 = [True if cond(theta, b) else False for b in
+                        list(zip(theta_nodes[:-1], theta_nodes[1:]))].index(True)
+            dtheta = theta - theta_nodes[itheta0]
+
+        phi_nodes = self.nodes["phi"][0,0,:]
+        if phi <= phi_nodes[0]:
+            iphi0 = 0
+            dphi = 0
+        elif phi >= phi_nodes[-1]:
+            iphi0 = len(phi_nodes) - 1
+            dphi = 0
+        elif phi in phi_nodes:
+            iphi0 = list(phi_nodes).index(phi)
+        else:
+            iphi0 = [True if cond(phi, b) else False for b in
+                    list(zip(phi_nodes[:-1], phi_nodes[1:]))].index(True)
+            dphi = phi - phi_nodes[iphi0]
         ir1 = ir0 if ir0 == self.nodes["nr"] - 1 else ir0 + 1
         itheta1 = itheta0 if itheta0 == self.nodes["ntheta"] - 1 else itheta0 + 1
         iphi1 = iphi0 if iphi0 == self.nodes["nphi"] - 1 else iphi0 + 1
@@ -129,19 +164,25 @@ class VelocityModel(object):
         V010, V110 = values[ir0, itheta1, iphi0], values[ir1, itheta1, iphi0]
         V001, V101 = values[ir0, itheta0, iphi1], values[ir1, itheta0, iphi1]
         V011, V111 = values[ir0, itheta1, iphi1], values[ir1, itheta1, iphi1]
-        V00 = V000 + (V100 - V000) * dr
-        V10 = V010 + (V110 - V010) * dr
-        V01 = V001 + (V101 - V001) * dr
-        V11 = V011 + (V111 - V011) * dr
-        V0 = V00 + (V10 - V00) * dtheta
-        V1 = V01 + (V11 - V01) * dtheta
-        return(V0 + (V1 - V0) * dphi)
+        dVdr = (V100 - V000) / (r_nodes[ir1] - r_nodes[ir0])
+        V00 = V000 + dVdr * dr
+        dVdr = (V110 - V010) / (r_nodes[ir1] - r_nodes[ir0])
+        V10 = V010 + dVdr * dr
+        dVdr = (V101 - V001) / (r_nodes[ir1] - r_nodes[ir0])
+        V01 = V001 + dVdr * dr
+        dVdr = (V111 - V011) / (r_nodes[ir1] - r_nodes[ir0])
+        V11 = V011 + dVdr * dr
+        dVdt = (V10 - V00) / (theta_nodes[itheta1] - theta_nodes[itheta0])
+        V0 = V00 + dVdt * dtheta
+        dVdt = (V11 - V01) / (theta_nodes[itheta1] - theta_nodes[itheta0])
+        V1 = V01 + dVdt * dtheta
+        dVdp = (V1 - V0) / (phi_nodes[iphi1] - phi_nodes[iphi0])
+        return(V0 + dVdp * dphi)
 
     def fit_propagation_grid(self,
                              nr=None,
                              nlat=None,
                              nlon=None):
-        import math
         if nr is None:
             nr = self.nodes["nr"]
         if nlat is None:
@@ -152,8 +193,8 @@ class VelocityModel(object):
                 1.01 * self.nodes["dr"]
         hf = self.nodes["r_min"] - seispy.constants.EARTH_RADIUS +\
                 1.01 * self.nodes["dr"]
-        lat0 = math.pi / 2 - (self.nodes["theta_max"] - 1.01 * self.nodes["dtheta"])
-        latf = math.pi / 2 - (self.nodes["theta_min"] + 1.01 * self.nodes["dtheta"])
+        lat0 = pi / 2 - (self.nodes["theta_max"] - 1.01 * self.nodes["dtheta"])
+        latf = pi / 2 - (self.nodes["theta_min"] + 1.01 * self.nodes["dtheta"])
         lon0 = self.nodes["phi_min"] + 1.01 * self.nodes["dphi"]
         lonf = self.nodes["phi_max"] - 1.01 * self.nodes["dphi"]
         dr = abs((hf-h0)/(nr-1))
