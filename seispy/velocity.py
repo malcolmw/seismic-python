@@ -126,7 +126,7 @@ class VelocityModel(object):
             dr = 0
         else:
             ir0 = [True if cond(r, b) else False for b in
-                    list(zip(r_nodes[:-1], r_nodes[1:]))].index(True)
+                    zip(r_nodes[:-1], r_nodes[1:])].index(True)
             dr = r - r_nodes[ir0]
 
         theta_nodes = self.nodes["theta"][0,:,0]
@@ -140,7 +140,7 @@ class VelocityModel(object):
             itheta0 = list(theta_nodes).index(theta)
         else:
             itheta0 = [True if cond(theta, b) else False for b in
-                        list(zip(theta_nodes[:-1], theta_nodes[1:]))].index(True)
+                        zip(theta_nodes[:-1], theta_nodes[1:])].index(True)
             dtheta = theta - theta_nodes[itheta0]
 
         phi_nodes = self.nodes["phi"][0,0,:]
@@ -154,7 +154,7 @@ class VelocityModel(object):
             iphi0 = list(phi_nodes).index(phi)
         else:
             iphi0 = [True if cond(phi, b) else False for b in
-                    list(zip(phi_nodes[:-1], phi_nodes[1:]))].index(True)
+                    zip(phi_nodes[:-1], phi_nodes[1:])].index(True)
             dphi = phi - phi_nodes[iphi0]
         ir1 = ir0 if ir0 == self.nodes["nr"] - 1 else ir0 + 1
         itheta1 = itheta0 if itheta0 == self.nodes["ntheta"] - 1 else itheta0 + 1
