@@ -46,6 +46,7 @@ class VelocityModel(object):
         if topo is None:
             self.topo = lambda _, __: seispy.constants.EARTH_RADIUS
         else:
+            #self.topo = lambda lat, lon: topo(lat, lon)
             self.topo = topo
         inf = open(infile)
         phi_nodes = [radians(float(lon)) % 360.\
@@ -59,18 +60,12 @@ class VelocityModel(object):
         self.nodes["nr"] = R.shape[0]
         self.nodes["r_min"] = min(r_nodes)
         self.nodes["r_max"] = max(r_nodes)
-        self.nodes["dr"] = (self.nodes["r_max"] - self.nodes["r_min"]) /\
-                (self.nodes["nr"] - 1)
         self.nodes["ntheta"] = T.shape[1]
         self.nodes["theta_min"] = min(theta_nodes)
         self.nodes["theta_max"] = max(theta_nodes)
-        self.nodes["dtheta"] = (self.nodes["theta_max"] -\
-                self.nodes["theta_min"]) / (self.nodes["ntheta"] - 1)
         self.nodes["nphi"] = P.shape[2]
         self.nodes["phi_min"] = min(phi_nodes)
         self.nodes["phi_max"] = max(phi_nodes)
-        self.nodes["dphi"] = (self.nodes["phi_max"] - self.nodes["phi_min"])/\
-                (self.nodes["nphi"] - 1)
         self.values = {"Vp": np.empty(shape=(len(r_nodes),
                                              len(theta_nodes),
                                              len(phi_nodes))),
@@ -138,6 +133,7 @@ class VelocityModel(object):
             dtheta = 0
         elif theta in theta_nodes:
             itheta0 = list(theta_nodes).index(theta)
+            dtheta = 0
         else:
             itheta0 = [True if cond(theta, b) else False for b in
                         zip(theta_nodes[:-1], theta_nodes[1:])].index(True)
@@ -152,6 +148,7 @@ class VelocityModel(object):
             dphi = 0
         elif phi in phi_nodes:
             iphi0 = list(phi_nodes).index(phi)
+            dphi = 0
         else:
             iphi0 = [True if cond(phi, b) else False for b in
                     zip(phi_nodes[:-1], phi_nodes[1:])].index(True)
@@ -164,45 +161,37 @@ class VelocityModel(object):
         V010, V110 = values[ir0, itheta1, iphi0], values[ir1, itheta1, iphi0]
         V001, V101 = values[ir0, itheta0, iphi1], values[ir1, itheta0, iphi1]
         V011, V111 = values[ir0, itheta1, iphi1], values[ir1, itheta1, iphi1]
-        dVdr = (V100 - V000) / (r_nodes[ir1] - r_nodes[ir0])
-        V00 = V000 + dVdr * dr
-        dVdr = (V110 - V010) / (r_nodes[ir1] - r_nodes[ir0])
-        V10 = V010 + dVdr * dr
-        dVdr = (V101 - V001) / (r_nodes[ir1] - r_nodes[ir0])
-        V01 = V001 + dVdr * dr
-        dVdr = (V111 - V011) / (r_nodes[ir1] - r_nodes[ir0])
-        V11 = V011 + dVdr * dr
-        dVdt = (V10 - V00) / (theta_nodes[itheta1] - theta_nodes[itheta0])
-        V0 = V00 + dVdt * dtheta
-        dVdt = (V11 - V01) / (theta_nodes[itheta1] - theta_nodes[itheta0])
-        V1 = V01 + dVdt * dtheta
-        dVdp = (V1 - V0) / (phi_nodes[iphi1] - phi_nodes[iphi0])
-        return(V0 + dVdp * dphi)
-
-    def fit_propagation_grid(self,
-                             nr=None,
-                             nlat=None,
-                             nlon=None):
-        if nr is None:
-            nr = self.nodes["nr"]
-        if nlat is None:
-            nlat = self.nodes["ntheta"]
-        if nlon is None:
-            nlon = self.nodes["nphi"]
-        h0 = self.nodes["r_max"] - seispy.constants.EARTH_RADIUS -\
-                1.01 * self.nodes["dr"]
-        hf = self.nodes["r_min"] - seispy.constants.EARTH_RADIUS +\
-                1.01 * self.nodes["dr"]
-        lat0 = pi / 2 - (self.nodes["theta_max"] - 1.01 * self.nodes["dtheta"])
-        latf = pi / 2 - (self.nodes["theta_min"] + 1.01 * self.nodes["dtheta"])
-        lon0 = self.nodes["phi_min"] + 1.01 * self.nodes["dphi"]
-        lonf = self.nodes["phi_max"] - 1.01 * self.nodes["dphi"]
-        dr = abs((hf-h0)/(nr-1))
-        dlat = (latf-lat0)/(nlat-1)
-        dlon = (lonf-lon0)/(nlon-1)
-        return({"h0": h0, "dr": dr, "nr": nr,
-                "lat0": lat0, "dlat": dlat, "nlat": nlat,
-                "lon0": lon0, "dlon": dlon, "nlon": nlon})
+        V100 = V000 if V100 == -1 else V100
+        V110 = V010 if V110 == -1 else V110
+        V101 = V001 if V101 == -1 else V101
+        V111 = V011 if V111 == -1 else V111
+        if dr == 0:
+            V00, V10, V01, V11 = V000, V010, V001, V011
+        else:
+            dVdr = (V100 - V000) / (r_nodes[ir1] - r_nodes[ir0])
+            V00 = V000 + dVdr * dr
+            dVdr = (V110 - V010) / (r_nodes[ir1] - r_nodes[ir0])
+            V10 = V010 + dVdr * dr
+            dVdr = (V101 - V001) / (r_nodes[ir1] - r_nodes[ir0])
+            V01 = V001 + dVdr * dr
+            dVdr = (V111 - V011) / (r_nodes[ir1] - r_nodes[ir0])
+            V11 = V011 + dVdr * dr
+        if dtheta == 0:
+            V0, V1 = V00, V01
+        else:
+            V10 = V00 if V10 == -1 else V10
+            V11 = V01 if V11 == -1 else V11
+            dVdt = (V10 - V00) / (theta_nodes[itheta1] - theta_nodes[itheta0])
+            V0 = V00 + dVdt * dtheta
+            dVdt = (V11 - V01) / (theta_nodes[itheta1] - theta_nodes[itheta0])
+            V1 = V01 + dVdt * dtheta
+        if dphi == 0:
+            V = V0
+        else:
+            V1 = V0 if V1 == -1 else V1
+            dVdp = (V1 - V0) / (phi_nodes[iphi1] - phi_nodes[iphi0])
+            V = V0 + dVdp * dphi
+        return(V)
 
     def get_grid_center(self):
         """
@@ -217,6 +206,41 @@ class VelocityModel(object):
         return ((self.nodes["r_max"] + self.nodes["r_min"]) / 2,
                 (self.nodes["theta_max"] + self.nodes["theta_min"]) / 2,
                 (self.nodes["phi_max"] + self.nodes["phi_min"]) / 2)
+
+    def regrid(self, R, T, P):
+        Vp = np.empty(shape=R.shape)
+        Vs = np.empty(shape=R.shape)
+        for store, phase, index in ((Vp, "Vp", 0), (Vs, "Vs", 1)):
+            for (ir, it, ip) in [(ir, it, ip) for ir in range(R.shape[0])
+                                              for it in range(T.shape[1])
+                                              for ip in range(P.shape[2])]:
+                r, theta, phi = R[ir, it, ip], T[ir, it, ip], P[ir, it, ip]
+                store[ir, it, ip] = self._get_V(r, theta, phi, phase)
+        self.values["Vp"] = Vp
+        self.values["Vs"] = Vs
+        self.nodes["r"], self.nodes["theta"], self.nodes["phi"] = R, T, P
+        self.nodes["nr"] = R.shape[0]
+        self.nodes["ntheta"] = T.shape[1]
+        self.nodes["nphi"] = P.shape[2]
+        self.nodes["dr"] = (R[:,0,0][-1] - R[:,0,0][0]) / (R.shape[0] - 1)
+        self.nodes["dtheta"] = (T[0,:,0][-1] - T[0,:,0][0]) / (T.shape[1] - 1)
+        self.nodes["dphi"] = (P[0,0,:][-1] - P[0,0,:][0]) / (P.shape[2] - 1)
+        self.nodes["r_min"], self.nodes["r_max"] = np.min(R), np.max(R)
+        self.nodes["theta_min"], self.nodes["theta_max"] = np.min(T), np.max(T)
+        self.nodes["phi_min"], self.nodes["phi_max"] = np.min(P), np.max(P)
+
+    def regularize(self, nr, ntheta, nphi):
+        R, T, P = np.meshgrid(np.linspace(self.nodes["r_min"],
+                                          self.nodes["r_max"],
+                                          nr),
+                              np.linspace(self.nodes["theta_min"],
+                                          self.nodes["theta_max"],
+                                          ntheta),
+                              np.linspace(self.nodes["phi_min"],
+                                          self.nodes["phi_max"],
+                                          nphi),
+                              indexing="ij")
+        self.regrid(R, T, P)
 
     def slice(self, phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
         """
