@@ -17,7 +17,7 @@ class SeismicDB(object):
                          """)
         self.cur.execute("""
                          CREATE TABLE IF NOT EXISTS detection
-                         (stacode TEXT, channel TEXT, time REAL, state TEXT,
+                         (stacode TEXT, channel TEXT, time REAL, label TEXT,
                          snr REAL)
                          """)
         self.cur.execute("""
@@ -50,9 +50,7 @@ class SeismicDB(object):
                 data = line.split()
                 data = [int(data[2]), data[0], data[6], float(data[1]), data[7],
                         data[23]]
-                print("""
-                      arrival: ({}, '{}', '{}', {}, '{}', '{}')
-                      """.format(*data))
+                print("arrival: ({}, '{}', '{}', {}, '{}', '{}')".format(*data))
                 self.cur.execute("""
                                  INSERT INTO arrival
                                  (arrivalid, stacode, channel, time, phase,
@@ -65,9 +63,7 @@ class SeismicDB(object):
             for line in inf:
                 data = line.split()
                 data = [int(data[0]), int(data[1])]
-                print("""
-                      assoc: ({}, {});
-                      """.format(*data))
+                print("assoc: ({}, {})".format(*data))
                 self.cur.execute("""
                                  INSERT INTO assoc
                                  (arrivalid, originid)
@@ -78,14 +74,12 @@ class SeismicDB(object):
             inf = open("%s.detection" % path)
             for line in inf:
                 data = line.split()
-                data = [line[2],
-                        line[3],
-                        float(line[4]),
-                        line[6],
-                        float(line[-1])]
-                print("""
-                      detection: ('{}', '{}', {}, '{}', {})
-                      """.format(*data))
+                data = [data[2],
+                        data[3],
+                        float(data[4]),
+                        data[6],
+                        float(data[-1])]
+                print("detection: ('{}', '{}', {}, '{}', {})".format(*data))
                 self.cur.execute("""
                                  INSERT INTO detection
                                  (stacode, channel, time, label, snr)
@@ -97,9 +91,7 @@ class SeismicDB(object):
             for line in inf:
                 data = line.split()
                 data = [int(data[0]), int(data[2]), data[3]]
-                print("""
-                      event ({}, {}, '{}')
-                      """.format(*data))
+                print("event ({}, {}, '{}')".format(*data))
                 self.cur.execute("""
                                  INSERT INTO event
                                  (eventid, originid, author)
@@ -114,9 +106,7 @@ class SeismicDB(object):
                        [int(v) for v in data[4:6]] +\
                        [int(data[7])] +\
                        [data[23]]
-                print("""
-                      origin ({}, {}, {}, {}, {}, {}, {}, '{}')
-                      """.format(*data))
+                print("origin ({}, {}, {}, {}, {}, {}, {}, '{}')".format(*data))
                 self.cur.execute("""
                                  INSERT INTO origin
                                  (latitude, longitude, depth, time, originid,
