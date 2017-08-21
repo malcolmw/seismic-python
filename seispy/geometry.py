@@ -11,8 +11,7 @@ from math import acos,\
                  sin,\
                  sqrt
 import numpy as np
-from obspy.geodetics.base import gps2dist_azimuth
-import seispy
+import seispy.constants
 
 
 EARTH_RADIUS = seispy.constants.EARTH_RADIUS
@@ -28,11 +27,11 @@ def azimuth(lat1, lon1, lat2, lon2):
     :param float lat2: latitude coordinate of point 2
     :param float lon2: longitude coordinate of point 2
     :returns: azimuth of the line connecting points **(lat1, lon1)**
-              and **(lat2, lon2)** **{Units:** degrees, **Range:** [0,
-              360)}.
+              and **(lat2, lon2)** **{Units:** degrees, **Range:** [-180,
+              180)}.
     :rtype: float
     """
-    return((90 - degrees(atan2(lat2 - lat1, lon2 - lon1))) % 360)
+    return((90 - degrees(atan2(lat2 - lat1, lon2 - lon1))))
 
 
 def azimuth2radians(azimuth):
@@ -105,16 +104,16 @@ def get_line_endpoints(lat0, lon0, azimuth, length):
     :param float lat0: latitude coordinate of line center {**Units**:
                        degrees, **Range**: [-90, 90]}
     :param float lon0: longitude coordinate of line center {**Units**:
-                       degrees, **Range**: [-180, 360]}
+                       degrees, **Range**: [-180, 180]}
     :param float azimuth: azimuth of line {**Units**: degrees,
-                          **Range**: [0, 360]}
+                          **Range**: [-180, 180]}
     :param float length: length of line **{Units:** *degrees*\ **}**
     :returns: geographic coordinates of length=\ **length** line
               passing through (**lat0**, **lon0**) with strike=
               **strike**
     :rtype: ((float, float), (float, float))
     """
-    phi = radians(azimuth % 360)
+    phi = radians(azimuth)
     l2 = 0.5 * length
     theta1 = -phi + pi/2
     theta2 = -phi - pi/2
@@ -129,20 +128,18 @@ def geo2sph(lat, lon, z):
     :param float lat: latitude coordinate {**Units**: degrees,
                       **Range**: [-90, 90]}
     :param float lon: longitude coordinate {**Units**: degrees,
-                      **Range**: [-180, 360]}
+                      **Range**: [-180, 180]}
     :param float depth: depth from surface {**Units**: km,
                         **Range**: (-inf, inf)}
     :returns: spherical coordinate conversion *(r, theta, phi)* of
               geographic coordinates
     :rtype: (float, float, float)
     """
-    if not (-90. <= lat <= 90.) or not (-180. < lon < 360.):
-        raise ValueError("invalid geographic coordinates")
-    lon %= 360.
+    lat, lon, z = validate_geographic_coords([lat, lon, z])
     theta = radians(90. - lat)
     phi = radians(lon)
     r = EARTH_RADIUS - z
-    return r, theta, phi
+    return(r, theta, phi)
 
 
 def radians2azimuth(theta):
@@ -172,18 +169,18 @@ def sph2geo(r, theta, phi):
     :param float r: radial distance from coordinate system origin
                     {**Units**: km, **Range**: [0, inf)}
     :param float theta: polar angle {**Units**: radians, **Range**: [0,
-                        pi]}
+                        π]}
     :param float phi: azimuthal angle {**Units**: radians, **Range**:
-                      [0, 2*pi]}
+                      [-π, π]}
     :returns: geographic coordinate conversion *(lat, lon, depth)* of
               spherical coordinates
     :rtype: (float, float, float)
     """
+    r, theta, phi = validate_spherical_coords([r, theta, phi])
     z = EARTH_RADIUS - r
     lat = 90 - degrees(theta)
     lon = degrees(phi)
-    lon %= 360.
-    return lat, lon, z
+    return(lat, lon, z)
 
 
 def sph2xyz(r, theta, phi):
@@ -193,13 +190,14 @@ def sph2xyz(r, theta, phi):
     :param float r: radial distance from coordinate system origin
                     {**Units**: km, **Range**: [0, inf)}
     :param float theta: polar angle {**Units**: radians, **Range**: [0,
-                        pi]}
+                        π]}
     :param float phi: azimuthal angle {**Units**: radians, **Range**:
-                      [0, 2*pi]}
+                      [-π, π]}
     :returns: cartesian coordinate conversion *(x, y, z)* of spherical
               coordinates
     :rtype: (float, float, float)
     """
+    r, theta, phi = validate_spherical_coords([r, theta, phi])
     x = r * sin(theta) * cos(phi)
     y = r * sin(theta) * sin(phi)
     z = r * cos(theta)
@@ -211,11 +209,11 @@ def xyz2sph(x, y, z):
     Convert cartesian coordinates to spherical coordinates.
 
     :param float x: cartesian x-coordinate {**Units**: km, **Range**:
-                    [0, inf)}
+                    (-inf, inf)}
     :param float y: cartesian y-coordinate {**Units**: km, **Range**:
-                    [0, inf)}
+                    (-inf, inf)}
     :param float z: cartesian z-coordinate {**Units**: km, **Range**:
-                    [0, inf)}
+                    (-inf, inf)}
     :returns: spherical coordinate conversion *(r, theta, phi)* of
               cartesian coordinates
     :rtype: (float, float, float)
@@ -223,7 +221,7 @@ def xyz2sph(x, y, z):
     r = sqrt(x ** 2 + y ** 2 + z ** 2)
     theta = acos(z / r)
     phi = atan2(y, x)
-    return r, theta, phi
+    return( r, theta, phi)
 
 
 def rotation_matrix(axis, theta):
@@ -243,8 +241,33 @@ def rotation_matrix(axis, theta):
         raise ValueError("invalid axis")
 
 
-def validate_geographic_coords(lat, lon):
-    if not -90 <= lat <= 90:
-        raise(ValueError("latitude must be in range [-90, 90]: %f" % lat))
-    if not -180 <= lon < 360:
-        raise(ValueError("longitude must be in range [-180, 360): %f" % lon))
+def validate_geographic_coords(coordinates):
+    data = np.asarray(coordinates)
+    if data.shape == (3,):
+        if not -90 <= data[0] <= 90:
+            raise(ValueError("latitude must be in range [-90, 90]: %f" % data[0]))
+        data[1] %= 360
+        data[1] = data[1] if data[1] < 180 else data[1] - 360
+        return(data)
+    return(np.asarray([validate_geographic_coords(coords) for coords in data]))
+
+def validate_spherical_coords(coordinates):
+    data = np.asarray(coordinates)
+    if data.shape == (3,):
+        if data[0] < 0:
+            raise(ValueError("Invalid value for r: {:f}".format(data[0])))
+        if np.pi < data[1] % (2 * np.pi) < np.pi * 2:
+            raise(ValueError("Invalid value for θ: {:f}".format(data[1])))
+        data[2] %= 2 * np.pi
+        data[2] = data[2] if 0 <= data[2] <= np.pi else data[2] - 2 * np.pi
+        return(data)
+    return(np.asarray([validate_spherical_coords(coords) for coords in data]))
+
+def test():
+    coords = np.asarray([-90, 79, 3])
+    print(validate_geographic_coords(coords))
+    coords = np.asarray([[-89, -117, 3],[45, 426, 4]])
+    print(validate_geographic_coords(coords))
+
+if __name__ == "__main__":
+    test()
