@@ -46,10 +46,9 @@ class VelocityModel(object):
         if topo is None:
             self.topo = lambda _, __: seispy.constants.EARTH_RADIUS
         else:
-            #self.topo = lambda lat, lon: topo(lat, lon)
             self.topo = topo
         inf = open(infile)
-        phi_nodes = [radians(float(lon)) % 360.\
+        phi_nodes = [radians(float(lon))\
                 for lon in inf.readline().split()]
         theta_nodes = [radians(90 - float(lat))\
                 for lat in inf.readline().split()]
@@ -253,7 +252,7 @@ class VelocityModel(object):
                            **}**
         :param float lon0: longitude of center point of section trace
                            **{Units:** *degrees*, **Range:** *[-180,
-                           360)*\ **}**
+                           180]*\ **}**
         :param float azimuth: azimuth of section trace **{Units:**
                               *degrees*, **Range:** *(-inf, inf)*\ **}**
         :param float length: length of section trace **{Units:**
