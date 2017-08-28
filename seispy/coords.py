@@ -11,22 +11,22 @@ class GeographicCoordinates(np.ndarray):
         self.resize(self.shape + (3,), refcheck=False)
         # Set all elements to 0
         self *= self*0
+        self[np.where(np.isnan(self))] = 0
+
 
     def __setitem__(self, index, coordinates):
         coordinates = np.asarray(coordinates)
         if coordinates.shape == (3,):
             coordinates = np.asarray([coordinates])
         super().__setitem__(index, coordinates)
-        if np.any(list(map(lambda c: not -90 <= c <= 90,
-                            self[...,0]))):
+        if False in  [-90 <= lat <= 90 for lat in self[...,0].flatten()]:
             raise(ValueError("all values for latitude must satisfiy -90 "\
                     "<= latitude <= 90"))
-        if np.any(list(map(lambda c: not -180 <= c <= 180,
-                            self[...,1]))):
+        if False in  [-180 <= lon <= 180 for lon in self[...,1].flatten()]:
             raise(ValueError("all values for longitude must satisfiy -180 <= "\
                     "longitude <= 180"))
-        if np.any(list(map(lambda c: not c <= seispy.constants.EARTH_RADIUS,
-                            self[...,2]))):
+        if False in [depth <= seispy.constants.EARTH_RADIUS
+                     for depth in self[...,2].flatten()]:
             raise(ValueError("all depth values must satisfy depth <= "\
                     "{:f}".format(seispy.constants.EARTH_RADIUS)))
 
@@ -62,6 +62,21 @@ class CartesianCoordinates(np.ndarray):
         # Set all elements to 0
         self *= self*0
 
+    def rotate(self, α, β, γ):
+        """
+        """
+        R = np.asarray(np.matrix([[np.cos(α), -np.sin(α), 0],
+                                  [np.sin(α), np.cos(α), 0],
+                                  [0, 0, 1]])\
+                     * np.matrix([[np.cos(β), 0, np.sin(β)],
+                                  [0, 1, 0],
+                                  [-np.sin(β), 0, np.cos(β)]])\
+                     * np.matrix([[1, 0, 0],
+                                  [0, np.cos(γ), -np.sin(γ)],
+                                  [0, np.sin(γ), np.cos(γ)]]))
+        return(np.dot(self, R))
+
+
     def toGeographic(self):
         geo = GeographicCoordinates(self.shape[:-1])
         ρ = np.sqrt(np.sum(np.square(self),axis=-1))
@@ -89,17 +104,18 @@ class SphericalCoordinates(np.ndarray):
         self.resize(self.shape + (3,), refcheck=False)
         # Set all elements to 0
         self *= self*0
+        self[np.where(np.isnan(self))] = 0
 
     def __setitem__(self, index, coordinates):
         coordinates = np.asarray(coordinates)
         if coordinates.shape == (3,):
             coordinates = np.asarray([coordinates])
         super().__setitem__(index, coordinates)
-        if np.any(list(map(lambda c: c < 0, self[...,0]))):
+        if False in [ρ >= 0 for ρ in self[...,0].flatten()]:
             raise(ValueError("all values for ρ must satisfiy 0 <= ρ"))
-        if np.any(list(map(lambda c: c < 0  or c > π, self[...,1]))):
+        if False in  [0 <= θ <= π for θ in self[...,1].flatten()]:
             raise(ValueError("all values for θ must satisfiy 0 <= θ <= π"))
-        if np.any(list(map(lambda c: c < -π  or c > π, self[...,2]))):
+        if False in  [-π <= φ <= π for φ in self[...,2].flatten()]:
             raise(ValueError("all values for φ must satisfiy -π <= φ <= π"))
 
     def toCartesian(self):
@@ -128,17 +144,18 @@ class  LeftSphericalCoordinates(np.ndarray):
         self.resize(self.shape + (3,), refcheck=False)
         # Set all elements to 0.
         self *= self*0
+        self[np.where(np.isnan(self))] = 0
 
     def __setitem__(self, index, coordinates):
         coordinates = np.asarray(coordinates)
         if coordinates.shape == (3,):
             coordinates = np.asarray([coordinates])
         super().__setitem__(index, coordinates)
-        if np.any(list(map(lambda c: c < 0, self[...,0]))):
+        if False in  [ρ < 0 for ρ in self[...,0].flatten()]:
             raise(ValueError("all values for ρ must satisfiy 0 <= ρ"))
-        if np.any(list(map(lambda c: c < -π/2  or c > π/2, self[...,1]))):
+        if False in  [-π/2 <= θ <= π/2 for θ in self[...,1].flatten()]:
             raise(ValueError("all values for λ must satisfiy -π/2 <= λ <= π/2"))
-        if np.any(list(map(lambda c: c < -π  or c > π, self[...,2]))):
+        if False in  [-π <= φ <= π for φ in self[...,2].flatten()]:
             raise(ValueError("all values for φ must satisfiy -π <= φ <= π"))
 
     def toCartesian(self):
