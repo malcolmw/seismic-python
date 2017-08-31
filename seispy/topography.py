@@ -30,7 +30,7 @@ class Topography(object):
             self.radius[itheta, iphi] = R[i]
 
     def __call__(self, lat, lon):
-        r, theta, phi = seispy.geometry.geo2sph(lat, lon, 0)
+        r, theta, phi = seispy.geometry.geo2sph((lat, lon, 0))
         itheta0 = np.argmin(np.absolute(self.theta - theta))
         iphi0 = np.argmin(np.absolute(self.phi - phi))
         dtheta, dphi = self.theta[itheta0] % 1., self.phi[iphi0] % 1.
