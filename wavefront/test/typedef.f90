@@ -524,4 +524,213 @@ TYPE Tsource
     LOGICAL, DIMENSION(:,:,:), POINTER            :: active
   END TYPE Tvelocity_grid
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+  CONTAINS
+! The subroutines below can be called to give variables inside
+! instances of the derived types defined above default values when
+! allocated. Initialization inside the derived type definition is a
+! Fortran 95 feature, and we had to remove it to ensure fortran 90
+! compatibility.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE interface_defaults(iface)
+      TYPE(Tinterface)  :: iface
+      iface%pinched = .FALSE.
+      iface%nnode = 0
+      iface%to_be_inverted = .FALSE.
+      NULLIFY(iface%lat)
+      NULLIFY(iface%long)
+      NULLIFY(iface%r)
+    END SUBROUTINE interface_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE intersection_defaults(isec)
+      TYPE(Tintersection)  :: isec
+      isec%nnode = 0
+      isec%n_ccells = 0
+      isec%id = 0
+      isec%iface_id = 0
+      NULLIFY(isec%grid)
+      isec%pinched = .FALSE.
+      NULLIFY(isec%r)
+      NULLIFY(isec%lat)
+      NULLIFY(isec%long)
+      NULLIFY(isec%coslat)
+      NULLIFY(isec%normal)
+      NULLIFY(isec%vel_top)
+      NULLIFY(isec%vel_bot)
+      NULLIFY(isec%arrivaltime)
+      NULLIFY(isec%starttime)
+      NULLIFY(isec%time_gradient)
+      NULLIFY(isec%intype)
+      NULLIFY(isec%ccells)
+      NULLIFY(isec%n_inodes)
+      NULLIFY(isec%inodes)
+      NULLIFY(isec%ccell_from_inode)
+      NULLIFY(isec%regabo)
+      NULLIFY(isec%regbel)
+      NULLIFY(isec%rabo_node_id)
+      NULLIFY(isec%rbel_node_id)
+      NULLIFY(isec%irg_abo)
+      NULLIFY(isec%irg_bel)
+    END SUBROUTINE intersection_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE source_defaults(source)
+      TYPE(Tsource)  :: source
+      source%on_grid = .FALSE.
+      source%on_interface = .FALSE.
+      source%on_pinched_interface = .FALSE.
+      source%region_id = 0
+      source%interface_id = 0
+      source%topreg_id = 0
+      source%botreg_id = 0
+      source%topint_id = 0
+      source%botint_id = 0
+      source%is_local = .FALSE.
+      source%is_teleseismic = .FALSE.
+      source%teleseismic_id = 0
+      source%teleseismic_phase = ' '
+      source%n_tf_init = 1
+      NULLIFY(source%first_tf_up)
+      NULLIFY(source%first_tf_down)
+      source%n_paths = 0
+      source%to_be_inverted  = .FALSE.
+      NULLIFY(source%path)
+      source%n_time_fields = 0
+      NULLIFY(source%time_field)
+    END SUBROUTINE source_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE path_defaults(path)
+      TYPE(Tpath)  :: path
+      path%id = 0
+      path%n_tf = 0
+      NULLIFY(path%sequence)
+      NULLIFY(path%tf_sequence)
+      NULLIFY(path%vtype_sequence)
+      path%valid = .TRUE.
+      path%used  = .FALSE.
+      path%gridsave  = .FALSE.
+      path%refstep = 0
+      path%fitting_interface = 0
+    END SUBROUTINE path_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE pgrid_defaults(grid)
+      TYPE(Tpropagation_grid)  :: grid
+      grid%is_main_grid = .FALSE.
+      grid%is_source_grid  = .FALSE.
+      grid%nnode = 0
+      NULLIFY(grid%r)
+      NULLIFY(grid%lat)
+      NULLIFY(grid%long)
+      NULLIFY(grid%coslat)
+      NULLIFY(grid%velocity)
+      NULLIFY(grid%arrivaltime)
+      NULLIFY(grid%time_gradient)
+      NULLIFY(grid%node_region)
+      NULLIFY(grid%rnode_id)
+      NULLIFY(grid%fully_regular)
+      NULLIFY(grid%ccind_from_3dc)
+    END SUBROUTINE pgrid_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE ray_defaults(ray)
+      TYPE(Tray)  :: ray
+      ray%nsections = 0
+      NULLIFY(ray%section)
+      NULLIFY(ray%source)
+      ray%raypath_id = 0
+      ray%source_id = 0
+      ray%diffracted = .FALSE.
+      ray%headwave = .FALSE.
+      ray%is_multiray = .FALSE.
+      ray%n_subrays = 0
+      NULLIFY(ray%subray)
+      ray%n_pdev = 0
+      NULLIFY(ray%pdev_indx)
+      NULLIFY(ray%pdev)
+      ray%valid = .TRUE.
+    END SUBROUTINE ray_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE ray_section_defaults(raysec)
+      TYPE(Tray_section) :: raysec
+      NULLIFY(raysec%ray)
+      NULLIFY(raysec%reg)
+      NULLIFY(raysec%istart)
+      NULLIFY(raysec%iend)
+      NULLIFY(raysec%tf)
+      NULLIFY(raysec%source)
+      raysec%npoints = 0
+      NULLIFY(raysec%point)
+      raysec%place_in_sequence = 0
+      raysec%diffracted = .FALSE.
+      raysec%headwave = .FALSE.
+    END SUBROUTINE ray_section_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE receiver_defaults(rx)
+      TYPE(Treceiver) :: rx
+      rx%id  = 0
+      NULLIFY(rx%arrivaltime)
+      rx%n_rays  = 0
+      NULLIFY(rx%ray)
+      rx%source_equivalent = 0
+      NULLIFY(rx%path_equivalent)
+    END SUBROUTINE receiver_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE region_defaults(reg)
+      TYPE(Tregion)  :: reg
+      reg%id = 0
+      reg%ivgrid = 0
+      NULLIFY(reg%grid)
+      reg%ngnode   = 0
+      reg%nnode  = 0
+      reg%n_init = 0
+      NULLIFY(reg%node)
+      NULLIFY(reg%node_status)
+      NULLIFY(reg%arrivaltime)
+      NULLIFY(reg%time_gradient)
+      NULLIFY(reg%velocity)
+      NULLIFY(reg%r)
+      NULLIFY(reg%lat)
+      NULLIFY(reg%long)
+      NULLIFY(reg%coslat)
+      NULLIFY(reg%init_id)
+      NULLIFY(reg%init_arrivaltime)
+      NULLIFY(reg%init_time_gradient)
+    END SUBROUTINE region_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE time_field_defaults(tf)
+      TYPE(Ttime_field)  :: tf
+      tf%id = 0
+      tf%vtype = 0
+      NULLIFY(tf%reg)
+      NULLIFY(tf%istart)
+      NULLIFY(tf%inonstart)
+      NULLIFY(tf%arrivaltime)
+      NULLIFY(tf%time_gradient)
+      tf%turning_rays_present = .FALSE.
+      NULLIFY(tf%received_turning_ray)
+      tf%prev_tf = 0
+      tf%next_tf(1:8) = 0
+    END SUBROUTINE time_field_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE triangulation_defaults(tri)
+      TYPE(Ttriangulation) :: tri
+      tri%npoints = 0
+      NULLIFY(tri%points)
+      tri%ntriangles = 0
+      NULLIFY(tri%points_from_triangle)
+      NULLIFY(tri%triangle_neighbours)
+      NULLIFY(tri%n_triangles_from_point)
+      NULLIFY(tri%triangles_from_point)
+    END SUBROUTINE triangulation_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    SUBROUTINE vgrid_defaults(grid)
+      TYPE(Tvelocity_grid)  :: grid
+      grid%to_be_inverted  = .FALSE.
+      grid%nnode = 0
+      NULLIFY(grid%r)
+      NULLIFY(grid%lat)
+      NULLIFY(grid%long)
+      NULLIFY(grid%velocity)
+      NULLIFY(grid%active)
+    END SUBROUTINE vgrid_defaults
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 END MODULE typedefn

@@ -16,19 +16,8 @@ MODULE initialize
       DO rxID=1,n_receivers
         CALL receiver_defaults(receiver(rxID))
         receiver(rxID)%id = rxID
-      ENDDO
+      END DO
     END SUBROUTINE allocate_receivers
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    SUBROUTINE receiver_defaults(rx)
-      TYPE(Treceiver) :: rx
-      rx%id  = 0
-      NULLIFY(rx%arrivaltime)
-      rx%n_rays  = 0
-      rx%source_equivalent = 0
-      NULLIFY(rx%path_equivalent)
-    END SUBROUTINE receiver_defaults
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
@@ -40,12 +29,12 @@ MODULE initialize
                                  & source_ids,&
                                  & path_ids)
       INTEGER, INTENT(IN)       :: rxID,&
-                                 & n_rays
-      REAL, INTENT(IN)          :: lat,&
-                                 & lon,&
-                                 & depth,&
+                                 & n_rays,&
                                  & source_ids(n_rays),&
                                  & path_ids(n_rays)
+      REAL, INTENT(IN)          :: lat,&
+                                 & lon,&
+                                 & depth
       INTEGER                   :: rayID
       TYPE(Treceiver), POINTER  :: rx
 ! Initialize receiver coordinates
@@ -64,9 +53,9 @@ MODULE initialize
       CALL ray_defaults(rx%ray(rayID))
       rx%ray(rayID)%source_id = source_ids(rayID)
       rx%ray(rayID)%raypath_id = path_ids(rayID)
-      !rx%ray(rayID)%source => source(source_ids(rayID))
+      rx%ray(rayID)%source => source(source_ids(rayID))
 ! Verify that ray path references are valid here.
-    ENDDO
+    END DO
     END SUBROUTINE initialize_receiver
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 
