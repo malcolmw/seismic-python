@@ -398,7 +398,7 @@ TYPE Tsource
     LOGICAL                                   :: is_local,&
                                                & is_teleseismic
     INTEGER                                   :: teleseismic_id
-    character(LEN=8)                          :: teleseismic_phase
+    CHARACTER(LEN=8)                          :: teleseismic_phase
     INTEGER                                   :: nfile
 ! # of timefields in which source lies (1/2). 1 if in a region, 2 if on
 ! an interface that is not top or bottom.
@@ -580,6 +580,7 @@ TYPE Tsource
       source%on_interface = .FALSE.
       source%on_pinched_interface = .FALSE.
       source%region_id = 0
+      print *,source%region_id
       source%interface_id = 0
       source%topreg_id = 0
       source%botreg_id = 0

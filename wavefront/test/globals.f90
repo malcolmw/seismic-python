@@ -1,5 +1,4 @@
 MODULE globals
-
   USE typedefn
 ! Global parameters.
 ! Intersection nodes snap to regular grid if closer than this fraction
@@ -8,6 +7,7 @@ MODULE globals
 ! Default value for a time that is larger than any realistic value.
     REAL(KIND=dp), PARAMETER   :: huge_time = 1.0e20_dp
     REAL(KIND=dp), PARAMETER   :: earth_radius = 6371.0_dp
+    REAL(KIND=dp), PARAMETER   :: deg_to_rad=acos(-1.0_dp)/180._dp
 ! Reduction in size for refined source grid.
     INTEGER   :: refinement_factor
 ! Extent of refined grid around the source in main grid cells
@@ -82,4 +82,34 @@ MODULE globals
     INTEGER                                             :: n_inv_source
 ! List of sources to be solved for.
     INTEGER, DIMENSION(:), POINTER                      :: sources_to_be_inv
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+CONTAINS
+  SUBROUTINE display()
+    INTEGER                   :: rxID,&
+                               & rayID,&
+                               & srcID,&
+                               & pathID
+    TYPE(Treceiver), POINTER  :: rx
+    TYPE(Tray), POINTER       :: ray
+    TYPE(Tsource), POINTER    :: src
+    TYPE(Tpath), POINTER      :: path
+    DO rxID=1,n_receivers
+      rx => receiver(rxID)
+      print *,"RECEIVER:",rx%id,rx%lat,rx%long,rx%r,rx%n_rays
+      DO rayID=1,rx%n_rays
+        ray => rx%ray(rayID)
+        print *,"    RAY:",ray%source_id,ray%raypath_id
+      ENDDO
+    ENDDO
+    DO srcID=1,n_sources
+      src => source(srcID)
+      print *,"SOURCE:",src%id,src%lat,src%long,src%r,src%n_paths
+      DO pathID=1,src%n_paths
+        path => src%path(pathID)
+        print *,"    PATH:",path%id
+        print *,"        :",path%sequence
+        print *,"        :",path%vtype_sequence
+      ENDDO
+    ENDDO
+  END SUBROUTINE display
 END MODULE globals
