@@ -578,14 +578,83 @@ MODULE core
               k = 0
               t_arrival = -1.0_dp
             ENDIF
-            CALL clean_ray(irec, iray)
+! IF THE RAY IS CLEANED UP HERE, WE CAN'T RETRIEVE ITS DATA!!!
+! IT NEEDS TO BE CLEANED UP ELSEWHERE!
+            !CALL clean_ray(irec, iray)
           ENDDO ! loop over rays/paths
         ENDDO ! loop over receivers
       ENDIF
     END SUBROUTINE march
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_nsources()
+      INTEGER :: get_nsources
+      get_nsources = n_sources
+    END FUNCTION get_nsources
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_nrays(recID)
+      INTEGER :: get_nrays,&
+               & recID
+      get_nrays = receiver(recID)%n_rays
+    END FUNCTION get_nrays
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_nreceivers()
+      INTEGER :: get_nreceivers
+      get_nreceivers = n_receivers
+    END FUNCTION get_nreceivers
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_nsections(recID, rayID)
+      INTEGER :: get_nsections,&
+               & recID,&
+               & rayID
+      get_nsections = receiver(recID)%ray(rayID)%nsections
+    END FUNCTION get_nsections
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_npoints(recID, rayID, secID)
+      INTEGER :: get_npoints,&
+               & recID,&
+               & rayID,&
+               & secID
+      get_npoints = receiver(recID)%ray(rayID)%section(secID)%npoints
+    END FUNCTION get_npoints
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_ray_section(recID, rayID, secID, npts)
+      INTEGER   :: recID,&
+                 & rayID,&
+                 & secID,&
+                 & npts
+      REAL      :: get_ray_section(3,npts)
+      !REAL      :: get_ray_section(3,npts)
+      get_ray_section = receiver(recID)%ray(rayID)%section(secID)%point(1:3,1:npts)
+    END FUNCTION get_ray_section
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    FUNCTION get_ray_arrival_time(recID, rayID)
+      INTEGER   :: recID,&
+                 & rayID
+      REAL      :: get_ray_arrival_time
+      get_ray_arrival_time = receiver(recID)%ray(rayID)%receiver_time
+    END FUNCTION get_ray_arrival_time
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 END MODULE core
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE fmm3dlib
@@ -596,6 +665,7 @@ MODULE fmm3dlib
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 END MODULE fmm3dlib
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
 
 !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 MODULE fmm3dlib_noint

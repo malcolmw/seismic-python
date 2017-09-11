@@ -2,6 +2,202 @@ import _test
 import f90wrap.runtime
 import logging
 
+class Core(f90wrap.runtime.FortranModule):
+    """
+    Module core
+    
+    
+    Defined at fmm3dlib.f90 lines 296-654
+    
+    """
+    @staticmethod
+    def march():
+        """
+        march()
+        
+        
+        Defined at fmm3dlib.f90 lines 302-586
+        
+        
+        """
+        _test.f90wrap_march()
+    
+    @staticmethod
+    def get_nsources():
+        """
+        get_nsources = get_nsources()
+        
+        
+        Defined at fmm3dlib.f90 lines 592-594
+        
+        
+        Returns
+        -------
+        get_nsources : int
+        
+        """
+        get_nsources = _test.f90wrap_get_nsources()
+        return get_nsources
+    
+    @staticmethod
+    def get_nrays(recid):
+        """
+        get_nrays = get_nrays(recid)
+        
+        
+        Defined at fmm3dlib.f90 lines 599-602
+        
+        Parameters
+        ----------
+        recid : int
+        
+        Returns
+        -------
+        get_nrays : int
+        
+        """
+        get_nrays = _test.f90wrap_get_nrays(recid=recid)
+        return get_nrays
+    
+    @staticmethod
+    def get_nreceivers():
+        """
+        get_nreceivers = get_nreceivers()
+        
+        
+        Defined at fmm3dlib.f90 lines 607-609
+        
+        
+        Returns
+        -------
+        get_nreceivers : int
+        
+        """
+        get_nreceivers = _test.f90wrap_get_nreceivers()
+        return get_nreceivers
+    
+    @staticmethod
+    def get_nsections(recid, rayid):
+        """
+        get_nsections = get_nsections(recid, rayid)
+        
+        
+        Defined at fmm3dlib.f90 lines 615-619
+        
+        Parameters
+        ----------
+        recid : int
+        rayid : int
+        
+        Returns
+        -------
+        get_nsections : int
+        
+        """
+        get_nsections = _test.f90wrap_get_nsections(recid=recid, rayid=rayid)
+        return get_nsections
+    
+    @staticmethod
+    def get_npoints(recid, rayid, secid):
+        """
+        get_npoints = get_npoints(recid, rayid, secid)
+        
+        
+        Defined at fmm3dlib.f90 lines 624-629
+        
+        Parameters
+        ----------
+        recid : int
+        rayid : int
+        secid : int
+        
+        Returns
+        -------
+        get_npoints : int
+        
+        """
+        get_npoints = _test.f90wrap_get_npoints(recid=recid, rayid=rayid, secid=secid)
+        return get_npoints
+    
+    @staticmethod
+    def get_ray_section(recid, rayid, secid, npts):
+        """
+        get_ray_section = get_ray_section(recid, rayid, secid, npts)
+        
+        
+        Defined at fmm3dlib.f90 lines 634-641
+        
+        Parameters
+        ----------
+        recid : int
+        rayid : int
+        secid : int
+        npts : int
+        
+        Returns
+        -------
+        get_ray_section : float array
+        
+        """
+        get_ray_section = _test.f90wrap_get_ray_section(recid=recid, rayid=rayid, \
+            secid=secid, npts=npts, n0=npts)
+        return get_ray_section
+    
+    @staticmethod
+    def get_ray_arrival_time(recid, rayid):
+        """
+        get_ray_arrival_time = get_ray_arrival_time(recid, rayid)
+        
+        
+        Defined at fmm3dlib.f90 lines 646-650
+        
+        Parameters
+        ----------
+        recid : int
+        rayid : int
+        
+        Returns
+        -------
+        get_ray_arrival_time : float
+        
+        """
+        get_ray_arrival_time = _test.f90wrap_get_ray_arrival_time(recid=recid, \
+            rayid=rayid)
+        return get_ray_arrival_time
+    
+    _dt_array_initialisers = []
+    
+
+core = Core()
+
+class Fmm3Dlib(f90wrap.runtime.FortranModule):
+    """
+    Module fmm3dlib
+    
+    
+    Defined at fmm3dlib.f90 lines 660-665
+    
+    """
+    pass
+    _dt_array_initialisers = []
+    
+
+fmm3dlib = Fmm3Dlib()
+
+class Fmm3Dlib_Noint(f90wrap.runtime.FortranModule):
+    """
+    Module fmm3dlib_noint
+    
+    
+    Defined at fmm3dlib.f90 lines 671-675
+    
+    """
+    pass
+    _dt_array_initialisers = []
+    
+
+fmm3dlib_noint = Fmm3Dlib_Noint()
+
 class Initialize(f90wrap.runtime.FortranModule):
     """
     Module initialize
@@ -214,57 +410,4 @@ class Initialize(f90wrap.runtime.FortranModule):
     
 
 initialize = Initialize()
-
-class Core(f90wrap.runtime.FortranModule):
-    """
-    Module core
-    
-    
-    Defined at fmm3dlib.f90 lines 296-586
-    
-    """
-    @staticmethod
-    def march():
-        """
-        march()
-        
-        
-        Defined at fmm3dlib.f90 lines 302-584
-        
-        
-        """
-        _test.f90wrap_march()
-    
-    _dt_array_initialisers = []
-    
-
-core = Core()
-
-class Fmm3Dlib(f90wrap.runtime.FortranModule):
-    """
-    Module fmm3dlib
-    
-    
-    Defined at fmm3dlib.f90 lines 591-596
-    
-    """
-    pass
-    _dt_array_initialisers = []
-    
-
-fmm3dlib = Fmm3Dlib()
-
-class Fmm3Dlib_Noint(f90wrap.runtime.FortranModule):
-    """
-    Module fmm3dlib_noint
-    
-    
-    Defined at fmm3dlib.f90 lines 601-605
-    
-    """
-    pass
-    _dt_array_initialisers = []
-    
-
-fmm3dlib_noint = Fmm3Dlib_Noint()
 

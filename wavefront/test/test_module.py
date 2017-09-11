@@ -64,5 +64,19 @@ def main():
     test.initialize.finalize_definitions()
     print("march()")
     test.core.march()
+    for srcID in range(1, test.core.get_nsources() + 1):
+        print("source #%d" % srcID)
+        for recID in range(1, test.core.get_nreceivers() + 1):
+            nrays = test.core.get_nrays(recID)
+            print("    treceiver #%d - %d rays" % (recID, nrays))
+            for rayID in range(1, nrays + 1):
+                nsec = test.core.get_nsections(recID, rayID)
+                print("        ray #%d - %d sections" % (rayID, nsec))
+                print("            travel time: %f" % test.core.get_ray_arrival_time(recID, rayID))
+                for secID in range(1, nsec + 1):
+                    npts = test.core.get_npoints(recID, rayID, secID)
+                    print("            section #%d - %d points" % (secID, npts))
+                    print(test.core.get_ray_section(recID, rayID, secID, npts)[:,0])
+
 if __name__ == "__main__":
     main()
