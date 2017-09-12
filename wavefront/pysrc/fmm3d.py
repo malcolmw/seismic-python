@@ -1,106 +1,67 @@
-from . import _fmm3d
-import f90wrap.runtime
-import logging
+from . import fmm3dlib
 
-def run(sources, nsources, receivers, nreceivers, outrays, outtts):
-    """
-    run(sources, nsources, receivers, nreceivers, outrays, outtts)
-    
-    
-    Defined at 3dfm_main.f90 lines 14-1230
-    
-    Parameters
-    ----------
-    sources : float array
-    nsources : int
-    receivers : float array
-    nreceivers : int
-    outrays : float array
-    outtts : float array
-    
-    \
-        ---------------------------------------------------------------------------------------------------
-     initialize intersections (interface grid + navigation pointers) and regions \
-         (collection of grid
-     points between two interfaces, including the bounding intersections ). The fast \
-         marching
-     solution is evaluated region by region.
-    ---------
-      calculate the intersection points, i.e. where the surfaces cut through the \
-          regular propagation grid
-    """
-    _fmm3d.f90wrap_run(sources=sources, nsources=nsources, receivers=receivers, \
-        nreceivers=nreceivers, outrays=outrays, outtts=outtts)
+core = fmm3dlib.core
+init = fmm3dlib.initialize
 
-def initialize_velocity_grids(vgrids, ngrids, ntypes, nr, nlambda, nphi, r0, \
-    lambda0, phi0, dr, dlambda, dphi):
-    """
-    initialize_velocity_grids(vgrids, ngrids, ntypes, nr, nlambda, nphi, r0, \
-        lambda0, phi0, dr, dlambda, dphi)
-    
-    
-    Defined at 3dfmlib.f90 lines 7-99
-    
-    Parameters
-    ----------
-    vgrids : float array
-    ngrids : int
-    ntypes : int
-    nr : int
-    nlambda : int
-    nphi : int
-    r0 : float
-    lambda0 : float
-    phi0 : float
-    dr : float
-    dlambda : float
-    dphi : float
-    
-    """
-    _fmm3d.f90wrap_initialize_velocity_grids(vgrids=vgrids, ngrids=ngrids, \
-        ntypes=ntypes, nr=nr, nlambda=nlambda, nphi=nphi, r0=r0, lambda0=lambda0, \
-        phi0=phi0, dr=dr, dlambda=dlambda, dphi=dphi)
+class RaySection(object):
+    def __init__(self, recID, srcID, rayID, secID, npts, points):
+        self.recID = recID
+        self.srcID = srcID
+        self.rayID = rayID
+        self.secID = secID
+        self.npts = npts
+        self.points = points
 
-def initialize_propagation_grid(nr, nlat, nlon, dr, dlat, dlon, h0, lat0, lon0):
-    """
-    initialize_propagation_grid(nr, nlat, nlon, dr, dlat, dlon, h0, lat0, lon0)
-    
-    
-    Defined at 3dfmlib.f90 lines 104-187
-    
-    Parameters
-    ----------
-    nr : int
-    nlat : int
-    nlon : int
-    dr : float
-    dlat : float
-    dlon : float
-    h0 : float
-    lat0 : float
-    lon0 : float
-    
-    """
-    _fmm3d.f90wrap_initialize_propagation_grid(nr=nr, nlat=nlat, nlon=nlon, dr=dr, \
-        dlat=dlat, dlon=dlon, h0=h0, lat0=lat0, lon0=lon0)
+class Ray(object):
+    def __init__(self, recID, srcID, rayID, nsec):
+        self.recID = recID
+        self.srcID = srcID
+        self.rayID = rayID
+        self.nsec = nsec
+        self.sections = []
 
-def initialize_interfaces(lambda0, phi0, nlambda, nphi, dlambda, dphi):
-    """
-    initialize_interfaces(lambda0, phi0, nlambda, nphi, dlambda, dphi)
-    
-    
-    Defined at 3dfmlib.f90 lines 194-292
-    
-    Parameters
-    ----------
-    lambda0 : float
-    phi0 : float
-    nlambda : int
-    nphi : int
-    dlambda : float
-    dphi : float
-    
-    """
-    _fmm3d.f90wrap_initialize_interfaces(lambda0=lambda0, phi0=phi0, \
-        nlambda=nlambda, nphi=nphi, dlambda=dlambda, dphi=dphi)
+    def add_section(self, secID, points):
+        self.sections.append(RaySection(self.recID,
+                                        self.srcID,
+                                        self.rayID,
+                                        secID,
+                                        points.shape[1],
+                                        points))
 
+    def __str__(self):
+        print(self.sections[0].points.shape)
+        s = "%d %d %d 0 %d\n" % (self.recID,
+                               self.srcID,
+                               self.rayID,
+                               self.nsec)
+        for isec in range(self.nsec):
+            s += "%d %d F F\n" % (self.sections[isec].npts, 0)
+            for ipt in range(self.sections[isec].npts):
+                s += "%f %f %f\n" % (self.sections[isec].points[0,ipt],
+                                     self.sections[isec].points[1,ipt],
+                                     self.sections[isec].points[2,ipt])
+        return(s)
+
+
+def get_rays():
+    with open("/Users/malcolcw/Desktop/rays.dat", "w") as outf:
+        rays = []
+        for srcID in range(1, core.get_nsources() + 1):
+            #print("source #%d" % srcID)
+            for recID in range(1, core.get_nreceivers() + 1):
+                nrays = core.get_nrays(recID)
+                #print("    treceiver #%d - %d rays" % (recID, nrays))
+                for rayID in range(1, nrays + 1):
+                    nsec = core.get_nsections(recID, rayID)
+                    ray = Ray(recID, srcID, rayID, nsec)
+                    print("RAYID %d ray" % rayID)
+                    #print("        ray #%d - %d sections" % (rayID, nsec))
+                    #print("            travel time: %f" % core.get_ray_arrival_time(recID, rayID))
+                    for secID in range(1, nsec + 1):
+                        npts = core.get_npoints(recID, rayID, secID)
+                        #print("            section #%d - %d points" % (secID, npts))
+                        points = core.get_ray_section(recID, rayID, secID, npts)
+                        ray.add_section(secID, points)
+                        #outf.write(print(str(ray)))
+                    rays.append(ray)
+    return(rays)

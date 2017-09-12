@@ -36,17 +36,31 @@ def configure():
                            "seispy.topography",
                            "seispy.ttgrid",
                            "seispy.velocity",
-                           "wavefront.fmm3d"],
-            "package_data": {"wavefront": ["_fmm3d.*.so"]}}
+                           "wavefront.fmm3d",
+                           "wavefront.fmm3dlib"],
+            "package_data": {"wavefront": ["_fmm3dlib.*.so"]}}
     return(kwargs)
 
 def compile_fmm3d():
-    fsrcs = ["libsun", "libtau", "ellip", "sphdist", "nn_subsf"]
-    f90srcs = ["mod_3dfm", "3dfmlib", "propagate", "rays",
-            "frechet", "matchref", "teleseismic",
-            "3dfm_main", "stack", "svdlib", "visual"]
-    srcs = f90srcs + fsrcs
-
+    sources = ["typedefn.f90",
+               "globals.f90",
+               "legacy/interface_definitions.f90",
+               "fmm3dlib.f90",
+               "legacy/3dfmlib.f90",
+               "legacy/ellip.f",
+               "legacy/frechet.f90",
+               "legacy/libsun.f",
+               "legacy/libtau.f",
+               "legacy/matchref.f90",
+               "legacy/nn_subsf.f",
+               "legacy/propagate.f90",
+               "legacy/rays.f90",
+               "legacy/sphdist.f",
+               "legacy/stack.f90",
+               "legacy/svdlib.f90",
+               "legacy/teleseismic.f90",
+               "initialize.f90",
+               "util.f90"]
     root_dir = os.path.split(os.path.abspath(__file__))[0]
     comp_dir = "%s/wavefront/compile" % root_dir
     fortran_src_dir = "%s/wavefront/fsrc" % root_dir
@@ -59,7 +73,6 @@ def compile_fmm3d():
             print(rtext("Failed to remove compile directory"))
             print(rtext(err))
             exit()
-
     try:
         print(gtext("Creating compile directory: %s" % comp_dir))
         os.mkdir(comp_dir)
@@ -74,20 +87,17 @@ def compile_fmm3d():
         print(rtext("Failed to change directory"))
         print(rtext(err))
         exit()
-    for src, ext in list(zip(["%s/%s" % (fortran_src_dir, src) for src in f90srcs],
-                            ["f90"]*len(f90srcs))) +\
-                    list(zip(["%s/%s" % (fortran_src_dir, src) for src in fsrcs],
-                            ["f"]*len(fsrcs))):
-        print(gtext("Compiling Fortran source %s.%s" % (src, ext)))
+    for src in sources:
+        print(gtext("Compiling Fortran source %s" % src))
+        src = "%s/%s" % (fortran_src_dir, src)
         try:
-            cmd = ["gfortran", "-c", "%s.%s" % (src, ext)]
+            cmd = ["gfortran", "-c", src]
             print("\t%s" % gtext(" ".join(cmd)))
             subprocess.run(cmd)
         except Exception as err:
-            print(rtext("Failed to compile Fortran source %s.%s" % (src, ext)))
+            print(rtext("Failed to compile Fortran source %s.%s" % src))
             print(rtext(err))
             exit()
-
     try:
         print(gtext("Copying package contents to: %s" % comp_dir))
         for f in glob.glob("%s/*" % py_src_dir):
@@ -98,10 +108,14 @@ def compile_fmm3d():
         exit()
 
     try:
-        print(gtext("Creating Fortran extension module: _fmm3d"))
-        cmd = ["f2py", "-c", "-m", "_fmm3d", "-I%s" % comp_dir]
-        cmd += glob.glob("%s/f90wrap_*.f90" % fortran_src_dir)
-        cmd += ["%s/%s.o" % (comp_dir, src) for src in srcs]
+        print(gtext("Creating Fortran extension module: _fmm3dlib"))
+        cmd = ["f2py", "-c", "-m", "_fmm3dlib", "-I%s" % comp_dir]
+        #cmd += glob.glob("%s/f90wrap_*.f90" % fortran_src_dir)
+        cmd += ["%s/f90wrap_fmm3dlib.f90" % fortran_src_dir]
+        cmd += ["%s/f90wrap_initialize.f90" % fortran_src_dir]
+        for src in sources:
+            src = os.path.splitext(os.path.split(src)[1])[0]
+            cmd += ["%s/%s.o" % (comp_dir, src)]
         print("\t%s" % gtext(" ".join(cmd)))
         subprocess.run(cmd)
     except Exception as err:
