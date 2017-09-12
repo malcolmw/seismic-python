@@ -1,3 +1,7 @@
 build
 */*.swp
 compile
+
+seispy/__pycache__/
+
+*.swp

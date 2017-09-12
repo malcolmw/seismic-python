@@ -1,6 +1,6 @@
 import numpy as np
 import seispy
-import fm3d
+import fmm3d
 
 class Propagator(seispy.velocity.VelocityModel):
     def __init__(self, *args, **kwargs):
@@ -31,9 +31,9 @@ class Propagator(seispy.velocity.VelocityModel):
                                    self.nodes["dphi"])
 
     def __call__(self, sources, receivers):
-        sources[:,1] %= 360.
+        sources = seispy.geometry.validate_geographic_coords(sources)
         nsources = len(sources)
-        receivers[:,1] %= 360.
+        receivers = seispy.geometry.validate_geographic_coords(receivers)
         nreceivers = len(receivers)
         rays = np.zeros((nsources, nreceivers, 2, 10000, 3),
                             order="F",

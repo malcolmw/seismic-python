@@ -121,7 +121,7 @@ def get_line_endpoints(lat0, lon0, azimuth, length):
            (lon0 + l2 * cos(theta1), lat0 + l2 * sin(theta1)))
 
 
-def geo2sph(lat, lon, z):
+def geo2sph(coordinates):
     """
     Convert geographic coordinates to spherical coordinates.
 
@@ -135,11 +135,14 @@ def geo2sph(lat, lon, z):
               geographic coordinates
     :rtype: (float, float, float)
     """
-    lat, lon, z = validate_geographic_coords([lat, lon, z])
-    theta = radians(90. - lat)
-    phi = radians(lon)
-    r = EARTH_RADIUS - z
-    return(r, theta, phi)
+    coordinates = np.asarray(coordinates)
+    if coordinates.shape == (3,):
+        lat, lon, z = validate_geographic_coords(coordinates)
+        theta = radians(90. - lat)
+        phi = radians(lon)
+        r = EARTH_RADIUS - z
+        return(r, theta, phi)
+    return(np.array([geo2sph(coords) for coords in coordinates]))
 
 
 def radians2azimuth(theta):
