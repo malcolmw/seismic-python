@@ -38,7 +38,8 @@ def configure():
                            "seispy.velocity",
                            "wavefront.fmm3d",
                            "wavefront.fmm3dlib"],
-            "package_data": {"wavefront": ["_fmm3dlib.*.so"]}}
+            "package_data": {"wavefront": ["_fmm3dlib.*.so"]},
+            "include_package_data": True}
     return(kwargs)
 
 def compile_fmm3d():
@@ -110,7 +111,6 @@ def compile_fmm3d():
     try:
         print(gtext("Creating Fortran extension module: _fmm3dlib"))
         cmd = ["f2py", "-c", "-m", "_fmm3dlib", "-I%s" % comp_dir]
-        #cmd += glob.glob("%s/f90wrap_*.f90" % fortran_src_dir)
         cmd += ["%s/f90wrap_fmm3dlib.f90" % fortran_src_dir]
         cmd += ["%s/f90wrap_initialize.f90" % fortran_src_dir]
         for src in sources:
