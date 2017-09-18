@@ -140,7 +140,6 @@ class VelocityModel(object):
                                                      np.degrees(dphi),
                                                      drho)
             grid = model["grid"]
-            print(str(grid))
             model["data"] = np.empty((nrho, nlambda, nphi))
             for (irho, ilambda, iphi) in [(irho, ilambda, iphi)\
                                     for irho in range(nrho)\
