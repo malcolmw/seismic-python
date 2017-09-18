@@ -258,9 +258,9 @@ def validate_spherical_coords(coordinates):
     data = np.asarray(coordinates)
     if data.shape == (3,):
         if data[0] < 0:
-            raise(ValueError("Invalid value for r: {:f}".format(data[0])))
+            raise(ValueError("Invalid value for rho: {:f}".format(data[0])))
         if np.pi < data[1] % (2 * np.pi) < np.pi * 2:
-            raise(ValueError("Invalid value for θ: {:f}".format(data[1])))
+            raise(ValueError("Invalid value for theta: {:f}".format(data[1])))
         data[2] %= 2 * np.pi
         data[2] = data[2] if 0 <= data[2] <= np.pi else data[2] - 2 * np.pi
         return(data)

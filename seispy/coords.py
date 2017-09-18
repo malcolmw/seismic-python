@@ -32,12 +32,12 @@ class GeographicCoordinates(np.ndarray):
 
     def to_cartesian(self):
         cart = CartesianCoordinates(self.shape[:-1])
-        ρ = seispy.constants.EARTH_RADIUS - self[...,2]
-        θ = π/2 - np.radians(self[...,0])
-        φ = np.radians(self[...,1])
-        cart[...,0] = ρ * np.sin(θ) * np.cos(φ)
-        cart[...,1] = ρ * np.sin(θ) * np.sin(φ)
-        cart[...,2] = ρ * np.cos(θ)
+        rho = seispy.constants.EARTH_RADIUS - self[...,2]
+        theta = π/2 - np.radians(self[...,0])
+        phi = np.radians(self[...,1])
+        cart[...,0] = rho * np.sin(theta) * np.cos(phi)
+        cart[...,1] = rho * np.sin(theta) * np.sin(phi)
+        cart[...,2] = rho * np.cos(theta)
         return(cart)
 
     def to_left_spherical(self):
@@ -79,10 +79,10 @@ class CartesianCoordinates(np.ndarray):
 
     def to_geographic(self):
         geo = GeographicCoordinates(self.shape[:-1])
-        ρ = np.sqrt(np.sum(np.square(self),axis=-1))
-        geo[...,0] = np.degrees(π/2 - np.arccos(self[...,2]/ρ))
+        rho = np.sqrt(np.sum(np.square(self),axis=-1))
+        geo[...,0] = np.degrees(π/2 - np.arccos(self[...,2]/rho))
         geo[...,1] = np.degrees(np.arctan2(self[...,1], self[...,0]))
-        geo[...,2] = seispy.constants.EARTH_RADIUS - ρ
+        geo[...,2] = seispy.constants.EARTH_RADIUS - rho
         return(geo)
 
     def to_left_spherical(self):
@@ -111,12 +111,12 @@ class SphericalCoordinates(np.ndarray):
         if coordinates.shape == (3,):
             coordinates = np.asarray([coordinates])
         super().__setitem__(index, coordinates)
-        if False in [ρ >= 0 for ρ in self[...,0].flatten()]:
-            raise(ValueError("all values for ρ must satisfiy 0 <= ρ"))
-        if False in  [0 <= θ <= π for θ in self[...,1].flatten()]:
-            raise(ValueError("all values for θ must satisfiy 0 <= θ <= π"))
-        if False in  [-π <= φ <= π for φ in self[...,2].flatten()]:
-            raise(ValueError("all values for φ must satisfiy -π <= φ <= π"))
+        if False in [rho >= 0 for rho in self[...,0].flatten()]:
+            raise(ValueError("all values for rho must satisfiy 0 <= rho"))
+        if False in  [0 <= theta <= π for theta in self[...,1].flatten()]:
+            raise(ValueError("all values for theta must satisfiy 0 <= theta <= π"))
+        if False in  [-π <= phi <= π for phi in self[...,2].flatten()]:
+            raise(ValueError("all values for phi must satisfiy -π <= phi <= π"))
 
     def to_cartesian(self):
         cart = CartesianCoordinates(self.shape[:-1])
@@ -151,12 +151,12 @@ class  LeftSphericalCoordinates(np.ndarray):
         if coordinates.shape == (3,):
             coordinates = np.asarray([coordinates])
         super().__setitem__(index, coordinates)
-        if False in  [ρ >= 0 for ρ in self[...,0].flatten()]:
-            raise(ValueError("all values for ρ must satisfiy 0 <= ρ"))
-        if False in  [-π/2 <= θ <= π/2 for θ in self[...,1].flatten()]:
-            raise(ValueError("all values for λ must satisfiy -π/2 <= λ <= π/2"))
-        if False in  [-π <= φ <= π for φ in self[...,2].flatten()]:
-            raise(ValueError("all values for φ must satisfiy -π <= φ <= π"))
+        if False in  [rho >= 0 for rho in self[...,0].flatten()]:
+            raise(ValueError("all values for rho must satisfiy 0 <= rho"))
+        if False in  [-π/2 <= theta <= π/2 for theta in self[...,1].flatten()]:
+            raise(ValueError("all values for lambda must satisfiy -π/2 <= lambda <= π/2"))
+        if False in  [-π <= phi <= π for phi in self[...,2].flatten()]:
+            raise(ValueError("all values for phi must satisfiy -π <= phi <= π"))
 
     def to_cartesian(self):
         cart = CartesianCoordinates(self.shape[:-1])

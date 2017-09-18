@@ -7,19 +7,19 @@ ER = seispy.constants.EARTH_RADIUS
 def format_interfaces(interfaces):
     grid = interfaces[0].grid
     blob = "{:d}\n".format(len(interfaces))
-    blob += "{:d} {:d}\n".format(grid.nλ, grid.nφ)
-    blob += "{:.15f} {:.15f}\n".format(np.float64(grid.dλ), np.float64(grid.dφ))
-    blob += "{:.15f} {:.15f}\n".format(grid.λ0, grid.φ0)
+    blob += "{:d} {:d}\n".format(grid.nlambda, grid.nphi)
+    blob += "{:.15f} {:.15f}\n".format(np.float64(grid.dlambda), np.float64(grid.dphi))
+    blob += "{:.15f} {:.15f}\n".format(grid.lambda0, grid.phi0)
     for interface in interfaces:
         coordinates = np.flipud(interface.coordinates)
-        for (iλ, iφ) in [(iλ, iφ) for iλ in range(grid.nλ)
-                                  for iφ in range(grid.nφ)]:
-            blob += "{:.15f}\n".format(coordinates[iλ, iφ, 0])
+        for (ilambda, iphi) in [(ilambda, iphi) for ilambda in range(grid.nlambda)
+                                  for iphi in range(grid.nphi)]:
+            blob += "{:.15f}\n".format(coordinates[ilambda, iphi, 0])
     return(blob)
 
 def format_propagation_grid(grid):
-    blob = "{:3d} {:3d} {:3d}\n".format(grid.nr, grid.nlat, grid.nlon)
-    blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.dr, grid.dlat, grid.dlon)
+    blob = "{:3d} {:3d} {:3d}\n".format(grid.nrho, grid.nlat, grid.nlon)
+    blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.drho, grid.dlat, grid.dlon)
     blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(-grid.depth0, grid.lat0, grid.lon0)
     blob += "5 10\n"
     return(blob)
@@ -40,42 +40,42 @@ def format_vgrids(vmodel):
                              for typeID in range(1, vmodel.nvtypes + 1)
                              for gridID in range(1, vmodel.nvgrids+ 1 )]:
         grid = vmodel.v_type_grids[typeID][gridID]["grid"]
-        blob += "{:d} {:d} {:d}\n".format(grid.nρ,
-                                          grid.nλ,
-                                          grid.nφ)
-        blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.dρ,
-                                                      grid.dλ,
-                                                      grid.dφ)
-        blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.ρ0,
-                                                      grid.λ0,
-                                                      grid.φ0)
-        for iρ, iλ, iφ in ((i, j, k) for i in range(grid.nρ)
-                                for j in range(grid.nλ)
-                                for k in range(grid.nφ)):
-            lat, lon, depth = seispy.coords.as_left_spherical([grid.ρ0 + iρ * grid.dρ,
-                                                        grid.λ0 + iλ * grid.dλ,
-                                                        grid.φ0 + iφ * grid.dφ]).to_geographic()
+        blob += "{:d} {:d} {:d}\n".format(grid.nrho,
+                                          grid.nlambda,
+                                          grid.nphi)
+        blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.drho,
+                                                      grid.dlambda,
+                                                      grid.dphi)
+        blob += "{:11.6f} {:11.6f} {:11.6f}\n".format(grid.rho0,
+                                                      grid.lambda0,
+                                                      grid.phi0)
+        for irho, ilambda, iphi in ((i, j, k) for i in range(grid.nrho)
+                                for j in range(grid.nlambda)
+                                for k in range(grid.nphi)):
+            lat, lon, depth = seispy.coords.as_left_spherical([grid.rho0 + irho * grid.drho,
+                                                        grid.lambda0 + ilambda * grid.dlambda,
+                                                        grid.phi0 + iphi * grid.dphi]).to_geographic()
             blob += "{:11.6f}\n".format(vmodel(typeID, gridID, lat, lon, depth ))
     return(blob)
 
 def read_interfaces(infile):
     infile = open(infile)
     ninter = int(infile.readline().split()[0])
-    nλ, nφ = [int(v) for v in infile.readline().split()[:2]]
-    dλ, dφ = [np.float64(v) for v in infile.readline().split()[:2]]
-    λ0, φ0 = [np.float64(v) for v in infile.readline().split()[:2]]
-    grid = seispy.geogrid.GeoGrid2D(np.degrees(λ0), np.degrees(φ0),
-                             nλ, nφ,
-                             np.degrees(dλ), np.degrees(dφ))
+    nlambda, nphi = [int(v) for v in infile.readline().split()[:2]]
+    dlambda, dphi = [np.float64(v) for v in infile.readline().split()[:2]]
+    lambda0, phi0 = [np.float64(v) for v in infile.readline().split()[:2]]
+    grid = seispy.geogrid.GeoGrid2D(np.degrees(lambda0), np.degrees(phi0),
+                             nlambda, nphi,
+                             np.degrees(dlambda), np.degrees(dphi))
     interfaces = []
     for iinter in range(ninter):
         surf = seispy.surface.GeoSurface()
         surf.grid = grid
         coordinates = seispy.coords.as_left_spherical([[[np.float64(infile.readline().split()[0]),
-                                                  λ0 + iλ*dλ,
-                                                  φ0 + iφ*dφ]
-                                                for iφ in range(nφ)]
-                                                for iλ in range(nλ)])
+                                                  lambda0 + ilambda*dlambda,
+                                                  phi0 + iphi*dphi]
+                                                for iphi in range(nphi)]
+                                                for ilambda in range(nlambda)])
         coordinates = np.flip(coordinates.to_spherical(), axis=0)
         surf.coordinates = coordinates
         interfaces.append(surf)

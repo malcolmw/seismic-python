@@ -13,22 +13,22 @@ class GeoSurface(object):
 # HACK
 # THIS NEEDS TO BE CLEANED UP
         #lon = lon % 360 - 360
-        _, θ, φ = seispy.coords.as_geographic([lat, lon, 0]).to_spherical()
-        iθ = (θ - self.grid.θ0) / self.grid.dθ
-        iθ0 = int(min([max([0, np.floor(iθ)]), self.grid.nθ - 1]))
-        iθ1 = int(max([0, min([self.grid.nθ-1, np.ceil(iθ)])]))
-        iφ = (φ - self.grid.φ0) / self.grid.dφ
-        iφ0 = int(min([max([0, np.floor(iφ)]), self.grid.nφ - 1]))
-        iφ1 = int(max([0, min([self.grid.nφ, np.ceil(iφ)])]))
-        R00 = self.coordinates[iθ0, iφ0, 0]
-        R01 = self.coordinates[iθ0, iφ1, 0]
-        R10 = self.coordinates[iθ1, iφ0, 0]
-        R11 = self.coordinates[iθ1, iφ1, 0]
-        dθ = θ - self.coordinates[iθ0, iφ0, 1]
-        dφ = φ - self.coordinates[iθ0, iφ0, 2]
-        R0 = R00 + (R10 - R00) * dθ
-        R1 = R01 + (R11 - R01) * dθ
-        return(R0 + (R1 - R0) * dφ)
+        _, theta, phi = seispy.coords.as_geographic([lat, lon, 0]).to_spherical()
+        itheta = (theta - self.grid.theta0) / self.grid.dtheta
+        itheta0 = int(min([max([0, np.floor(itheta)]), self.grid.ntheta - 1]))
+        itheta1 = int(max([0, min([self.grid.ntheta-1, np.ceil(itheta)])]))
+        iphi = (phi - self.grid.phi0) / self.grid.dphi
+        iphi0 = int(min([max([0, np.floor(iphi)]), self.grid.nphi - 1]))
+        iphi1 = int(max([0, min([self.grid.nphi, np.ceil(iphi)])]))
+        R00 = self.coordinates[itheta0, iphi0, 0]
+        R01 = self.coordinates[itheta0, iphi1, 0]
+        R10 = self.coordinates[itheta1, iphi0, 0]
+        R11 = self.coordinates[itheta1, iphi1, 0]
+        dtheta = theta - self.coordinates[itheta0, iphi0, 1]
+        dphi = phi - self.coordinates[itheta0, iphi0, 2]
+        R0 = R00 + (R10 - R00) * dtheta
+        R1 = R01 + (R11 - R01) * dtheta
+        return(R0 + (R1 - R0) * dphi)
 
     def read(self, infile):
         infile = open(infile)
@@ -63,7 +63,7 @@ def test():
     geosurf = GeoSurface()
     geosurf.read("/Users/malcolcw/Projects/Shared/Topography/anza.xyz")
     print(geosurf(33.0, -116.0))
-    print(geosurf.grid.θ0)
+    print(geosurf.grid.theta0)
 
 if __name__ == "__main__":
     print("WARNING:: topography.py not an executable script")

@@ -12,15 +12,15 @@ class GeoGrid2D(object):
         self.nlat, self.nlon = nlat, nlon
         self.dlat, self.dlon = dlat, dlon
 # Spherical/Pseudospherical coordinate systems
-        self.nθ = self.nλ = self.nlat
-        self.nφ = self.nlon
+        self.ntheta = self.nlambda = self.nlat
+        self.nphi = self.nlon
 
-        self.dθ = self.dλ = np.radians(self.dlat)
-        self.dφ = np.radians(self.dlon)
+        self.dtheta = self.dlambda = np.radians(self.dlat)
+        self.dphi = np.radians(self.dlon)
 
-        self.λ0 = np.radians(self.lat0)
-        self.θ0 = np.pi/2 - (self.λ0 + (self.nλ - 1) * self.dλ)
-        self.φ0 = np.radians(self.lon0)
+        self.lambda0 = np.radians(self.lat0)
+        self.theta0 = np.pi/2 - (self.lambda0 + (self.nlambda - 1) * self.dlambda)
+        self.phi0 = np.radians(self.lon0)
 
     def __str__(self):
         s = "lat0, lon0: {:.15g}, {:.15g}\n".format(self.lat0,
@@ -29,15 +29,15 @@ class GeoGrid2D(object):
                                                  self.nlon)
         s += "dlat, dlon: {:.15g}, {:.15g}\n".format(self.dlat,
                                                      self.dlon)
-        s += "θ0, λ0, φ0: {:.15g}, {:.15g}, {:.15g}\n".format(self.θ0,
-                                                             self.λ0,
-                                                             self.φ0)
-        s += "nθ, nλ, nφ : {:8d}, {:8d}\n".format(self.nθ,
-                                                  self.nλ,
-                                                  self.nφ)
-        s += "dθ, dλ, dφ : {:.15g}, {:.15g}, {:.15g}".format(self.dθ,
-                                                             self.dλ,
-                                                             self.dφ)
+        s += "theta0, lambda0, phi0: {:.15g}, {:.15g}, {:.15g}\n".format(self.theta0,
+                                                             self.lambda0,
+                                                             self.phi0)
+        s += "ntheta, nlambda, nphi : {:8d}, {:8d}\n".format(self.ntheta,
+                                                  self.nlambda,
+                                                  self.nphi)
+        s += "dtheta, dlambda, dphi : {:.15g}, {:.15g}, {:.15g}".format(self.dtheta,
+                                                             self.dlambda,
+                                                             self.dphi)
         return(s)
 
 class GeoGrid3D(object):
@@ -50,17 +50,17 @@ class GeoGrid3D(object):
         self.nlat, self.nlon, self.ndepth = nlat, nlon, ndepth
         self.dlat, self.dlon, self.ddepth = dlat, dlon, ddepth
 # Spherical/Pseudospherical coordinate systems
-        self.nρ = self.ndepth
-        self.nθ = self.nλ = self.nlat
-        self.nφ = self.nlon
-        self.dρ = self.ddepth
-        self.dθ = self.dλ = np.radians(self.dlat)
-        self.dφ = np.radians(self.dlon)
-        self.ρ0 = seispy.constants.EARTH_RADIUS\
+        self.nrho = self.ndepth
+        self.ntheta = self.nlambda = self.nlat
+        self.nphi = self.nlon
+        self.drho = self.ddepth
+        self.dtheta = self.dlambda = np.radians(self.dlat)
+        self.dphi = np.radians(self.dlon)
+        self.rho0 = seispy.constants.EARTH_RADIUS\
                 - (self.depth0 + (self.ndepth - 1) * self.ddepth)
-        self.λ0 = np.radians(self.lat0)
-        self.θ0 = π/2 - (self.λ0 + (self.nλ - 1) * self.dλ)
-        self.φ0 = np.radians(self.lon0)
+        self.lambda0 = np.radians(self.lat0)
+        self.theta0 = π/2 - (self.lambda0 + (self.nlambda - 1) * self.dlambda)
+        self.phi0 = np.radians(self.lon0)
 
     def __str__(self):
         s = "lat0, lon0, depth0: {:.15g}, {:.15g}, {:.15g}\n".format(self.lat0,
@@ -72,31 +72,31 @@ class GeoGrid3D(object):
         s += "dlat, dlon, ddepth: {:.15g}, {:.15g}, {:.15g}\n".format(self.dlat,
                                                                       self.dlon,
                                                                       self.ddepth)
-        s += "ρ0, θ0, λ0, φ0: {:.15g}, {:.15g}, {:.15g}, {:.15g}\n".format(self.ρ0,
-                                                                           self.θ0,
-                                                                           self.λ0,
-                                                                           self.φ0)
-        s += "nρ, nθ, nλ, nφ: {:8d} {:8d}, {:8d}, {:8d}\n".format(self.nρ,
-                                                                  self.nθ,
-                                                                  self.nλ,
-                                                                  self.nφ)
-        s += "dρ, dθ, dλ, dφ: {:.15g}, {:.15g}, {:.15g}, {:.15g}".format(self.dρ,
-                                                                         self.dθ,
-                                                                         self.dλ,
-                                                                         self.dφ)
+        s += "rho0, theta0, lambda0, phi0: {:.15g}, {:.15g}, {:.15g}, {:.15g}\n".format(self.rho0,
+                                                                           self.theta0,
+                                                                           self.lambda0,
+                                                                           self.phi0)
+        s += "nrho, ntheta, nlambda, nphi: {:8d} {:8d}, {:8d}, {:8d}\n".format(self.nrho,
+                                                                  self.ntheta,
+                                                                  self.nlambda,
+                                                                  self.nphi)
+        s += "drho, dtheta, dlambda, dphi: {:.15g}, {:.15g}, {:.15g}, {:.15g}".format(self.drho,
+                                                                         self.dtheta,
+                                                                         self.dlambda,
+                                                                         self.dphi)
         return(s)
 
     def fit_subgrid(self,
-                    nρ=None,
+                    nrho=None,
                     nlat=None,
                     nlon=None):
-        nρ = self.nρ if nρ is None else nρ
-        nlat = self.nθ if nlat is None else nlat
-        nlon = self.nφ if nlon is None else nlon
+        nrho = self.nrho if nrho is None else nrho
+        nlat = self.ntheta if nlat is None else nlat
+        nlon = self.nphi if nlon is None else nlon
 
-        ρ0 = self.ρ0 + self.dρ * 1.01
-        ρmax = self.ρ0 + (self.nρ - 2.01) * self.dρ
-        dρ = (ρmax - ρ0) / (nρ - 1)
+        rho0 = self.rho0 + self.drho * 1.01
+        rhomax = self.rho0 + (self.nrho - 2.01) * self.drho
+        drho = (rhomax - rho0) / (nrho - 1)
 
         lat0 = self.lat0 + 1.01 * self.dlat
         latmax = self.lat0 + (self.nlat - 2.01) * self.dlat
@@ -106,8 +106,8 @@ class GeoGrid3D(object):
         lonmax = self.lon0 + (self.nlon - 2.01) * self.dlon
         dlon = (lonmax - lon0) / (nlon - 1)
 
-        return(GeoGrid3D(lat0, lon0, seispy.constants.EARTH_RADIUS - ρmax,
-                         nlat, nlon, nρ, dlat, dlon, dρ))
+        return(GeoGrid3D(lat0, lon0, seispy.constants.EARTH_RADIUS - rhomax,
+                         nlat, nlon, nrho, dlat, dlon, drho))
 
 def test():
     print(GeoGrid(33.0, -118.0, 6375.0, 25, 25, 25, 0.1, 0.1, 1.0))
