@@ -62,18 +62,18 @@ class CartesianCoordinates(np.ndarray):
         # Set all elements to 0
         self *= self*0
 
-    def rotate(self, α, β, γ):
+    def rotate(self, alpha, beta, gamma):
         """
         """
-        R = np.asarray(np.matrix([[np.cos(α), -np.sin(α), 0],
-                                  [np.sin(α), np.cos(α), 0],
+        R = np.asarray(np.matrix([[np.cos(alpha), -np.sin(alpha), 0],
+                                  [np.sin(alpha), np.cos(alpha), 0],
                                   [0, 0, 1]])\
-                     * np.matrix([[np.cos(β), 0, np.sin(β)],
+                     * np.matrix([[np.cos(beta), 0, np.sin(beta)],
                                   [0, 1, 0],
-                                  [-np.sin(β), 0, np.cos(β)]])\
+                                  [-np.sin(beta), 0, np.cos(beta)]])\
                      * np.matrix([[1, 0, 0],
-                                  [0, np.cos(γ), -np.sin(γ)],
-                                  [0, np.sin(γ), np.cos(γ)]]))
+                                  [0, np.cos(gamma), -np.sin(gamma)],
+                                  [0, np.sin(gamma), np.cos(gamma)]]))
         return(np.dot(self, R))
 
 
