@@ -221,7 +221,7 @@ class VelocityModel(object):
                     V = V0 + (V1 - V0)*dphi
 
                 model["data"][irho, ilambda, iphi] = V
-            #model["data"] = np.flip(model["data"], axis=1)
+            model["data"] = np.flip(model["data"], axis=1)
             self.v_type_grids[vtype][1] = model
 
     def _read_fang_dep(self, inf, topo):
