@@ -64,6 +64,9 @@ class CartesianCoordinates(np.ndarray):
 
     def rotate(self, alpha, beta, gamma):
         """
+        Rotates a set of cartesian coordinates by alpha radians about
+        the z-axis, then beta radians about the new y-axis and then
+        gamma radians about the new x-axis.
         """
         R = np.asarray(np.matrix([[np.cos(alpha), -np.sin(alpha), 0],
                                   [np.sin(alpha), np.cos(alpha), 0],
