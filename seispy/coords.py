@@ -65,19 +65,20 @@ class CartesianCoordinates(np.ndarray):
     def rotate(self, alpha, beta, gamma):
         """
         Rotates a set of cartesian coordinates by alpha radians about
-        the z-axis, then beta radians about the new y-axis and then
-        gamma radians about the new x-axis.
+        the z-axis, then beta radians about the y'-axis and then
+        gamma radians about the z''-axis.
         """
-        R = np.asarray(np.matrix([[np.cos(alpha), -np.sin(alpha), 0],
-                                  [np.sin(alpha), np.cos(alpha), 0],
-                                  [0, 0, 1]])\
-                     * np.matrix([[np.cos(beta), 0, np.sin(beta)],
-                                  [0, 1, 0],
-                                  [-np.sin(beta), 0, np.cos(beta)]])\
-                     * np.matrix([[1, 0, 0],
-                                  [0, np.cos(gamma), -np.sin(gamma)],
-                                  [0, np.sin(gamma), np.cos(gamma)]]))
-        return(np.dot(self, R))
+        ALPHA = np.matrix([[np.cos(alpha), -np.sin(alpha), 0],
+                           [np.sin(alpha), np.cos(alpha), 0],
+                           [0, 0, 1]])
+        BETA = np.matrix([[np.cos(beta), 0, np.sin(beta)],
+                          [0, 1, 0],
+                          [-np.sin(beta), 0, np.cos(beta)]])
+        GAMMA = np.matrix([[np.cos(gamma), -np.sin(gamma), 0],
+                           [np.sin(gamma), np.cos(gamma), 0],
+                           [0, 0, 1]])
+        R = ALPHA.dot(BETA).dot(GAMMA)
+        return(self.dot(R))
 
 
     def to_geographic(self):
