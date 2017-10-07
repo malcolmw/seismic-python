@@ -68,17 +68,7 @@ class CartesianCoordinates(np.ndarray):
         the z-axis, then beta radians about the y'-axis and then
         gamma radians about the z''-axis.
         """
-        ALPHA = np.array([[np.cos(alpha), -np.sin(alpha), 0],
-                           [np.sin(alpha), np.cos(alpha), 0],
-                           [0, 0, 1]])
-        BETA = np.array([[np.cos(beta), 0, np.sin(beta)],
-                          [0, 1, 0],
-                          [-np.sin(beta), 0, np.cos(beta)]])
-        GAMMA = np.array([[np.cos(gamma), -np.sin(gamma), 0],
-                           [np.sin(gamma), np.cos(gamma), 0],
-                           [0, 0, 1]])
-        R = ALPHA.dot(BETA).dot(GAMMA)
-        return(self.dot(R))
+        return(self.dot(rotation_matrix(alpha, beta, gamma)))
 
 
     def to_geographic(self):
@@ -182,6 +172,24 @@ class  LeftSphericalCoordinates(np.ndarray):
         spher[...,1] = pi/2 - self[...,1]
         spher[...,2] = self[...,2]
         return(spher)
+
+def rotation_matrix(alpha, beta, gamma):
+    """
+    Return the rotation matrix used to rotate a set of cartesian
+    coordinates by alpha radians about the z-axis, then beta radians
+    about the y'-axis and then gamma radians about the z''-axis.
+    """
+    ALPHA = np.array([[np.cos(alpha), -np.sin(alpha), 0],
+                        [np.sin(alpha), np.cos(alpha), 0],
+                        [0, 0, 1]])
+    BETA = np.array([[np.cos(beta), 0, np.sin(beta)],
+                        [0, 1, 0],
+                        [-np.sin(beta), 0, np.cos(beta)]])
+    GAMMA = np.array([[np.cos(gamma), -np.sin(gamma), 0],
+                        [np.sin(gamma), np.cos(gamma), 0],
+                        [0, 0, 1]])
+    R = ALPHA.dot(BETA).dot(GAMMA)
+    return(R)
 
 def as_cartesian(array):
     array = np.asarray(array)
