@@ -1,3 +1,4 @@
+# coding=utf-8
 import mpl_toolkits.basemap as bm
 
 class Basemap(bm.Basemap):

@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This module deprecates the geometry module.
 """

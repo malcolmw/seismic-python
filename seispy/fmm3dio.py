@@ -1,8 +1,9 @@
+# coding=utf-8
 import numpy as np
 import seispy
 ER = seispy.constants.EARTH_RADIUS
 
-π = np.pi
+pi = np.pi
 
 def format_interfaces(interfaces):
     grid = interfaces[0].grid
@@ -105,31 +106,31 @@ def read_receivers(infile):
             receivers[irec].add_path(RayPath(path_sourceID[ipath], pathID[ipath]))
     return(receivers)
 
-def read_sources(infile):
-    infile = open(infile)
-    nsrc = int(infile.readline().split()[0])
-    sources = []
-    for sourceID in range(1, nsrc+1):
-        is_tele = True if int(infile.readline().split()[0]) == 1 else False
-        if is_tele:
-            phase = infile.readline().split()[0]
-        depth, lat, lon = [np.float64(v) for v in infile.readline().split()[:3]]
-        lat, lon, depth = seispy.coords.as_geographic([lat, lon, depth])
-        if is_tele:
-            sources.append(Source(sourceID, lat, lon, depth, is_tele, phase))
-        else:
-            sources.append(Source(sourceID, lat, lon, depth, is_tele))
-        npath = int(infile.readline().split()[0])
-        for pathID in range(1, npath+1):
-            nsection = int(infile.readline().split()[0])
-            sections = [int(v) for v in infile.readline().split()[:2*nsection]]
-            vtypes = [int(v) for v in infile.readline().split()[:nsection]]
-            path = RayPath(sourceID, pathID)
-            for isec in range(nsection):
-                path.add_section(RayPathSection(*sections[isec*2:isec*2+2],
-                                                vtypes[isec]))
-            sources[-1].add_path(path)
-    return(sources)
+#def read_sources(infile):
+#    infile = open(infile)
+#    nsrc = int(infile.readline().split()[0])
+#    sources = []
+#    for sourceID in range(1, nsrc+1):
+#        is_tele = True if int(infile.readline().split()[0]) == 1 else False
+#        if is_tele:
+#            phase = infile.readline().split()[0]
+#        depth, lat, lon = [np.float64(v) for v in infile.readline().split()[:3]]
+#        lat, lon, depth = seispy.coords.as_geographic([lat, lon, depth])
+#        if is_tele:
+#            sources.append(Source(sourceID, lat, lon, depth, is_tele, phase))
+#        else:
+#            sources.append(Source(sourceID, lat, lon, depth, is_tele))
+#        npath = int(infile.readline().split()[0])
+#        for pathID in range(1, npath+1):
+#            nsection = int(infile.readline().split()[0])
+#            sections = [int(v) for v in infile.readline().split()[:2*nsection]]
+#            vtypes = [int(v) for v in infile.readline().split()[:nsection]]
+#            path = RayPath(sourceID, pathID)
+#            for isec in range(nsection):
+#                path.add_section(RayPathSection(*sections[isec*2:isec*2+2],
+#                                                vtypes[isec]))
+#            sources[-1].add_path(path)
+#    return(sources)
 
 class RayPath(object):
     def __init__(self, sourceID, pathID):

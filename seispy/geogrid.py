@@ -1,7 +1,7 @@
+# coding=utf-8
+
 import numpy as np
 import seispy
-
-π = np.pi
 
 class GeoGrid2D(object):
     def __init__(self, lat0, lon0, nlat, nlon, dlat, dlon):
@@ -59,7 +59,7 @@ class GeoGrid3D(object):
         self.rho0 = seispy.constants.EARTH_RADIUS\
                 - (self.depth0 + (self.ndepth - 1) * self.ddepth)
         self.lambda0 = np.radians(self.lat0)
-        self.theta0 = π/2 - (self.lambda0 + (self.nlambda - 1) * self.dlambda)
+        self.theta0 = np.pi/2 - (self.lambda0 + (self.nlambda - 1) * self.dlambda)
         self.phi0 = np.radians(self.lon0)
 
     def __str__(self):

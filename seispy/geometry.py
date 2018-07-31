@@ -1,3 +1,4 @@
+# coding=utf-8
 """
 This module provides basic geometric utility functions to facilitate
 working in different coordinate systems.

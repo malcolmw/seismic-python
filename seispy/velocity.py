@@ -1,11 +1,11 @@
+# coding=utf-8
 from math import degrees,\
                  pi,\
                  radians
 import numpy as np
 import scipy.interpolate
 import seispy
-
-π = np.pi
+import seispy.constants
 
 class VelocityModel(object):
     def __init__(self, inf, fmt, topo=None):
@@ -102,7 +102,7 @@ class VelocityModel(object):
                 for lat in inf.readline().split()]
         r_nodes = [seispy.constants.EARTH_RADIUS - float(z)\
                 for z in inf.readline().split()]
-        phi_nodes = [phi - 2*π if phi > π else phi for phi in phi_nodes]
+        phi_nodes = [phi - 2*np.pi if phi > np.pi else phi for phi in phi_nodes]
         R, T, P = np.meshgrid(r_nodes, theta_nodes, phi_nodes, indexing="ij")
         nodes = {"r": R, "theta": T, "phi": P}
         values = {1: np.empty(shape=(len(r_nodes),
@@ -128,7 +128,7 @@ class VelocityModel(object):
         dlambda = (max(theta_nodes) - min(theta_nodes)) / (nlambda - 1)
         dphi = (max(phi_nodes) - min(phi_nodes)) / (nphi - 1)
         rho0 = seispy.constants.EARTH_RADIUS - max(r_nodes)
-        lambda0 = π/2 - max(theta_nodes)
+        lambda0 = np.pi/2 - max(theta_nodes)
         phi0 = min(phi_nodes)
         for vtype in (1, 2):
             model = {"typeID": vtype, "gridID": 1}
@@ -146,7 +146,7 @@ class VelocityModel(object):
                                     for ilambda in range(nlambda)\
                                     for iphi in range(nphi)]:
                 r = grid.rho0 + irho * grid.drho
-                theta = π/2 - (grid.lambda0 + ilambda * grid.dlambda)
+                theta = np.pi/2 - (grid.lambda0 + ilambda * grid.dlambda)
                 phi = grid.phi0 + iphi * grid.dphi
 
                 if r < min(r_nodes):
@@ -159,8 +159,8 @@ class VelocityModel(object):
                 else:
                     ir1 = [i for i in range(len(r_nodes))
                              if nodes["r"][i, 0, 0] >= r][0]
-                δr = r - nodes["r"][ir0, 0, 0]
-                Δr = nodes["r"][ir1, 0, 0] - nodes["r"][ir0, 0, 0]
+                dr = r - nodes["r"][ir0, 0, 0]
+                Dr = nodes["r"][ir1, 0, 0] - nodes["r"][ir0, 0, 0]
 
                 if theta < min(theta_nodes):
                     itheta0 = 0
@@ -172,8 +172,8 @@ class VelocityModel(object):
                 else:
                     itheta1 = [i for i in range(len(theta_nodes))
                              if nodes["theta"][0, i, 0] >= theta][0]
-                δtheta = theta - nodes["theta"][0, itheta0, 0]
-                Δtheta = nodes["theta"][0, itheta1, 0] - nodes["theta"][0, itheta0, 0]
+                dtheta = theta - nodes["theta"][0, itheta0, 0]
+                Dtheta = nodes["theta"][0, itheta1, 0] - nodes["theta"][0, itheta0, 0]
 
                 if phi < min(phi_nodes):
                     iphi0 = 0
@@ -185,8 +185,8 @@ class VelocityModel(object):
                 else:
                     iphi1 = [i for i in range(len(phi_nodes))
                              if nodes["phi"][0, 0, i] >= phi][0]
-                δphi = phi - nodes["phi"][0, 0, iphi0]
-                Δphi = nodes["phi"][0, 0, iphi1] - nodes["phi"][0, 0, iphi0]
+                dphi = phi - nodes["phi"][0, 0, iphi0]
+                Dphi = nodes["phi"][0, 0, iphi1] - nodes["phi"][0, 0, iphi0]
 
                 V000 = values[vtype][ir0, itheta0, iphi0]
                 V001 = values[vtype][ir0, itheta0, iphi1]
@@ -197,25 +197,25 @@ class VelocityModel(object):
                 V110 = values[vtype][ir1, itheta1, iphi0]
                 V111 = values[vtype][ir1, itheta1, iphi1]
 
-                if Δr == 0:
+                if Dr == 0:
                     V00 = V000
                     V01 = V001
                     V10 = V010
                     V11 = V011
                 else:
-                    V00 = V000 + (V100 - V000) * δr / Δr
-                    V01 = V001 + (V101 - V001) * δr / Δr
-                    V10 = V010 + (V110 - V010) * δr / Δr
-                    V11 = V011 + (V111 - V011) * δr / Δr
+                    V00 = V000 + (V100 - V000) * dr / Dr
+                    V01 = V001 + (V101 - V001) * dr / Dr
+                    V10 = V010 + (V110 - V010) * dr / Dr
+                    V11 = V011 + (V111 - V011) * dr / Dr
 
-                if Δtheta == 0:
+                if Dtheta == 0:
                     V0 = V00
                     V1 = V01
                 else:
-                    V0 = V00 + (V10 - V00) * δtheta / Δtheta
-                    V1 = V01 + (V11 - V01) * δtheta / Δtheta
+                    V0 = V00 + (V10 - V00) * dtheta / Dtheta
+                    V1 = V01 + (V11 - V01) * dtheta / Dtheta
 
-                if Δphi == 0:
+                if Dphi == 0:
                     V = V0
                 else:
                     V = V0 + (V1 - V0)*dphi
@@ -241,7 +241,7 @@ class VelocityModel(object):
                 for lat in inf.readline().split()]
         r_nodes = [seispy.constants.EARTH_RADIUS - float(z)\
                 for z in inf.readline().split()]
-        phi_nodes = [phi - 2*π if phi > π else phi for phi in phi_nodes]
+        phi_nodes = [phi - 2*np.pi if phi > np.pi else phi for phi in phi_nodes]
         R, T, P = np.meshgrid(r_nodes, theta_nodes, phi_nodes, indexing="ij")
         self.nodes = {"r": R, "theta": T, "phi": P}
         self.nodes["nr"] = R.shape[0]
