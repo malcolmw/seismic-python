@@ -25,7 +25,8 @@ def configure():
                            "seispy.surface",
                            "seispy.topography",
                            "seispy.ttgrid",
-                           "seispy.velocity"]}
+                           "seispy.velocity"],
+            "package_data": {"seispy": ["data/ca_scitex.flt"]}}
     return(kwargs)
 
 if __name__ == "__main__":
