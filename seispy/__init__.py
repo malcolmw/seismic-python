@@ -12,6 +12,7 @@ submodules = ["constants",
               "surface",
               "topography",
               "ttgrid",
-              "velocity"]
+              "velocity",
+              "pandas"]
 for submodule in submodules:
     importlib.import_module(".{}".format(submodule), package="seispy")
