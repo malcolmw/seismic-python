@@ -14,22 +14,9 @@ def configure():
             "download_url": "https://github.com/malcolmw/seismic-python.git",
             "platforms": ["linux", "osx"],
             "requires": ["obspy", "sqlite3", "numpy", "scipy", "basemap"],
-            "packages": ["seispy", "seispy.pandas"],
-            "py_modules": ["seispy.constants",
-                           "seispy.coords",
-                           "seispy.faults",
-                           "seispy.fmm3dio",
-                           "seispy.geogrid",
-                           "seispy.geometry",
-                           "seispy.mapping",
-                           "seispy.sqlschemas",
-                           "seispy.surface",
-                           "seispy.topography",
-                           "seispy.ttgrid",
-                           "seispy.velocity",
-                           "seispy.pandas"],
+            "packages": ["seispy"],
             "package_data": {"seispy": ["data/ca_scitex.flt"],
-                             "seismic_pandas": ["data/schemas/*.pkl"]}
+                             "seispy.pandas": ["data/schemas/*.pkl"]}
             }
     return(kwargs)
 
