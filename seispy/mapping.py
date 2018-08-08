@@ -1,6 +1,7 @@
 # coding=utf-8
 import numpy as np
 import mpl_toolkits.basemap as bm
+import pandas as pd
 import pkg_resources
 
 DEFAULT_KWARGS = {
@@ -9,6 +10,7 @@ DEFAULT_KWARGS = {
         "latmax": 34.5,
         "lonmax": -115.5,
         "bgstyle": "basic",
+        "resolution": "c",
         "fill_color": "aqua",
         "continent_color": "coral",
         "lake_color": "aqua",
@@ -35,7 +37,8 @@ class Basemap(bm.Basemap):
         kwargs = {"llcrnrlat": self.kwargs["latmin"],
                   "llcrnrlon": self.kwargs["lonmin"],
                   "urcrnrlat": self.kwargs["latmax"],
-                  "urcrnrlon": self.kwargs["lonmax"]}
+                  "urcrnrlon": self.kwargs["lonmax"],
+                  "resolution": self.kwargs["resolution"]}
 
         if self.kwargs["bgstyle"] == "relief":
             kwargs["projection"] = self.kwargs["projection"]
@@ -95,6 +98,24 @@ class Basemap(bm.Basemap):
             ZZ[ix, iy] = func(z[idx]) if np.any(idx) else np.inf
         XX = XX - dx/2
         YY = YY - dy/2
+        qmesh = self.pcolormesh(XX, YY, ZZ,
+                                zorder=3,
+                                **kwargs)
+        return(qmesh)
+
+    def overlay_pcolormesh(self, x, y, z, **kwargs):
+        df = pd.DataFrame.from_dict({"X": x, "Y": y, "Z": z})
+        df = df.sort_values(["X", "Y"])
+        x = df["X"].drop_duplicates()
+        y = df["Y"].drop_duplicates()
+        ZZ = df["Z"].reshape((len(x), len(y)))
+        x = np.concatenate([[x.iloc[0] - x.iloc[:2].diff().iloc[1]/2],
+                            x.rolling(2).mean().dropna(),
+                            [x.iloc[-1] + x.iloc[-2:].diff().iloc[1]/2]])
+        y  = np.concatenate([[y.iloc[0] - y.iloc[:2].diff().iloc[1]/2],
+                             y.rolling(2).mean().dropna(),
+                             [y.iloc[-1] + y.iloc[-2:].diff().iloc[1]/2]])
+        XX, YY = np.meshgrid(x, y, indexing="ij")
         qmesh = self.pcolormesh(XX, YY, ZZ,
                                 zorder=3,
                                 **kwargs)
