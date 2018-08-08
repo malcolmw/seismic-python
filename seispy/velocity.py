@@ -48,11 +48,23 @@ class VelocityModel(object):
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
         self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
-        Vp = df["Vp"].reshape(nR, nT, nP)
-        Vs = df["Vs"].reshape(nR, nT, nP)
+        Vp = df["Vp"].values.reshape(nR, nT, nP)
+        Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
         self._Vs = Vs
+        return(self)
 
+    def to_DataFrame(self):
+        df = pd.DataFrame().from_dict({"R": self._nodes[...,0].flatten(),
+                                       "T": self._nodes[...,1].flatten(),
+                                       "P": self._nodes[...,2].flatten(),
+                                       "Vp": self._Vp.flatten(),
+                                       "Vs": self._Vs.flatten()})
+        df["lat"] = df["lon"] = df["depth"] = np.nan
+        geo = seispy.coords.as_spherical(df[["R", "T", "P"]]).to_geographic()
+        df.loc[:, ["lat", "lon", "depth"]] = geo
+        df = df.sort_values(["lat", "lon", "depth"]).reset_index()
+        return(df[["lat", "lon", "depth", "Vp", "Vs", "R", "T", "P"]])
 
     def __call__(self, phase, lat, lon, depth):
         """
@@ -99,8 +111,8 @@ class VelocityModel(object):
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
         self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
-        Vp = df["Vp"].reshape(nR, nT, nP)
-        Vs = df["Vs"].reshape(nR, nT, nP)
+        Vp = df["Vp"].values.reshape(nR, nT, nP)
+        Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
         self._Vs = Vs
 
@@ -133,8 +145,8 @@ class VelocityModel(object):
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
         self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
-        Vp = df["Vp"].reshape(nR, nT, nP)
-        Vs = df["Vs"].reshape(nR, nT, nP)
+        Vp = df["Vp"].values.reshape(nR, nT, nP)
+        Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
         self._Vs = Vs
 
@@ -161,7 +173,7 @@ class VelocityModel(object):
             else:
                 iR0, iR1 = idxl[-1], idxr[0]
         if iR0 == iR1:
-            dR, drho = 0, 0
+            dR, drho = 1, 0
         else:
             dR = self._nodes[iR1,0,0,0]-self._nodes[iR0,0,0,0]
             drho = (rho - self._nodes[iR0,0,0,0])
@@ -180,7 +192,7 @@ class VelocityModel(object):
             else:
                 iT0, iT1 = idxl[-1], idxr[0]
         if iT0 == iT1:
-            dT, dtheta = 0, 0
+            dT, dtheta = 1, 0
         else:
             dT = self._nodes[0,iT1,0,1]-self._nodes[0,iT0,0,1]
             dtheta = (theta - self._nodes[0,iT0,0,1])
@@ -199,7 +211,7 @@ class VelocityModel(object):
             else:
                 iP0, iP1 = idxl[-1], idxr[0]
         if iP0 == iP1:
-            dP, dphi = 0, 0
+            dP, dphi = 1, 0
         else:
             dP = self._nodes[0,0,iP1,2]-self._nodes[0,0,iP0,2]
             dphi = (phi - self._nodes[0,0,iP0,2])
