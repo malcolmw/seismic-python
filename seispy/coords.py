@@ -1,48 +1,52 @@
-# coding=utf-8
-"""
-This module deprecates the geometry module.
-"""
 import numpy as np
 import seispy
 
-pi = np.pi
+PI = np.pi
 
 class GeographicCoordinates(np.ndarray):
-    def __init__(self, args):
-        self.resize(self.shape + (3,), refcheck=False)
-        # Set all elements to 0
-        self *= self*0
-        self[np.where(np.isnan(self))] = 0
+    """
+    This class provides a container for geographic coordinates and
+    methods to transform the coordinates to other commonly used
+    systems.
+    This class does not support creation via the np.ndarray.view
+    mechanism.
+    """
+    def __new__(cls, *args):
+        """
+        This creates a new instance of GeographicCoordinates, makes sure
+        that the last dimesion is of length 3, and sets all elements
+        to 0.
+        """
+        return(np.zeros(args + (3,)).view(GeographicCoordinates))
 
-
-    def __setitem__(self, index, coordinates):
-        coordinates = np.asarray(coordinates)
-        if coordinates.shape == (3,):
-            coordinates = np.asarray([coordinates])
-        super().__setitem__(index, coordinates)
-        if False in  [-90 <= lat <= 90 for lat in self[...,0].flatten()]:
+    def __setitem__(self, index, value):
+        """
+        This sets the values of the array and tests that they are in
+        meaningful ranges.
+        """
+        super().__setitem__(index, value)
+        if not np.all((-90 <= self[...,0]) & (self[...,0] <= 90)):
             raise(ValueError("all values for latitude must satisfiy -90 "\
                     "<= latitude <= 90"))
-        if False in  [-180 <= lon <= 180 for lon in self[...,1].flatten()]:
+        if not np.all((-180 <= self[...,1]) & ( self[...,1] <= 180)):
             raise(ValueError("all values for longitude must satisfiy -180 <= "\
                     "longitude <= 180"))
-        if False in [depth <= seispy.constants.EARTH_RADIUS
-                     for depth in self[...,2].flatten()]:
+        if not np.all(self[...,2] <= seispy.constants.EARTH_RADIUS):
             raise(ValueError("all depth values must satisfy depth <= "\
                     "{:f}".format(seispy.constants.EARTH_RADIUS)))
 
     def to_cartesian(self):
-        cart = CartesianCoordinates(self.shape[:-1])
-        rho = seispy.constants.EARTH_RADIUS - self[...,2]
-        theta = pi/2 - np.radians(self[...,0])
-        phi = np.radians(self[...,1])
+        cart = CartesianCoordinates(*self.shape[:-1])
+        rho = np.asarray(seispy.constants.EARTH_RADIUS - self[...,2])
+        theta = np.asarray(PI/2 - np.radians(self[...,0]))
+        phi = np.asarray(np.radians(self[...,1]))
         cart[...,0] = rho * np.sin(theta) * np.cos(phi)
         cart[...,1] = rho * np.sin(theta) * np.sin(phi)
         cart[...,2] = rho * np.cos(theta)
         return(cart)
 
     def to_left_spherical(self):
-        lspher = LeftSphericalCoordinates(self.shape[:-1])
+        lspher = LeftSphericalCoordinates(*self.shape[:-1])
         lspher[...,0] = seispy.constants.EARTH_RADIUS - self[...,2]
         lspher[...,1] = np.radians(self[...,0])
         lspher[...,2] = np.radians(self[...,1])
@@ -50,7 +54,7 @@ class GeographicCoordinates(np.ndarray):
 
 
     def to_spherical(self):
-        spher = SphericalCoordinates(self.shape[:-1])
+        spher = SphericalCoordinates(*self.shape[:-1])
         spher[...,0] = seispy.constants.EARTH_RADIUS - self[...,2]
         spher[...,1] = np.radians(90 - self[...,0])
         spher[...,2] = np.radians(self[...,1])
@@ -58,10 +62,20 @@ class GeographicCoordinates(np.ndarray):
 
 
 class CartesianCoordinates(np.ndarray):
-    def __init__(self, args):
-        self.resize(self.shape + (3,), refcheck=False)
-        # Set all elements to 0
-        self *= self*0
+    """
+    This class provides a container for Cartesian coordinates and
+    methods to transform the coordinates to other commonly used
+    systems.
+    This class does not support creation via the np.ndarray.view
+    mechanism.
+    """
+    def __new__(cls, *args):
+        """
+        This creates a new instance of CartesianCoordinates, makes sure
+        that the last dimesion is of length 3, and sets all elements
+        to 0.
+        """
+        return(np.zeros(args + (3,)).view(CartesianCoordinates))
 
     def rotate(self, alpha, beta, gamma):
         """
@@ -73,104 +87,124 @@ class CartesianCoordinates(np.ndarray):
 
 
     def to_geographic(self):
-        geo = GeographicCoordinates(self.shape[:-1])
+        geo = GeographicCoordinates(*self.shape[:-1])
         rho = np.sqrt(np.sum(np.square(self),axis=-1))
-        geo[...,0] = np.degrees(pi/2 - np.arccos(self[...,2]/rho))
+        geo[...,0] = np.degrees(PI/2 - np.arccos(self[...,2]/rho))
         geo[...,1] = np.degrees(np.arctan2(self[...,1], self[...,0]))
         geo[...,2] = seispy.constants.EARTH_RADIUS - rho
         return(geo)
 
     def to_left_spherical(self):
-        lspher = LeftSphericalCoordinates(self.shape[:-1])
+        lspher = LeftSphericalCoordinates(*self.shape[:-1])
         lspher[...,0] = np.sqrt(np.sum(np.square(self),axis=-1))
-        lspher[...,1] = pi/2 - np.arccos(self[...,2]/lspher[...,0])
+        lspher[...,1] = PI/2 - np.arccos(self[...,2]/lspher[...,0])
         lspher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(lspher)
 
     def to_spherical(self):
-        spher = SphericalCoordinates(self.shape[:-1])
+        spher = SphericalCoordinates(*self.shape[:-1])
         spher[...,0] = np.sqrt(np.sum(np.square(self),axis=-1))
         spher[...,1] = np.arccos(self[...,2]/spher[...,0])
         spher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(spher)
 
 class SphericalCoordinates(np.ndarray):
-    def __init__(self, args):
-        self.resize(self.shape + (3,), refcheck=False)
-        # Set all elements to 0
-        self *= self*0
-        self[np.where(np.isnan(self))] = 0
+    """
+    This class provides a container for spherical coordinates and
+    methods to transform the coordinates to other commonly used
+    systems.
+    This class does not support creation via the np.ndarray.view
+    mechanism.
+    """
+    def __new__(cls, *args):
+        """
+        This creates a new instance of SphericalCoordinates, makes sure
+        that the last dimesion is of length 3, and sets all elements
+        to 0.
+        """
+        return(np.zeros(args + (3,)).view(SphericalCoordinates))
 
-    def __setitem__(self, index, coordinates):
-        coordinates = np.asarray(coordinates)
-        if coordinates.shape == (3,):
-            coordinates = np.asarray([coordinates])
-        super().__setitem__(index, coordinates)
-        if False in [rho >= 0 for rho in self[...,0].flatten()]:
+    def __setitem__(self, index, value):
+        """
+        This sets the values of the array and tests that they are in
+        meaningful ranges.
+        """
+        super().__setitem__(index, value)
+        if not np.all(0 <= self[...,0]):
             raise(ValueError("all values for rho must satisfiy 0 <= rho"))
-        if False in  [0 <= theta <= pi for theta in self[...,1].flatten()]:
-            raise(ValueError("all values for theta must satisfiy 0 <= theta <= pi"))
-        if False in  [-pi <= phi <= pi for phi in self[...,2].flatten()]:
+        if not np.all((0 <= self[...,1]) & (self[...,1] <= PI)):
+            raise(ValueError("all values for theta must satisfiy 0 <= theta <= π"))
+        if not np.all((-PI <= self[...,2]) & (self[...,2] <= PI)):
             raise(ValueError("all values for phi must satisfiy -π <= phi <= π"))
 
     def to_cartesian(self):
-        cart = CartesianCoordinates(self.shape[:-1])
+        cart = CartesianCoordinates(*self.shape[:-1])
         cart[...,0] = self[...,0]*np.sin(self[...,1])*np.cos(self[...,2])
         cart[...,1] = self[...,0]*np.sin(self[...,1])*np.sin(self[...,2])
         cart[...,2] = self[...,0]*np.cos(self[...,1])
         return(cart)
 
     def to_geographic(self):
-        geo = GeographicCoordinates(self.shape[:-1])
-        geo[...,0] = np.degrees(pi/2 - self[...,1])
+        geo = GeographicCoordinates(*self.shape[:-1])
+        geo[...,0] = np.degrees(PI/2 - self[...,1])
         geo[...,1] = np.degrees(self[...,2])
         geo[...,2] = seispy.constants.EARTH_RADIUS - self[...,0]
         return(geo)
 
     def to_left_spherical(self):
-        lspher = LeftSphericalCoordinates(self.shape[:-1])
+        lspher = LeftSphericalCoordinates(*self.shape[:-1])
         lspher[...,0] = self[...,0]
-        lspher[...,1] = pi/2  - self[...,1]
+        lspher[...,1] = PI/2  - self[...,1]
         lspher[...,2] = self[...,2]
         return(lspher)
 
 class  LeftSphericalCoordinates(np.ndarray):
-    def __init__(self, args):
-        self.resize(self.shape + (3,), refcheck=False)
-        # Set all elements to 0.
-        self *= self*0
-        self[np.where(np.isnan(self))] = 0
+    """
+    This class provides a container for spherical coordinates and
+    methods to transform the coordinates to other commonly used
+    systems.
+    This class does not support creation via the np.ndarray.view
+    mechanism.
+    """
+    def __new__(cls, *args):
+        """
+        This creates a new instance of SphericalCoordinates, makes sure
+        that the last dimesion is of length 3, and sets all elements
+        to 0.
+        """
+        return(np.zeros(args + (3,)).view(LeftSphericalCoordinates))
 
-    def __setitem__(self, index, coordinates):
-        coordinates = np.asarray(coordinates)
-        if coordinates.shape == (3,):
-            coordinates = np.asarray([coordinates])
-        super().__setitem__(index, coordinates)
-        if False in  [rho >= 0 for rho in self[...,0].flatten()]:
+    def __setitem__(self, index, value):
+        """
+        This sets the values of the array and tests that they are in
+        meaningful ranges.
+        """
+        super().__setitem__(index, value)
+        if not np.all(0 <= self[...,0]):
             raise(ValueError("all values for rho must satisfiy 0 <= rho"))
-        if False in  [-pi/2 <= theta <= pi/2 for theta in self[...,1].flatten()]:
-            raise(ValueError("all values for lambda must satisfiy -π/2 <= lambda <= π/2"))
-        if False in  [-pi <= phi <= pi for phi in self[...,2].flatten()]:
+        if not np.all((-PI/2 <= self[...,1]) & (self[...,1] <= PI/2)):
+            raise(ValueError("all values for theta must satisfiy -π/2 <= theta <= π/2"))
+        if not np.all((-PI <= self[...,2]) & (self[...,2] <= PI)):
             raise(ValueError("all values for phi must satisfiy -π <= phi <= π"))
 
     def to_cartesian(self):
-        cart = CartesianCoordinates(self.shape[:-1])
-        cart[...,0] = self[...,0]*np.sin(pi/2 - self[...,1])*np.cos(self[...,2])
-        cart[...,1] = self[...,0]*np.sin(pi/2 - self[...,1])*np.sin(self[...,2])
-        cart[...,2] = self[...,0]*np.cos(pi/2 - self[...,1])
+        cart = CartesianCoordinates(*self.shape[:-1])
+        cart[...,0] = self[...,0]*np.sin(PI/2 - self[...,1])*np.cos(self[...,2])
+        cart[...,1] = self[...,0]*np.sin(PI/2 - self[...,1])*np.sin(self[...,2])
+        cart[...,2] = self[...,0]*np.cos(PI/2 - self[...,1])
         return(cart)
 
     def to_geographic(self):
-        geo = GeographicCoordinates(self.shape[:-1])
+        geo = GeographicCoordinates(*self.shape[:-1])
         geo[...,0] = np.degrees(self[...,1])
         geo[...,1] = np.degrees(self[...,2])
         geo[...,2] = seispy.constants.EARTH_RADIUS - self[...,0]
         return(geo)
 
     def to_spherical(self):
-        spher = SphericalCoordinates(self.shape[:-1])
+        spher = SphericalCoordinates(*self.shape[:-1])
         spher[...,0] = self[...,0]
-        spher[...,1] = pi/2 - self[...,1]
+        spher[...,1] = PI/2 - self[...,1]
         spher[...,2] = self[...,2]
         return(spher)
 
@@ -193,29 +227,34 @@ def rotation_matrix(alpha, beta, gamma):
     return(R)
 
 def as_cartesian(array):
-    array = np.asarray(array)
-    cart = CartesianCoordinates(array.shape[:-1])
+    cart = CartesianCoordinates(*np.asarray(array).shape[:-1])
     cart[...] = array
     return(cart)
 
 def as_geographic(array):
-    array = np.asarray(array)
-    geo = GeographicCoordinates(array.shape[:-1])
+    geo = GeographicCoordinates(*np.asarray(array).shape[:-1])
     geo[...] = array
     return(geo)
 
 def as_left_spherical(array):
-    array = np.asarray(array)
-    lspher = LeftSphericalCoordinates(array.shape[:-1])
+    lspher = LeftSphericalCoordinates(*np.asarray(array).shape[:-1])
     lspher[...] = array
     return(lspher)
 
 def as_spherical(array):
-    array = np.asarray(array)
-    spher = SphericalCoordinates(array.shape[:-1])
+    spher = SphericalCoordinates(*np.asarray(array).shape[:-1])
     spher[...] = array
     return(spher)
 
+def test():
+    with open("/Users/malcolcw/Projects/Shared/Topography/anza.xyz") as inf:
+        data = np.array([[float(v) for v in line.split()] for line in inf])
+        gc = GeographicCoordinates(len(data))
+        gc[:,0], gc[:,1], gc[:,2] = data[:,1], data[:,0], data[:,2]/1000
+        print(gc.to_cartesian())
+        #np.save("topo.npy", gc.to_cartesian().rotate(P0, T0, 0))
+
 if __name__ == "__main__":
     print("coords.py not an executable script!!!")
+    test()
     exit()
