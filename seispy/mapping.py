@@ -175,3 +175,33 @@ class CaliforniaFaults(FaultCollection):
         fname = pkg_resources.resource_filename("seispy",
                                                 "data/ca_scitex.flt")
         super(self.__class__, self).__init__(fname)
+
+def plot_section(lat, lon, depth, **kwargs):
+    for key in DEFAULT_SECTION_KWARGS:
+        if key not in kwargs:
+            kwargs[key] = DEFAULT_SECTION_KWARGS[key]
+
+    geo = _coords.GeographicCoordinates(len(lat))
+    geo[:,0], geo[:,1], geo[:,2] = lat, lon, depth
+    ned = geo.to_ned(origin=kwargs["origin"]
+                    ).rotate(np.radians(kwargs["strike"]))
+    bool_idx = (np.abs(ned[:,0]) < kwargs["length"])\
+              &(np.abs(ned[:,1]) < kwargs["width"])
+    ned = ned[bool_idx]
+
+    if kwargs["c"] is not None:
+        kwargs["c"] = kwargs["c"][bool_idx]
+
+    if kwargs["ax"] is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1, aspect=1)
+    else:
+        ax = kwargs["ax"]
+    del(kwargs["ax"])
+    del(kwargs["origin"])
+    del(kwargs["strike"])
+    del(kwargs["length"])
+    del(kwargs["width"])
+    pts = ax.scatter(ned[:,0], ned[:,2], **kwargs)
+    ax.invert_yaxis()
+    return(ax)
