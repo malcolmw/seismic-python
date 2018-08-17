@@ -5,8 +5,10 @@ from math import degrees,\
 import numpy as np
 import pandas as pd
 import scipy.interpolate
-import seispy
-import seispy.coords
+
+from . import constants as _constants
+from . import coords as _coords
+from . import geometry as _geometry
 
 
 class VelocityModel(object):
@@ -22,7 +24,7 @@ class VelocityModel(object):
         if inf is None:
             return
         if topo is None:
-            self.topo = lambda _, __: seispy.constants.EARTH_RADIUS
+            self.topo = lambda _, __: _constants.EARTH_RADIUS
         else:
             self.topo = topo
 
@@ -40,14 +42,15 @@ class VelocityModel(object):
 
     def from_DataFrame(self, df):
         df["R"] = df["T"] = df["P"] = np.nan
-        spher = seispy.coords.as_geographic(df[["lat", "lon", "depth"]]
+        spher = _coords.as_geographic(df[["lat", "lon", "depth"]]
                                            ).to_spherical()
         df.loc[:, ["R", "T", "P"]] = spher
         df = df.sort_values(["R", "T", "P"])
         nR = len(df.drop_duplicates("R"))
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
-        self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
+        nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
+        self._nodes = _coords.as_spherical(nodes)
         Vp = df["Vp"].values.reshape(nR, nT, nP)
         Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
@@ -61,7 +64,7 @@ class VelocityModel(object):
                                        "Vp": self._Vp.flatten(),
                                        "Vs": self._Vs.flatten()})
         df["lat"] = df["lon"] = df["depth"] = np.nan
-        geo = seispy.coords.as_spherical(df[["R", "T", "P"]]).to_geographic()
+        geo = _coords.as_spherical(df[["R", "T", "P"]]).to_geographic()
         df.loc[:, ["lat", "lon", "depth"]] = geo
         df = df.sort_values(["lat", "lon", "depth"]).reset_index()
         return(df[["lat", "lon", "depth", "Vp", "Vs", "R", "T", "P"]])
@@ -79,7 +82,7 @@ class VelocityModel(object):
         :rtype: float
         """
 
-        rho, theta, phi = seispy.coords.as_geographic([lat, lon, depth]).to_spherical()
+        rho, theta, phi = _coords.as_geographic([lat, lon, depth]).to_spherical()
         return(self._get_V(phase, rho, theta, phi))
 
     def save(self, outf):
@@ -87,7 +90,7 @@ class VelocityModel(object):
 
     def _read_npz(self, inf):
         inf = np.load(inf)
-        self._nodes = inf["nodes"]
+        self._nodes = _coords.as_spherical(inf["nodes"])
         self._Vp = inf["Vp"]
         self._Vs = inf["Vs"]
 
@@ -103,14 +106,15 @@ class VelocityModel(object):
         df["Vp"] = df[Vp_key]*1e-3
         df["Vs"] = df[Vs_key]*1e-3
         df["R"] = df["T"] = df["P"] = np.nan
-        spher = seispy.coords.as_geographic(df[["lat", "lon", "depth"]]
+        spher = _coords.as_geographic(df[["lat", "lon", "depth"]]
                                            ).to_spherical()
         df.loc[:, ["R", "T", "P"]] = spher
         df = df.sort_values(["R", "T", "P"])
         nR = len(df.drop_duplicates("R"))
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
-        self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
+        nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
+        self._nodes = _coords.as_spherical(nodes)
         Vp = df["Vp"].values.reshape(nR, nT, nP)
         Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
@@ -130,7 +134,7 @@ class VelocityModel(object):
             for idepth in range(len(depth)):
                 for ilat in range(len(lat)):
                     VVs[ilat, :, idepth] = np.array([float(v) for v in inf.readline().split()])
-        spher = seispy.coords.as_geographic(np.stack([LAT.flatten(),
+        spher = _coords.as_geographic(np.stack([LAT.flatten(),
                                                       LON.flatten(),
                                                       DEPTH.flatten()],
                                                      axis=1)
@@ -320,7 +324,7 @@ class VelocityModel(object):
         .. image:: VelocityModel.png
         """
 
-        (lon1, lat1), (lon2, lat2) = seispy.geometry.get_line_endpoints(lat0,
+        (lon1, lat1), (lon2, lat2) = _geometry.get_line_endpoints(lat0,
                                                                         lon0,
                                                                         azimuth,
                                                                         length)
@@ -334,7 +338,7 @@ class VelocityModel(object):
             for j in range(nd):
                 lat, lon, depth = LAT[i], LON[i], DEPTH[j]
                 V[i, j] = self(phase, lat, lon, depth)
-                X[i, j] = seispy.geometry.distance((lat1, lon1), (lat, lon))
+                X[i, j] = _geometry.distance((lat1, lon1), (lat, lon))
                 Y[i, j] = depth
         V = np.ma.masked_equal(V, -1)
         return(X, Y, V)

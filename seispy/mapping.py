@@ -1,10 +1,13 @@
 # coding=utf-8
 import numpy as np
+import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
 import pandas as pd
 import pkg_resources
 
-DEFAULT_KWARGS = {
+from . import coords as _coords
+
+DEFAULT_BASEMAP_KWARGS = {
         "latmin": 32.5,
         "lonmin": -117.5,
         "latmax": 34.5,
@@ -23,14 +26,26 @@ DEFAULT_KWARGS = {
         "fault_linewidth": 1,
         }
 
+DEFAULT_SECTION_KWARGS = {
+        "ax": None,
+        "origin": _coords.as_geographic([33.5, -116.5, 0]),
+        "strike": -45,
+        "length": 50,
+        "width": 15,
+        "s": 1,
+        "c": None,
+        "cmap": plt.get_cmap("hot_r"),
+        "zorder": 2
+        }
+
 class Basemap(bm.Basemap):
     def __init__(self, **kwargs):
         import warnings
         warnings.filterwarnings("ignore")
 
-        for key in DEFAULT_KWARGS:
+        for key in DEFAULT_BASEMAP_KWARGS:
             if key not in kwargs:
-                kwargs[key] = DEFAULT_KWARGS[key]
+                kwargs[key] = DEFAULT_BASEMAP_KWARGS[key]
         self.kwargs = kwargs
         del(kwargs)
 
@@ -42,6 +57,10 @@ class Basemap(bm.Basemap):
 
         if self.kwargs["bgstyle"] == "relief":
             kwargs["projection"] = self.kwargs["projection"]
+
+# Set the current Axes object to the provided handle if one exists.
+        if "ax" in self.kwargs:
+            plt.sca(self.kwargs["ax"])
 
         super(self.__class__, self).__init__(**kwargs)
 

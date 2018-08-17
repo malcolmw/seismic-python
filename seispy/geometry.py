@@ -12,10 +12,10 @@ from math import acos,\
                  sin,\
                  sqrt
 import numpy as np
-import seispy.constants
+from . import constants as _constants
 
 
-EARTH_RADIUS = seispy.constants.EARTH_RADIUS
+EARTH_RADIUS = _constants.EARTH_RADIUS
 
 
 def azimuth(lat1, lon1, lat2, lon2):

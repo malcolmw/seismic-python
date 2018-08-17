@@ -1,7 +1,8 @@
 import numpy as np
-import seispy
+from . import constants as _constants
 
 PI = np.pi
+
 
 class GeographicCoordinates(np.ndarray):
     """
@@ -31,13 +32,13 @@ class GeographicCoordinates(np.ndarray):
         if not np.all((-180 <= self[...,1]) & ( self[...,1] <= 180)):
             raise(ValueError("all values for longitude must satisfiy -180 <= "\
                     "longitude <= 180"))
-        if not np.all(self[...,2] <= seispy.constants.EARTH_RADIUS):
+        if not np.all(self[...,2] <= _constants.EARTH_RADIUS):
             raise(ValueError("all depth values must satisfy depth <= "\
-                    "{:f}".format(seispy.constants.EARTH_RADIUS)))
+                    "{:f}".format(_constants.EARTH_RADIUS)))
 
     def to_cartesian(self):
         cart = CartesianCoordinates(*self.shape[:-1])
-        rho = np.asarray(seispy.constants.EARTH_RADIUS - self[...,2])
+        rho = np.asarray(_constants.EARTH_RADIUS - self[...,2])
         theta = np.asarray(PI/2 - np.radians(self[...,0]))
         phi = np.asarray(np.radians(self[...,1]))
         cart[...,0] = rho * np.sin(theta) * np.cos(phi)
@@ -47,15 +48,19 @@ class GeographicCoordinates(np.ndarray):
 
     def to_left_spherical(self):
         lspher = LeftSphericalCoordinates(*self.shape[:-1])
-        lspher[...,0] = seispy.constants.EARTH_RADIUS - self[...,2]
+        lspher[...,0] = _constants.EARTH_RADIUS - self[...,2]
         lspher[...,1] = np.radians(self[...,0])
         lspher[...,2] = np.radians(self[...,1])
         return(lspher)
 
+    def to_ned(self, origin=None):
+        if origin is None:
+            origin = GeographicCoordinates(1)[0]
+        return(self.to_cartesian().to_ned(origin=origin))
 
     def to_spherical(self):
         spher = SphericalCoordinates(*self.shape[:-1])
-        spher[...,0] = seispy.constants.EARTH_RADIUS - self[...,2]
+        spher[...,0] = _constants.EARTH_RADIUS - self[...,2]
         spher[...,1] = np.radians(90 - self[...,0])
         spher[...,2] = np.radians(self[...,1])
         return(spher)
@@ -77,13 +82,13 @@ class CartesianCoordinates(np.ndarray):
         """
         return(np.zeros(args + (3,)).view(CartesianCoordinates))
 
-    def rotate(self, alpha, beta, gamma):
+    def rotate(self, *args):
         """
         Rotates a set of cartesian coordinates by alpha radians about
         the z-axis, then beta radians about the y'-axis and then
         gamma radians about the z''-axis.
         """
-        return(self.dot(rotation_matrix(alpha, beta, gamma)))
+        return(self.dot(rotation_matrix(*args)))
 
 
     def to_geographic(self):
@@ -91,7 +96,7 @@ class CartesianCoordinates(np.ndarray):
         rho = np.sqrt(np.sum(np.square(self),axis=-1))
         geo[...,0] = np.degrees(PI/2 - np.arccos(self[...,2]/rho))
         geo[...,1] = np.degrees(np.arctan2(self[...,1], self[...,0]))
-        geo[...,2] = seispy.constants.EARTH_RADIUS - rho
+        geo[...,2] = _constants.EARTH_RADIUS - rho
         return(geo)
 
     def to_left_spherical(self):
@@ -101,12 +106,73 @@ class CartesianCoordinates(np.ndarray):
         lspher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(lspher)
 
+    def to_ned(self, origin=GeographicCoordinates(1)[0]):
+        theta0 = np.radians(90-origin[0])
+        phi0 = np.radians(origin[1])
+        rho0 = _constants.EARTH_RADIUS-origin[2]
+        # This creates XYZ/NEZ coordinates
+        ned = self.rotate(phi0, theta0, np.pi/2).view(NEDCoordinates)
+        # Swap X and Y axes
+        ned[..., [0,1]] = ned[..., [1,0]]
+        # Map Z to Down
+        ned[..., 2] = rho0 - ned[..., 2]
+        # Set the origin of the NEDCoordinates object
+        ned.set_origin(origin)
+        return(ned)
+
     def to_spherical(self):
         spher = SphericalCoordinates(*self.shape[:-1])
         spher[...,0] = np.sqrt(np.sum(np.square(self),axis=-1))
         spher[...,1] = np.arccos(self[...,2]/spher[...,0])
         spher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(spher)
+
+class NEDCoordinates(CartesianCoordinates):
+    """
+    This class provides a container for North-East-Down coordinates and
+    methods to transform the coordinates to other commonly used
+    systems.
+    This class does not support creation via the np.ndarray.view
+    mechanism.
+    """
+    def __new__(cls, *args, **kwargs):
+        """
+        This creates a new instance of NEDCoordinates, makes sure
+        that the last dimesion is of length 3, and sets all elements
+        to 0.
+        """
+        instance = np.zeros(args + (3,)).view(NEDCoordinates)
+        if "origin" in kwargs:
+            instance.set_origin(kwargs["origin"])
+        return(instance)
+
+    def rotate(self, *args):
+        rot = super().rotate(*args).view(NEDCoordinates)
+        rot.origin = self.origin
+        return(rot)
+
+
+    def set_origin(self, origin):
+        if isinstance(origin, GeographicCoordinates):
+            self.origin = origin
+        else:
+            raise(NotImplementedError("NEDCoordinates can only handle "
+                                      "GeographicCoordinates right now"))
+
+    def to_cartesian(self):
+        theta0 = np.radians(90-self.origin[0])
+        phi0 = np.radians(self.origin[1])
+        rho0 = _constants.EARTH_RADIUS-self.origin[2]
+        cart = self.view(CartesianCoordinates)
+        # Map Down to Z
+        cart[..., 2] = rho0 - cart[..., 2]
+        # Swap X and Y axes
+        cart[..., [0,1]] = cart[..., [1,0]]
+        # This creates XYZ/NEZ coordinates
+        return(cart.rotate(-np.pi/2, -theta0, -phi0))
+
+    def to_geographic(self):
+        return(self.to_cartesian().to_geographic())
 
 class SphericalCoordinates(np.ndarray):
     """
@@ -148,7 +214,7 @@ class SphericalCoordinates(np.ndarray):
         geo = GeographicCoordinates(*self.shape[:-1])
         geo[...,0] = np.degrees(PI/2 - self[...,1])
         geo[...,1] = np.degrees(self[...,2])
-        geo[...,2] = seispy.constants.EARTH_RADIUS - self[...,0]
+        geo[...,2] = _constants.EARTH_RADIUS - self[...,0]
         return(geo)
 
     def to_left_spherical(self):
@@ -157,6 +223,7 @@ class SphericalCoordinates(np.ndarray):
         lspher[...,1] = PI/2  - self[...,1]
         lspher[...,2] = self[...,2]
         return(lspher)
+
 
 class  LeftSphericalCoordinates(np.ndarray):
     """
@@ -198,7 +265,7 @@ class  LeftSphericalCoordinates(np.ndarray):
         geo = GeographicCoordinates(*self.shape[:-1])
         geo[...,0] = np.degrees(self[...,1])
         geo[...,1] = np.degrees(self[...,2])
-        geo[...,2] = seispy.constants.EARTH_RADIUS - self[...,0]
+        geo[...,2] = _constants.EARTH_RADIUS - self[...,0]
         return(geo)
 
     def to_spherical(self):
@@ -208,12 +275,19 @@ class  LeftSphericalCoordinates(np.ndarray):
         spher[...,2] = self[...,2]
         return(spher)
 
-def rotation_matrix(alpha, beta, gamma):
+
+def rotation_matrix(*args):
     """
     Return the rotation matrix used to rotate a set of cartesian
     coordinates by alpha radians about the z-axis, then beta radians
     about the y'-axis and then gamma radians about the z''-axis.
     """
+    if len(args) == 1:
+        alpha, beta, gamma = args[0], 0, 0
+    elif len(args) == 3:
+        alpha, beta, gamma = args
+    else:
+        raise(ValueError("number of positional arguments must be 1 or 3"))
     ALPHA = np.array([[np.cos(alpha), -np.sin(alpha), 0],
                         [np.sin(alpha), np.cos(alpha), 0],
                         [0, 0, 1]])
@@ -240,6 +314,13 @@ def as_left_spherical(array):
     lspher = LeftSphericalCoordinates(*np.asarray(array).shape[:-1])
     lspher[...] = array
     return(lspher)
+
+def as_ned(array, origin=None):
+    ned = NEDCoordinates(*np.asarray(array).shape[:-1])
+    if origin is not None:
+        ned.set_origin(origin)
+    ned[...] = array
+    return(ned)
 
 def as_spherical(array):
     spher = SphericalCoordinates(*np.asarray(array).shape[:-1])

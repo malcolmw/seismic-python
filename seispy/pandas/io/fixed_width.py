@@ -2,7 +2,8 @@ import os
 import pandas as pd
 import pickle
 import pkg_resources
-import seispy
+
+from . import schema as _schema
 
 def read_fwf(path, schema="css3.0", tables=None):
     """
@@ -22,7 +23,7 @@ def read_fwf(path, schema="css3.0", tables=None):
     A dictionary with table names as keys and pandas.DataFrames as
     values.
     """
-    schema_data = seispy.pandas.io.schema.get_schema(schema)
+    schema_data = _schema.get_schema(schema)
 
     tables = [table for table in tables
                     if os.path.isfile("%s.%s" % (path, table))]\
@@ -51,7 +52,7 @@ def write_fwf(cat, path, schema):
         if os.path.isfile("%s.%s" % (path, table)):
             raise(IOError("file already exists: %s.%s" % (path, table)))
             
-    schema_data = seispy.pandas.io.schema.get_schema(schema)
+    schema_data = _schema.get_schema(schema)
         
     for table in cat._data:
         fmt = " ".join([schema_data["Attributes"][field]["format"]

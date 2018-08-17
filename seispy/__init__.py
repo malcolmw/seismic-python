@@ -1,18 +1,15 @@
 # coding=utf-8
-import importlib
 
-submodules = ["constants",
-              "coords",
-              "faults",
-              "fmm3dio",
-              "geogrid",
-              "geometry",
-              "mapping",
-              "stats",
-              "surface",
-              "topography",
-              "ttgrid",
-              "velocity",
-              "pandas"]
-for submodule in submodules:
-    importlib.import_module(".{}".format(submodule), package="seispy")
+from . import constants
+from . import coords
+from . import faults
+from . import fmm3dio
+from . import geogrid
+from . import geometry
+from . import mapping
+from . import stats
+from . import surface
+from . import topography
+from . import ttgrid
+from . import velocity
+from . import pandas

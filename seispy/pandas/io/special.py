@@ -3,20 +3,20 @@ import os
 import pandas as pd
 import pickle
 import pkg_resources
-import seispy
+from . import schema as _schema
 
 def _index_origin_rows(fname):
     """
     Return the total number of lines and indices of origin
     rows in input file.
-    
+
     This is a utility function for parsing hypoinverse2000
     phase format data.
     """
     with open(fname) as inf:
         data = inf.read().rstrip("\n").split("\n")
     nrows = len(data)
-    return(nrows, np.array([i for i in range(len(data)) 
+    return(nrows, np.array([i for i in range(len(data))
                             if len(data[i]) == 164]))
 
 def read_special(path, schema="hypoinverse2000", tables=None):
@@ -25,10 +25,10 @@ def read_special(path, schema="hypoinverse2000", tables=None):
     is for reading formats that don't lend themselves to more
     general parsing routines. Data downloaded from SCEDC in the
     hypoinverse2000 phase format is motivating this; it does not
-    lend itself to the more general fixed-width format parsing 
+    lend itself to the more general fixed-width format parsing
     function because it contains both origin and arrival rows that
     need to be parsed simultaneously.
-    
+
     Positional arguments
     ====================
     path ::str:: path to database
@@ -43,14 +43,14 @@ def read_special(path, schema="hypoinverse2000", tables=None):
     A dictionary with table names as keys and pandas.DataFrames as
     values.
     """
-    
+
     if schema == "hypoinverse2000":
         return(_read_hypoinverse2000(path))
     else:
         raise(NotImplementedError("schema not recognized: %s" % schema))
-        
+
 def _read_hypoinverse2000(path):
-    schema_data = seispy.pandas.io.schema.get_schema("hypoinverse2000")
+    schema_data = _schema.get_schema("hypoinverse2000")
     nrows, origin_rows = _index_origin_rows(path)
     db = {}
     db["origin"] = pd.read_fwf(path,

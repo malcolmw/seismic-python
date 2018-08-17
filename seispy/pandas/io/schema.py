@@ -3,12 +3,12 @@ import pickle
 import pkg_resources
 
 def get_schema(schema):
-    schema_file = pkg_resources.resource_filename("seispy.pandas",
+    schema_file = pkg_resources.resource_filename("seispy",
                                                   os.path.join("data",
                                                                "schemas",
                                                                "%s.pkl" % schema)
                                                  )
-    ext_file = pkg_resources.resource_filename("seispy.pandas",
+    ext_file = pkg_resources.resource_filename("seispy",
                                                os.path.join("data",
                                                             "schemas",
                                                             "%s.ext.pkl" % schema)
@@ -43,4 +43,3 @@ def document(schema):
         blob += str(attr["null"]) + "|"
         blob += str(attr["width"]) + "\n"
     return(blob)
-        

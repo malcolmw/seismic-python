@@ -1,12 +1,14 @@
 import numpy as np
 import os
 import pandas as pd
-import seismic_pandas as _sp
+import seispy
+from . import catalog as _catalog
+from . import io as _io
 
 IO_FUNCS = {"csv": lambda *args, **kwargs: {"catalog": pd.read_csv(*args, **kwargs)},
             # "empty": lambda *args, **kwargs: {},
-            "fwf": _sp.io.fixed_width.read_fwf,
-            "special": _sp.io.special.read_special}
+            "fwf": _io.fixed_width.read_fwf,
+            "special": _io.special.read_special}
 
 class Catalog(object):
     def __init__(self, *args, **kwargs):
@@ -99,35 +101,15 @@ class Catalog(object):
                                                       "schema": [self._schema]})
             for table in self._data.keys():
                 store[table] = self[table]
-        
-    def prefor_only(self):
-        """
-        This is necessary to account for the fact that Antelope
-        allow many origins for a single event, and a preferred
-        origin flagged for each event.
-        This will return a new catalog with only the preferred
-        origins.
-        """
-        if self._schema != "css3.0":
-            raise(NotImplementedError("you'll have to give me instructions"))
-        df = self["origin"].merge(self["event"][["evid", "prefor"]])
-        df = df[df["orid"] == df["prefor"]][df.columns.drop("prefor")]
-        cat = Catalog(fmt="empty")
-        cat["origin"] = df
-        return(cat)
-
-    def write(self, path):
-        _sp.io.fixed_width.write_fwf(self, path, self._schema)
-
 
 def load(infile):
     """
-    This should load a catalog as a dictionary pandas.DataFrames
+    This loads a catalog as a dictionary pandas.DataFrame
     using pandas.HDFStore.
     """
     with pd.HDFStore(infile, "r") as store:
         fmt, schema = store["meta"].iloc[0]
-        cat = _sp.catalog.Catalog(fmt=fmt, schema=schema)
+        cat = _catalog.Catalog(fmt=fmt, schema=schema)
         cat._data = {}
         for key in store:
             key = key.lstrip("/")

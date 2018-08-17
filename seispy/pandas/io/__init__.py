@@ -1,9 +1,3 @@
-import importlib
-
-submodules = ["fixed_width",
-              "schema",
-              "special"]
-
-for submodule in submodules:
-    importlib.import_module(".{}".format(submodule),
-                            package="seispy.pandas.io")
+from . import fixed_width
+from . import schema
+from . import special
