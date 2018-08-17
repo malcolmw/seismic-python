@@ -152,6 +152,24 @@ class Basemap(bm.Basemap):
                                             self.lonmin, self.lonmax)]
         )
 
+    def add_surface_trace(self, origin, strike, length, width=0, **kwargs):
+        if width == 0:
+            geo = _coords.as_ned([[-length, 0, 0],
+                                  [length, 0, 0]],
+                                 origin=origin
+                                 ).rotate(-np.radians(strike)
+                                 ).to_geographic()
+        else:
+            geo = _coords.as_ned([[-length, -width, 0],
+                                  [-length, width, 0],
+                                  [length, width, 0],
+                                  [length, -width, 0],
+                                  [-length, -width, 0]],
+                                 origin=origin
+                                 ).rotate(-np.radians(strike)
+                                 ).to_geographic()
+        return(self.plot(geo[:,1], geo[:,0], **kwargs))
+
 class FaultCollection(object):
     def __init__(self, infile):
         inf = open(infile)
