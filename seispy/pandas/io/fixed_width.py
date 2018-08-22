@@ -47,18 +47,17 @@ def read_fwf(path, schema="css3.0", tables=None):
     return(db)
 
 def write_fwf(cat, path, schema):
-    print("write", cat, path, schema)
     for table in cat._data:
         if os.path.isfile("%s.%s" % (path, table)):
             raise(IOError("file already exists: %s.%s" % (path, table)))
-            
+
     schema_data = _schema.get_schema(schema)
-        
+
     for table in cat._data:
+        fields = schema_data["Relations"][table]
         fmt = " ".join([schema_data["Attributes"][field]["format"]
                         for field in schema_data["Relations"][table]])
-        print(table, fmt)
         with open("%s.%s" % (path, table), "w") as outf:
             outf.write(
-                "\n".join([fmt % tuple(row) for _, row in cat[table].iterrows()]) + "\n"
+                "\n".join([fmt % tuple(row) for _, row in cat[table][fields].iterrows()]) + "\n"
                       )
