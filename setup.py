@@ -4,7 +4,7 @@ def configure():
 # Initialize the setup kwargs
     kwargs = {
             "name": "seismic-python",
-            "version": "1.0a0",
+            "version": "0.0a0",
             "author": "Malcolm White",
             "author_email": "malcolcw@usc.edu",
             "maintainer": "Malcolm White",

@@ -1,7 +1,11 @@
 # coding=utf-8
 import numpy as np
-import seispy
-ER = seispy.constants.EARTH_RADIUS
+from . import constants as _constants
+from . import coords as _coords
+from . import geogrid as _geogrid
+from . import velocity as _velocity
+
+ER = _constants.EARTH_RADIUS
 
 pi = np.pi
 
@@ -53,7 +57,7 @@ def format_vgrids(vmodel):
         for irho, ilambda, iphi in ((i, j, k) for i in range(grid.nrho)
                                 for j in range(grid.nlambda)
                                 for k in range(grid.nphi)):
-            lat, lon, depth = seispy.coords.as_left_spherical([grid.rho0 + irho * grid.drho,
+            lat, lon, depth = _coords.as_left_spherical([grid.rho0 + irho * grid.drho,
                                                         grid.lambda0 + ilambda * grid.dlambda,
                                                         grid.phi0 + iphi * grid.dphi]).to_geographic()
             blob += "{:11.6f}\n".format(vmodel(typeID, gridID, lat, lon, depth ))
@@ -65,14 +69,14 @@ def read_interfaces(infile):
     nlambda, nphi = [int(v) for v in infile.readline().split()[:2]]
     dlambda, dphi = [np.float64(v) for v in infile.readline().split()[:2]]
     lambda0, phi0 = [np.float64(v) for v in infile.readline().split()[:2]]
-    grid = seispy.geogrid.GeoGrid2D(np.degrees(lambda0), np.degrees(phi0),
+    grid = _geogrid.GeoGrid2D(np.degrees(lambda0), np.degrees(phi0),
                              nlambda, nphi,
                              np.degrees(dlambda), np.degrees(dphi))
     interfaces = []
     for iinter in range(ninter):
-        surf = seispy.surface.GeoSurface()
+        surf = _surface.GeoSurface()
         surf.grid = grid
-        coordinates = seispy.coords.as_left_spherical([[[np.float64(infile.readline().split()[0]),
+        coordinates = _coords.as_left_spherical([[[np.float64(infile.readline().split()[0]),
                                                   lambda0 + ilambda*dlambda,
                                                   phi0 + iphi*dphi]
                                                 for iphi in range(nphi)]
@@ -87,7 +91,7 @@ def read_propgrid(infile):
     nr, nlat, nlon = [int(v) for v in infile.readline().split()[:3]]
     dr, dlat, dlon = [float(v) for v in infile.readline().split()[:3]]
     h0, lat0, lon0 = [float(v) for v in infile.readline().split()[:3]]
-    return(seispy.geogrid.GeoGrid3D(lat0, lon0, -h0,
+    return(_geogrid.GeoGrid3D(lat0, lon0, -h0,
                                     nlat, nlon, nr,
                                     dlat, dlon, dr))
 
@@ -97,7 +101,7 @@ def read_receivers(infile):
     receivers = []
     for irec in range(nrec):
         depth, lat, lon = [np.float64(v) for v in infile.readline().split()[:3]]
-        lat, lon, depth = seispy.coords.as_geographic([lat, lon, depth])
+        lat, lon, depth = _coords.as_geographic([lat, lon, depth])
         receivers.append(Receiver(lat, lon, depth))
         npath = int(infile.readline().split()[0])
         path_sourceID = [int(v) for v in infile.readline().split()[:npath]]
@@ -115,7 +119,7 @@ def read_receivers(infile):
 #        if is_tele:
 #            phase = infile.readline().split()[0]
 #        depth, lat, lon = [np.float64(v) for v in infile.readline().split()[:3]]
-#        lat, lon, depth = seispy.coords.as_geographic([lat, lon, depth])
+#        lat, lon, depth = _coords.as_geographic([lat, lon, depth])
 #        if is_tele:
 #            sources.append(Source(sourceID, lat, lon, depth, is_tele, phase))
 #        else:
@@ -199,7 +203,7 @@ def test_io():
     receivers = read_receivers("%s/receivers.in" % rootin)
     sources = read_sources("%s/sources.in" % rootin)
     interfaces = read_interfaces("%s/interfaces.in" % rootin)
-    vmodel = seispy.velocity.VelocityModel("%s/vgrids.in" % rootin, "fmm3d")
+    vmodel = _velocity.VelocityModel("%s/vgrids.in" % rootin, "fmm3d")
     with open("%s/vgrids.in" % rootout, "w") as f:
         f.write(format_vgrids(vmodel))
     with open("%s/interfaces.in" % rootout, "w") as f:

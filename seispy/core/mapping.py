@@ -1,4 +1,21 @@
 # coding=utf-8
+r"""
+This is some introductory text describing this module.
+
+.. codeauthor:: Malcolm White
+
+.. autoclass:: Basemap
+   :members:
+
+.. autoclass:: FaultCollection
+   :members:
+
+.. autoclass:: CaliforniaFaults
+   :members:
+
+.. autoclass:: VerticalPlaneProjector
+   :members:
+"""
 import numpy as np
 import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
@@ -27,18 +44,28 @@ DEFAULT_BASEMAP_KWARGS = {
         }
 
 DEFAULT_SECTION_KWARGS = {
-        "ax": None,
-        "origin": _coords.as_geographic([33.5, -116.5, 0]),
-        "strike": -45,
-        "length": 50,
-        "width": 15,
-        "s": 1,
-        "c": None,
-        "cmap": plt.get_cmap("hot_r"),
-        "zorder": 2
+        "general": {"ax": None,
+                    "fig_width": 8,
+                    "origin": _coords.as_geographic([33.5, -116.5, 0]),
+                    "strike": 135,
+                    "length": 50,
+                    "width": 15,
+                    "ymin": 0,
+                    "ymax": 25,
+                    "special": None,
+                   },
+        "scatter_kwargs": {"s": 1,
+                           "cmap": plt.get_cmap("hot_r"),
+                           "zorder": 2
+                          },
+        "colorbar_kwargs": {"shrink": 0.75}
         }
 
 class Basemap(bm.Basemap):
+    r"""A basic map to get started with.
+    
+    .. todo:: Document this class.
+    """
     def __init__(self, **kwargs):
         import warnings
         warnings.filterwarnings("ignore")
@@ -171,9 +198,11 @@ class Basemap(bm.Basemap):
         return(self.plot(geo[:,1], geo[:,0], **kwargs))
 
 class FaultCollection(object):
+    r"""
+    A collection of faults.
+    """
     def __init__(self, infile):
         inf = open(infile)
-        #: Doc comment for instance attribute data
         self.data = np.array([
                                 np.array([[float(coord) for coord in pair.split()]
                                  for pair in chunk.strip().split("\n")
@@ -189,37 +218,115 @@ class FaultCollection(object):
         return(np.asarray(list(filter(cond2, self.data))))
 
 class CaliforniaFaults(FaultCollection):
+    r"""
+    Faults in California.
+    """
     def __init__(self):
         fname = pkg_resources.resource_filename("seispy",
                                                 "data/ca_scitex.flt")
         super(self.__class__, self).__init__(fname)
 
-def plot_section(lat, lon, depth, **kwargs):
-    for key in DEFAULT_SECTION_KWARGS:
-        if key not in kwargs:
-            kwargs[key] = DEFAULT_SECTION_KWARGS[key]
 
-    geo = _coords.GeographicCoordinates(len(lat))
-    geo[:,0], geo[:,1], geo[:,2] = lat, lon, depth
-    ned = geo.to_ned(origin=kwargs["origin"]
-                    ).rotate(np.radians(kwargs["strike"]))
-    bool_idx = (np.abs(ned[:,0]) < kwargs["length"])\
-              &(np.abs(ned[:,1]) < kwargs["width"])
-    ned = ned[bool_idx]
+class VerticalPlaneProjector(object):
+    r"""
+    This is the VerticalPlaneProjector docstring.
+    
+    :param list lat: Event latitude coordinates.
+    :param list lon: Event longitude coordinates.
+    :param list depth: Event depth coordinates.
+    :param list aux_data: Auxiliary data.
+    """
+    def __init__(self, lat, lon, depth, aux_data=None):
+        #: Doc comment for instance attribute _rdata
+        self._rdata = _coords.GeographicCoordinates(len(lat))
+        self._rdata[:,0], self._rdata[:,1], self._rdata[:,2] = lat, lon, depth
+        self._aux_data = np.asarray(aux_data)
+        self.scatter_kwargs = DEFAULT_SECTION_KWARGS["scatter_kwargs"]
+        self.colorbar_kwargs = DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
+        self.general_kwargs = DEFAULT_SECTION_KWARGS["general"]
 
-    if kwargs["c"] is not None:
-        kwargs["c"] = kwargs["c"][bool_idx]
+    def update_scatter_kwargs(self, **kwargs):
+        r"""
+        Update kwargs passed directly to matplotlib.pyplot.Axes.scatter. 
+        
+        This method updates *only* the kwargs specified.
+        """
+        kwargs = {**self.scatter_kwargs, **kwargs}
+        self.set_scatter_kwargs(**kwargs)
+    
+    def update_colorbar_kwargs(self, **kwargs):
+        r"""
+        Update kwargs passed directly to matplotlib.pyplot.Figure.colorbar. 
+        
+        This method updates *only* the kwargs specified.
+        """
+        kwargs = {**self.colorbar_kwargs, **kwargs}
+        self.set_colorbar_kwargs(**kwargs)
+    
+    def update_general_kwargs(self, **kwargs):
+        r"""Update general plot kwargs. 
+        
+        This method updates *only* the kwargs specified.
 
-    if kwargs["ax"] is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(1, 1, 1, aspect=1)
-    else:
-        ax = kwargs["ax"]
-    del(kwargs["ax"])
-    del(kwargs["origin"])
-    del(kwargs["strike"])
-    del(kwargs["length"])
-    del(kwargs["width"])
-    pts = ax.scatter(ned[:,0], ned[:,2], **kwargs)
-    ax.invert_yaxis()
-    return(ax)
+        :param matplotlib.pyplot.Axes ax: 
+        :param float fig_width:
+        :param seispy.coords.GeographicCoordinates origin:
+        :param float strike:
+        :oaram float length:
+        :param float ymin:
+        :param float ymax:
+        """
+        kwargs = {**self.general_kwargs, **kwargs}
+        self.set_general_kwargs(**kwargs)
+    
+    def set_scatter_kwargs(self, **kwargs):
+        self.scatter_kwargs = kwargs
+
+    def set_colobar_kwargs(self, **kwargs):
+        self.colorbar_kwargs = kwargs
+
+    def set_general_kwargs(self, **kwargs):
+        self.general_kwargs = kwargs
+
+    def plot(self, ax=None):
+        r"""Plot the vertical transect.
+        
+        :param matplotlib.pyplot.Axes ax: The axes to plot to.
+        """
+        self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
+                               ).rotate(np.radians(self.general_kwargs["strike"]))
+        bool_idx = (np.abs(self._data[:,0]) < self.general_kwargs["length"])\
+                  &(np.abs(self._data[:,1]) < self.general_kwargs["width"])
+        data = self._data[bool_idx]
+    
+        if "c" in self.scatter_kwargs:
+            self.scatter_kwargs["c"] = self.scatter_kwargs["c"][bool_idx]
+        if ax is None:
+            print("ax is None")
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1, aspect=1)
+        else:
+            fig = ax.get_figure()
+        hwr = (self.general_kwargs["ymax"] - self.general_kwargs["ymin"]) \
+            / (self.general_kwargs["length"]*2.15)
+        fig.set_size_inches(self.general_kwargs["fig_width"], 
+                            self.general_kwargs["fig_width"]*hwr)
+        pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
+        if self.general_kwargs["special"] is not None:
+            for special in self.general_kwargs["special"]:
+                sdata = self._data[(self._aux_data >= special["threshon"])
+                                  &(self._aux_data < special["threshoff"])]
+                ax.scatter(sdata[:,0], sdata[:,2], **special["kwargs"])
+        ax.set_xlim(-self.general_kwargs["length"], 
+                    self.general_kwargs["length"])
+        ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
+        ax.invert_yaxis()
+        ax.set_xlabel(r"Horizontal offset [$km$]")
+        ax.set_ylabel(r"Depth [$km$]")
+        if "c" in self.scatter_kwargs:
+            cbar = fig.colorbar(pts, ax=ax, **self.colorbar_kwargs)
+            cbar.ax.invert_yaxis()
+            cbar.set_alpha(1)
+            if "colorbar_label" in self.general_kwargs:
+                cbar.set_label(self.general_kwargs["colorbar_label"])
+        return(ax)

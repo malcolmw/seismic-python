@@ -1,4 +1,15 @@
 # coding=utf-8
+"""
+This module facilitates access to velocity model data.
+
+.. todo::
+   Make a ScalarField class to abstract behaviour in this class.
+
+.. autoclass:: VelocityModel
+   :special-members:
+   :private-members:
+   :members:
+"""
 from math import degrees,\
                  pi,\
                  radians
@@ -12,15 +23,15 @@ from . import geometry as _geometry
 
 
 class VelocityModel(object):
-    def __init__(self, inf=None, fmt=None, topo=None, **kwargs):
-        """
-        A callable class providing a queryable container for seismic
-        velocities in a 3D volume.
+    """
+    A callable class providing a queryable container for seismic
+    velocities in a 3D volume.
 
-        :param str inf: path to input file containing phase velocity
-                           data
-        :param str fmt: format of input file
-        """
+    :param str inf: path to input file containing phase velocity
+                    data
+    :param str fmt: format of input file
+    """
+    def __init__(self, inf=None, fmt=None, topo=None, **kwargs):
         if inf is None:
             return
         if topo is None:
@@ -41,6 +52,13 @@ class VelocityModel(object):
             raise(ValueError(f"Unrecognized format - {fmt}"))
 
     def from_DataFrame(self, df):
+        """
+        Initialize VelocityModel from a pandas.DataFrame. Input
+        DataFrame must have *lat*, *lon*, *depth*, *Vp*, and *Vs*,
+        fields.
+
+        :param pandas.DataFrame df: DataFrame with velocity data
+        """
         df["R"] = df["T"] = df["P"] = np.nan
         spher = _coords.as_geographic(df[["lat", "lon", "depth"]]
                                            ).to_spherical()
