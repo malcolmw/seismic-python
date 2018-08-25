@@ -1,8 +1,9 @@
 import os
+import pandas as pd
 import pickle
 import pkg_resources
 
-def get_schema(schema):
+def get_schema(schema, ext=False):
     schema_file = pkg_resources.resource_filename("seispy",
                                                   os.path.join("data",
                                                                "schemas",
@@ -16,7 +17,7 @@ def get_schema(schema):
     with open(schema_file, "rb") as inf:
         schema_data = pickle.load(inf)
 
-    if os.path.isfile(ext_file):
+    if ext is True and os.path.isfile(ext_file):
         with open(ext_file, "rb") as inf:
             ext_data = pickle.load(inf)
         for attr in ext_data["Attributes"]:
@@ -24,6 +25,22 @@ def get_schema(schema):
         for rel in ext_data["Relations"]:
             schema_data["Relations"][rel] = ext_data["Relations"][rel]
     return(schema_data)
+
+def get_null(schema, table, ext=False):
+    r"""Return a single-row DataFrame filled with null values.
+    
+    :param str schema:
+    :param str table:
+    :param bool ext:
+    """
+    schema = get_schema(schema, ext=ext)
+    fields = schema["Relations"][table]
+    nulls = [[schema["Attributes"][field]["null"] for field in fields]]
+    df = pd.DataFrame(nulls, columns=fields)
+    for field in fields:
+        dtype = schema["Attributes"][field]["dtype"]
+        df[field] = df[field].astype(dtype)
+    return(df)
 
 def document(schema):
     blob = "# %s\n" % schema
