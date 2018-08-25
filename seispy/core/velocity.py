@@ -10,12 +10,8 @@ This module facilitates access to velocity model data.
    :private-members:
    :members:
 """
-from math import degrees,\
-                 pi,\
-                 radians
 import numpy as np
 import pandas as pd
-import scipy.interpolate
 
 from . import constants as _constants
 from . import coords as _coords
