@@ -1,56 +1,41 @@
-import numpy as np
+r"""
+.. codeauthor:: Malcolm White
+
+.. autoclass:: Catalog
+   :members:
+"""
 import os
 import pandas as pd
-import seispy
 from . import catalog as _catalog
 from . import io as _io
 
 IO_FUNCS = {"csv": lambda *args, **kwargs: {"catalog": pd.read_csv(*args, **kwargs)},
-            # "empty": lambda *args, **kwargs: {},
             "fwf": _io.fixed_width.read_fwf,
             "special": _io.special.read_special}
 
 class Catalog(object):
-    def __init__(self, *args, **kwargs):
-        """
-        This is a wrapper around IO functions that are defined in
-        seismic_pandas.io and registered in IO_FUNCS.
-        
-        Positional arguments
-        ====================
-        *args       ::tuple:: passed directly to underlying IO function.
-        
-        Keyword arguments
-        =================
-        fmt         ::str:: data format - ("csv", fwf").
-        schema      ::str:: data schema - ("css3.0", "scsn1.0", "hys1.0", "growclust1.0").
-        **kwargs    ::dict:: passed directly to underlying IO function.
-        """
+    r"""An earthquake catalog.
+
+    fmt         ::str:: data format - ("csv", fwf").
+    schema      ::str:: data schema - ("css3.0", "scsn1.0", "hys1.0", "growclust1.0").
+    **kwargs    ::dict:: passed directly to underlying IO function.
+    """
+    def __init__(self, path=None, fmt="fwf", schema="css3.0", **kwargs):
         self._data = None
-        self._fmt = kwargs["fmt"].lower() if "fmt" in kwargs else None
-        self._schema = kwargs["schema"].lower() if "schema" in kwargs else None
-        if len(args) == 0:
-            return
-        if "fmt" not in kwargs:
-            raise(ValueError("caller must provide kwarg: fmt"))
-        if "schema" not in kwargs and self._fmt != "csv":
-            raise(ValueError("caller must provide kwarg: schema"))
-        if self._fmt not in IO_FUNCS:
-            raise(NotImplementedError("unrecognized format: %s" % self._fmt))
-        del(kwargs["fmt"])
-        self._data = IO_FUNCS[self._fmt](*args, **kwargs)
+        self._fmt = fmt.lower()
+        self._schema = schema.lower()
+        assert self._fmt in IO_FUNCS
+        self._data = IO_FUNCS[self._fmt](path=path, schema=schema, **kwargs)
 
     def __getitem__(self, key):
-        """
-        Support data access via indexing.
+        r"""Support data access via indexing.
         """
         if key not in self._data:
             raise(KeyError)
         return(self._data[key])
 
     def __setitem__(self, key, value):
-        """
-        Support data assignment via indexing.
+        r"""Support data assignment via indexing.
         """
         if self._data is None:
             self._data = {key: value}
@@ -58,8 +43,7 @@ class Catalog(object):
             self._data[key] = value
 
     def append(self, *args, **kwargs):
-        """
-        Append catalog data to existing Catalog instance.
+        r"""Append catalog data to existing Catalog instance.
         """
         if self._fmt is None and "fmt" not in kwargs:
             raise(ValueError("caller must provide kwarg: fmt"))
@@ -91,8 +75,7 @@ class Catalog(object):
                                             ignore_index=True)
 
     def save(self, outfile):
-        """
-        Save a catalog using pandas.HDFStore.
+        r"""Save a catalog using pandas.HDFStore.
         """
         if os.path.exists(outfile):
             raise(IOError("file/directory already exists:", outfile))
@@ -103,9 +86,7 @@ class Catalog(object):
                 store[table] = self[table]
 
 def load(infile):
-    """
-    This loads a catalog as a dictionary pandas.DataFrame
-    using pandas.HDFStore.
+    r"""Load a catalog using pandas.HDFStore.
     """
     with pd.HDFStore(infile, "r") as store:
         fmt, schema = store["meta"].iloc[0]
