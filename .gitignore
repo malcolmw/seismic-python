@@ -1,6 +1,10 @@
 build
-*/*.swp
 compile
-seispy/__pycache__/
+seismic_python.egg-info
+
+__pycache__
+
 *.swp
-jupyter/.ipynb_checkpoints
+
+.spyproject
+.ipynb_checkpoints
