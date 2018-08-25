@@ -1,50 +1,46 @@
 import os
 import pandas as pd
-import pickle
-import pkg_resources
 
 from . import schema as _schema
 
-def read_fwf(path, schema="css3.0", tables=None):
+def read_fwf(path=None, schema="css3.0", tables=None):
+    r"""Read fixed-width-format database tables into a DataFrame.
+
+    :param str path: Path to database.
+    :param str schema: Schema identifier.
+    :param list tables: A list of table populate.
+    :return: A dict with table names for keys and pandas.DataFrames as
+             values.
+    :rtype: dict
     """
-    Read Antelope format database tables into a Pandas DataFrame.
-
-    Positional arguments
-    ====================
-    path ::str:: path to database
-
-    Keyword arguments
-    =================
-    schema ::str:: schema handle
-    tables ::iterable:: a list of table names to read
-
-    Returns
-    =======
-    A dictionary with table names as keys and pandas.DataFrames as
-    values.
-    """
-    schema_data = _schema.get_schema(schema)
-
+    schema_name = schema
+    # Get the schema.
+    schema = _schema.get_schema(schema)
+    # Build the list of tables to populate.
     tables = [table for table in tables
-                    if os.path.isfile("%s.%s" % (path, table))]\
+                    if table in schema["Relations"].keys()]\
              if tables is not None\
-             else [table for table in schema_data["Relations"].keys()
-                         if os.path.isfile("%s.%s" % (path, table))]
-    for table in tables:
-        if table not in schema_data["Relations"]:
-            raise(ValueError("table name not recognized: %s" % table))
-
-    db = {table: pd.read_fwf("%s.%s" % (path, table),
-                             names=schema_data["Relations"][table],
-                             widths=[schema_data["Attributes"][field]["width"]+1
-                                     for field in schema_data["Relations"][table]],
-                             comment=schema_data["comment"] if "comment" in schema_data
-                                                            else None)
+             else schema["Relations"].keys()
+    # If no path is provided, populate tables with null values.
+    if path is None:
+        data = {table: _schema.get_null(schema_name, table) 
+                for table in tables}
+        return(data)
+    # Read data files and build tables.
+    data = {table: pd.read_fwf("%s.%s" % (path, table),
+                             names=schema["Relations"][table],
+                             widths=[schema["Attributes"][field]["width"]+1
+                                     for field in schema["Relations"][table]],
+                             comment=schema["comment"] if "comment" in schema
+                                                       else None)
+         if os.path.isfile("%s.%s" % (path, table))
+         else _schema.get_null(schema_name, table)
          for table in tables}
+    # Coerce dtype of every field.
     for table in tables:
-        for field in schema_data["Relations"][table]:
-            db[table][field] = db[table][field].astype(schema_data["Attributes"][field]["dtype"])
-    return(db)
+        for field in schema["Relations"][table]:
+            data[table][field] = data[table][field].astype(schema["Attributes"][field]["dtype"])
+    return(data)
 
 def write_fwf(cat, path, schema):
     for table in cat._data:
