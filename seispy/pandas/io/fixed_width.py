@@ -23,7 +23,7 @@ def read_fwf(path=None, schema="css3.0", tables=None):
              else schema["Relations"].keys()
     # If no path is provided, populate tables with null values.
     if path is None:
-        data = {table: _schema.get_null(schema_name, table) 
+        data = {table: _schema.get_empty(schema_name, table) 
                 for table in tables}
         return(data)
     # Read data files and build tables.
@@ -34,7 +34,7 @@ def read_fwf(path=None, schema="css3.0", tables=None):
                              comment=schema["comment"] if "comment" in schema
                                                        else None)
          if os.path.isfile("%s.%s" % (path, table))
-         else _schema.get_null(schema_name, table)
+         else _schema.get_empty(schema_name, table)
          for table in tables}
     # Coerce dtype of every field.
     for table in tables:
@@ -42,18 +42,18 @@ def read_fwf(path=None, schema="css3.0", tables=None):
             data[table][field] = data[table][field].astype(schema["Attributes"][field]["dtype"])
     return(data)
 
-def write_fwf(cat, path, schema):
-    for table in cat._data:
+def write_fwf(data, path, schema):
+    for table in data:
         if os.path.isfile("%s.%s" % (path, table)):
             raise(IOError("file already exists: %s.%s" % (path, table)))
 
-    schema_data = _schema.get_schema(schema)
+    schema = _schema.get_schema(schema)
 
-    for table in cat._data:
-        fields = schema_data["Relations"][table]
-        fmt = " ".join([schema_data["Attributes"][field]["format"]
-                        for field in schema_data["Relations"][table]])
+    for table in data:
+        fields = schema["Relations"][table]
+        fmt = " ".join([schema["Attributes"][field]["format"]
+                        for field in schema["Relations"][table]])
         with open("%s.%s" % (path, table), "w") as outf:
             outf.write(
-                "\n".join([fmt % tuple(row) for _, row in cat[table][fields].iterrows()]) + "\n"
+                "\n".join([fmt % tuple(row) for _, row in data[table][fields].iterrows()]) + "\n"
                       )
