@@ -42,6 +42,17 @@ def get_null(schema, table, ext=False):
         df[field] = df[field].astype(dtype)
     return(df)
 
+def get_empty(schema, table, ext=False):
+    r"""Return a DataFrame header.
+    
+    :param str schema:
+    :param str table:
+    :param bool ext:
+    """
+    schema = get_schema(schema, ext=ext)
+    fields = schema["Relations"][table]
+    return(pd.DataFrame(columns=fields))
+
 def document(schema):
     blob = "# %s\n" % schema
     schema = get_schema(schema)
