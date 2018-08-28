@@ -23,43 +23,7 @@ import pandas as pd
 import pkg_resources
 
 from . import coords as _coords
-
-DEFAULT_BASEMAP_KWARGS = {
-        "latmin": 32.5,
-        "lonmin": -117.5,
-        "latmax": 34.5,
-        "lonmax": -115.5,
-        "bgstyle": "basic",
-        "resolution": "c",
-        "fill_color": "aqua",
-        "continent_color": "coral",
-        "lake_color": "aqua",
-        "projection": "cyl",
-        "meridian_stride": 1,
-        "meridian_labels": [False, False, False, True],
-        "parallel_stride": 1,
-        "parallel_labels": [True, False, False, False],
-        "fault_color": "k",
-        "fault_linewidth": 1,
-        }
-
-DEFAULT_SECTION_KWARGS = {
-        "general": {"ax": None,
-                    "fig_width": 8,
-                    "origin": _coords.as_geographic([33.5, -116.5, 0]),
-                    "strike": 135,
-                    "length": 50,
-                    "width": 15,
-                    "ymin": 0,
-                    "ymax": 25,
-                    "special": None,
-                   },
-        "scatter_kwargs": {"s": 1,
-                           "cmap": plt.get_cmap("hot_r"),
-                           "zorder": 2
-                          },
-        "colorbar_kwargs": {"shrink": 0.75}
-        }
+from . import defaults as _defaults
 
 class Basemap(bm.Basemap):
     r"""A basic map to get started with.
@@ -70,9 +34,9 @@ class Basemap(bm.Basemap):
         import warnings
         warnings.filterwarnings("ignore")
 
-        for key in DEFAULT_BASEMAP_KWARGS:
+        for key in _defaults.DEFAULT_BASEMAP_KWARGS:
             if key not in kwargs:
-                kwargs[key] = DEFAULT_BASEMAP_KWARGS[key]
+                kwargs[key] = _defaults.DEFAULT_BASEMAP_KWARGS[key]
         self.kwargs = kwargs
         del(kwargs)
 
@@ -245,9 +209,9 @@ class VerticalPlaneProjector(object):
         self._rdata = _coords.GeographicCoordinates(len(lat))
         self._rdata[:,0], self._rdata[:,1], self._rdata[:,2] = lat, lon, depth
         self._aux_data = np.asarray(aux_data)
-        self.scatter_kwargs = DEFAULT_SECTION_KWARGS["scatter_kwargs"]
-        self.colorbar_kwargs = DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
-        self.general_kwargs = DEFAULT_SECTION_KWARGS["general"]
+        self.scatter_kwargs = _defaults.DEFAULT_SECTION_KWARGS["scatter_kwargs"]
+        self.colorbar_kwargs = _defaults.DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
+        self.general_kwargs = _defaults.DEFAULT_SECTION_KWARGS["general"]
 
     def update_scatter_kwargs(self, **kwargs):
         r"""
