@@ -1,8 +1,8 @@
 import numpy as np
 from . import constants as _constants
+from . import defaults as _defaults
 
 PI = np.pi
-
 
 class GeographicCoordinates(np.ndarray):
     """
@@ -53,9 +53,7 @@ class GeographicCoordinates(np.ndarray):
         lspher[...,2] = np.radians(self[...,1])
         return(lspher)
 
-    def to_ned(self, origin=None):
-        if origin is None:
-            origin = GeographicCoordinates(1)[0]
+    def to_ned(self, origin=(0, 0, 0)):
         return(self.to_cartesian().to_ned(origin=origin))
 
     def to_spherical(self):
@@ -64,10 +62,19 @@ class GeographicCoordinates(np.ndarray):
         spher[...,1] = np.radians(90 - self[...,0])
         spher[...,2] = np.radians(self[...,1])
         return(spher)
+    
+    def in_rectangle(self, **kwargs):
+        kwargs = {**_defaults.DEFAULT_RECTANGLE_KWARGS, **kwargs}
+        kwargs["origin"] = as_geographic(kwargs["origin"])
+        data = self.to_ned(origin=kwargs["origin"]
+                  ).rotate(np.radians(kwargs["strike"]))
+        bool_idx = (np.abs(data[:,0]) < kwargs["length"])\
+                  &(np.abs(data[:,1]) < kwargs["width"])
+        return(bool_idx)
 
 
 class CartesianCoordinates(np.ndarray):
-    """
+    r"""
     This class provides a container for Cartesian coordinates and
     methods to transform the coordinates to other commonly used
     systems.
@@ -75,7 +82,7 @@ class CartesianCoordinates(np.ndarray):
     mechanism.
     """
     def __new__(cls, *args):
-        """
+        r"""
         This creates a new instance of CartesianCoordinates, makes sure
         that the last dimesion is of length 3, and sets all elements
         to 0.
@@ -83,7 +90,7 @@ class CartesianCoordinates(np.ndarray):
         return(np.zeros(args + (3,)).view(CartesianCoordinates))
 
     def rotate(self, *args):
-        """
+        r"""
         Rotates a set of cartesian coordinates by alpha radians about
         the z-axis, then beta radians about the y'-axis and then
         gamma radians about the z''-axis.
@@ -106,7 +113,8 @@ class CartesianCoordinates(np.ndarray):
         lspher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(lspher)
 
-    def to_ned(self, origin=GeographicCoordinates(1)[0]):
+    def to_ned(self, origin=(0, 0, 0)):
+        origin = as_geographic(origin)
         theta0 = np.radians(90-origin[0])
         phi0 = np.radians(origin[1])
         rho0 = _constants.EARTH_RADIUS-origin[2]
@@ -128,7 +136,7 @@ class CartesianCoordinates(np.ndarray):
         return(spher)
 
 class NEDCoordinates(CartesianCoordinates):
-    """
+    r"""
     This class provides a container for North-East-Down coordinates and
     methods to transform the coordinates to other commonly used
     systems.
@@ -136,7 +144,7 @@ class NEDCoordinates(CartesianCoordinates):
     mechanism.
     """
     def __new__(cls, *args, **kwargs):
-        """
+        r"""
         This creates a new instance of NEDCoordinates, makes sure
         that the last dimesion is of length 3, and sets all elements
         to 0.
@@ -153,11 +161,7 @@ class NEDCoordinates(CartesianCoordinates):
 
 
     def set_origin(self, origin):
-        if isinstance(origin, GeographicCoordinates):
-            self.origin = origin
-        else:
-            raise(NotImplementedError("NEDCoordinates can only handle "
-                                      "GeographicCoordinates right now"))
+        self.origin = as_geographic(origin)
 
     def to_cartesian(self):
         theta0 = np.radians(90-self.origin[0])
@@ -175,7 +179,7 @@ class NEDCoordinates(CartesianCoordinates):
         return(self.to_cartesian().to_geographic())
 
 class SphericalCoordinates(np.ndarray):
-    """
+    r"""
     This class provides a container for spherical coordinates and
     methods to transform the coordinates to other commonly used
     systems.
@@ -183,7 +187,7 @@ class SphericalCoordinates(np.ndarray):
     mechanism.
     """
     def __new__(cls, *args):
-        """
+        r"""
         This creates a new instance of SphericalCoordinates, makes sure
         that the last dimesion is of length 3, and sets all elements
         to 0.
