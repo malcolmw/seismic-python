@@ -147,23 +147,38 @@ class Basemap(bm.Basemap):
                                             self.lonmin, self.lonmax)]
         )
 
-    def add_surface_trace(self, origin, strike, length, width=0, **kwargs):
-        if width == 0:
-            geo = _coords.as_ned([[-length, 0, 0],
-                                  [length, 0, 0]],
-                                 origin=origin
-                                 ).rotate(-np.radians(strike)
+    def add_rectangle(self, plot_kwargs=None, **kwargs):
+        kwargs = {**_defaults.DEFAULT_RECTANGLE_KWARGS, **kwargs}
+        if kwargs["width"] == 0:
+            geo = _coords.as_ned([[-kwargs["length"], 0, 0],
+                                  [kwargs["length"], 0, 0]],
+                                 origin=kwargs["origin"]
+                                 ).rotate(-np.radians(kwargs["strike"])
                                  ).to_geographic()
         else:
-            geo = _coords.as_ned([[-length, -width, 0],
-                                  [-length, width, 0],
-                                  [length, width, 0],
-                                  [length, -width, 0],
-                                  [-length, -width, 0]],
-                                 origin=origin
-                                 ).rotate(-np.radians(strike)
+            geo = _coords.as_ned([[-kwargs["length"], -kwargs["width"], 0],
+                                  [-kwargs["length"], kwargs["width"], 0],
+                                  [kwargs["length"], kwargs["width"], 0],
+                                  [kwargs["length"], -kwargs["width"], 0],
+                                  [-kwargs["length"], -kwargs["width"], 0]],
+                                 origin=kwargs["origin"]
+                                 ).rotate(-np.radians(kwargs["strike"])
                                  ).to_geographic()
-        return(self.plot(geo[:,1], geo[:,0], **kwargs))
+        if "label" in kwargs and kwargs["width"] == 0:
+            text = self.ax.text(geo[0,1], geo[0,0], kwargs["label"],
+                                color="w",
+                                ha="right",
+                                va="bottom")
+            text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
+                                   path_effects.Normal()])
+            text = self.ax.text(geo[1,1], geo[1,0], kwargs["label"] + "'",
+                                color="w",
+                                ha="left",
+                                va="top")
+            text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
+                                   path_effects.Normal()])
+        plot_kwargs = {} if plot_kwargs is None else plot_kwargs
+        return(self.plot(geo[:,1], geo[:,0], **plot_kwargs))
 
 class FaultCollection(object):
     r"""
