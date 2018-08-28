@@ -95,6 +95,8 @@ class Basemap(bm.Basemap):
             self._basic_background()
         elif self.kwargs["bgstyle"] == "relief":
             self._relief_background()
+        elif self.kwargs["bgstyle"] == "bluemarble":
+            self._bluemarble_background()
 
         if self.kwargs["meridian_stride"] is not None:
             self.drawmeridians(np.arange(-180,
@@ -120,6 +122,8 @@ class Basemap(bm.Basemap):
                          xpixels=3000,
                          verbose=True)
 
+    def _bluemarble_background(self):
+        self.bluemarble()
 
     def node_statistic(self, x, y, z, r,
                        func=np.mean,
