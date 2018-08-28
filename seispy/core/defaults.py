@@ -10,9 +10,9 @@ This provides access to default arguments.
 
 import matplotlib.pyplot as plt
 
-DEFAULT_RECTANGLE_KWARGS = {"origin": (33.5, -116.5, 0),
-                            "strike": 135,
-                            "length": 50,
+DEFAULT_RECTANGLE_KWARGS = {"origin": (33.5731, -116.633, 0),
+                            "strike": 125,
+                            "length": 40,
                             "width": 25}
    
 DEFAULT_BASEMAP_KWARGS = {
