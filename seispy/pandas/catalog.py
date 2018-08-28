@@ -99,7 +99,7 @@ class Catalog(object):
                                             ignore_index=True)
 
     def save(self, outfile):
-        r"""Save a catalog using pandas.HDFStore.
+        r"""Save catalog in HDF5 using pandas.HDFStore.
         """
         if os.path.exists(outfile):
             raise(IOError("file/directory already exists:", outfile))
@@ -121,7 +121,7 @@ class Catalog(object):
         IO_FUNCS["write"][self._fmt](data, path, self._schema)
 
 def load(infile):
-    r"""Load a catalog using pandas.HDFStore.
+    r"""Load a catalog from HDF5 using pandas.HDFStore.
     """
     with pd.HDFStore(infile, "r") as store:
         fmt, schema = store["meta"].iloc[0]
