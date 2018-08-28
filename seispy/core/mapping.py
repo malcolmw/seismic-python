@@ -17,6 +17,7 @@ This is some introductory text describing this module.
    :members:
 """
 import numpy as np
+import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
 import pandas as pd
@@ -54,6 +55,8 @@ class Basemap(bm.Basemap):
             plt.sca(self.kwargs["ax"])
 
         super(self.__class__, self).__init__(**kwargs)
+# Store a handle to the current Axes
+        self.ax = plt.gca()
 
         if self.kwargs["bgstyle"] == "basic":
             self._basic_background()
@@ -270,6 +273,35 @@ class VerticalPlaneProjector(object):
 
     def set_general_kwargs(self, **kwargs):
         self.general_kwargs = kwargs
+        
+    def plot_raw(self, ax=None):
+        r"""Plot the vertical transect with no frills.
+        
+        :param matplotlib.pyplot.Axes ax: The axes to plot to.
+        """
+        self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
+                               ).rotate(np.radians(self.general_kwargs["strike"]))
+        bool_idx = (np.abs(self._data[:,0]) < self.general_kwargs["length"])\
+                  &(np.abs(self._data[:,1]) < self.general_kwargs["width"])
+        data = self._data[bool_idx]
+    
+        if "c" in self.scatter_kwargs:
+            self.scatter_kwargs["c"] = self.scatter_kwargs["c"][bool_idx]
+        if ax is None:
+            print("ax is None")
+            fig = plt.figure()
+            ax = fig.add_subplot(1, 1, 1, aspect=1)
+        pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
+        if self.general_kwargs["special"] is not None:
+            for special in self.general_kwargs["special"]:
+                sdata = self._data[(self._aux_data >= special["threshon"])
+                                  &(self._aux_data < special["threshoff"])]
+                ax.scatter(sdata[:,0], sdata[:,2], **special["kwargs"])
+        ax.set_xlim(-self.general_kwargs["length"], 
+                    self.general_kwargs["length"])
+        ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
+        ax.invert_yaxis()
+        return(pts)
 
     def plot(self, ax=None):
         r"""Plot the vertical transect.
@@ -290,9 +322,10 @@ class VerticalPlaneProjector(object):
             ax = fig.add_subplot(1, 1, 1, aspect=1)
         else:
             fig = ax.get_figure()
-        hwr = (self.general_kwargs["ymax"] - self.general_kwargs["ymin"]) \
-            / (self.general_kwargs["length"]*2.15)
-        fig.set_size_inches(self.general_kwargs["fig_width"], 
+        if self.general_kwargs["fig_width"] is not None:
+            hwr = (self.general_kwargs["ymax"] - self.general_kwargs["ymin"]) \
+                / (self.general_kwargs["length"]*2.15)
+            fig.set_size_inches(self.general_kwargs["fig_width"], 
                             self.general_kwargs["fig_width"]*hwr)
         pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
         if self.general_kwargs["special"] is not None:
