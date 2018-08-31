@@ -56,5 +56,16 @@ def _float64_array_to_decimal_year(array):
     return(dec_yr)
 
 def _datetime_to_epoch(series):
-    epoch_start = pd.to_datetime("1970-01-01", utc=True)
-    return((series - epoch_start)/pd.to_timedelta("1ns"))
+    epoch_start = pd.to_datetime("1970-01-01 00:00:00", utc=True)
+    return(np.asarray((series - epoch_start)/pd.to_timedelta("1ns")))
+
+def to_epoch(series, utc=True):
+    r"""Return series as epoch timestamp in nanoseconds.
+    
+    :param list series: Input series
+    :param bool utc: UTC time
+    """
+    if isinstance(series, str):
+        series = [series]
+    series = pd.to_datetime(np.asarray(series, dtype=str), utc=utc)
+    return(_datetime_to_epoch(series))
