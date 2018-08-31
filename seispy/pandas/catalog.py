@@ -11,8 +11,10 @@ from . import io as _io
 
 IO_FUNCS = {"read": {"csv": lambda *args, **kwargs: {"catalog": pd.read_csv(*args, **kwargs)},
                      "fwf": _io.fixed_width.read_fwf,
+                     "hdf5": _io.h5.read_h5,
                      "special": _io.special.read_special},
-           "write": {"fwf": _io.fixed_width.write_fwf}
+           "write": {"fwf": _io.fixed_width.write_fwf,
+                     "hdf5": _io.h5.write_h5}
     }
 
 class Catalog(object):
@@ -26,6 +28,8 @@ class Catalog(object):
         self._data = None
         self._fmt = fmt.lower()
         self._schema = schema.lower()
+        if path is None:
+            return
         assert self._fmt in IO_FUNCS["read"]
         self._data = IO_FUNCS["read"][self._fmt](path=path, 
                                                  schema=schema, 
@@ -73,21 +77,14 @@ class Catalog(object):
             raise(ValueError("caller must provide kwarg: fmt"))
         if self._schema is None and "schema" not in kwargs:
             raise(ValueError("caller must provide kwarg: schema"))
-        if self._fmt is None:
-            self._fmt = kwargs["fmt"]
-        elif "fmt" in kwargs:
-            if self._fmt != kwargs["fmt"].lower():
-                raise(ValueError("kwarg['fmt'] != self._fmt"))
-        try:
-            del(kwargs["fmt"])
-        except KeyError:
-            pass
         if self._schema is None:
             self._schema = kwargs["schema"]
         elif "schema" in kwargs and self._schema != kwargs["schema"].lower():
             raise(ValueError("kwarg['schema'] != self._schema"))
 
-        data = IO_FUNCS[self._fmt](*args, **kwargs)
+        fmt = kwargs["fmt"]
+        del(kwargs["fmt"])
+        data = IO_FUNCS["read"][fmt](*args, **kwargs)
 
         if self._data is None:
             self._data = {}
@@ -96,7 +93,8 @@ class Catalog(object):
                 self._data[key] = data[key]
             else:
                 self._data[key] = pd.concat([self._data[key], data[key]],
-                                            ignore_index=True)
+                                            ignore_index=True
+                                           ).drop_duplicates()
 
     def save(self, outfile):
         r"""Save catalog in HDF5 using pandas.HDFStore.
@@ -109,16 +107,19 @@ class Catalog(object):
             for table in self._data.keys():
                 store[table] = self[table]
     
-    def write(self, path, tables=None):
+    def write(self, path, tables=None, fmt=None, overwrite=False):
         r"""Output as formatted text files.
         
         :param str path: Output path.
         :param list tables: List of tables to write.
+        :param str fmt: Output format ("fwf", "hdf5", ...)
         """
         tables = self._data.keys() if tables is None \
             else [table for table in tables if table in self._data.keys()]
         data = {table: self[table] for table in tables if len(self[table]) > 0}
-        IO_FUNCS["write"][self._fmt](data, path, self._schema)
+        if fmt == None:
+            fmt = self._fmt
+        IO_FUNCS["write"][fmt](data, path, self._schema, overwrite=overwrite)
 
 def load(infile):
     r"""Load a catalog from HDF5 using pandas.HDFStore.
