@@ -42,9 +42,9 @@ def read_fwf(path=None, schema="css3.0", tables=None):
             data[table][field] = data[table][field].astype(schema["Attributes"][field]["dtype"])
     return(data)
 
-def write_fwf(data, path, schema):
+def write_fwf(data, path, schema, overwrite=False):
     for table in data:
-        if os.path.isfile("%s.%s" % (path, table)):
+        if os.path.isfile("%s.%s" % (path, table)) and overwrite is False:
             raise(IOError("file already exists: %s.%s" % (path, table)))
 
     schema = _schema.get_schema(schema)
