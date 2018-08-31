@@ -31,30 +31,25 @@ class Basemap(bm.Basemap):
     
     .. todo:: Document this class.
     """
-    def __init__(self, **kwargs):
+    def __init__(self, basekwargs=None, **kwargs):
         import warnings
         warnings.filterwarnings("ignore")
 
-        for key in _defaults.DEFAULT_BASEMAP_KWARGS:
-            if key not in kwargs:
-                kwargs[key] = _defaults.DEFAULT_BASEMAP_KWARGS[key]
+        if basekwargs is None:
+            basekwargs = _defaults.DEFAULT_BASEMAP_BASEKWARGS
+        else:
+            assert isinstance(basekwargs, dict)
+            basekwargs = {**_defaults.DEFAULT_BASEMAP_BASEKWARGS,
+                          **basekwargs}
+        kwargs = {**_defaults.DEFAULT_BASEMAP_KWARGS, **kwargs}
+
         self.kwargs = kwargs
-        del(kwargs)
-
-        kwargs = {"llcrnrlat": self.kwargs["latmin"],
-                  "llcrnrlon": self.kwargs["lonmin"],
-                  "urcrnrlat": self.kwargs["latmax"],
-                  "urcrnrlon": self.kwargs["lonmax"],
-                  "resolution": self.kwargs["resolution"]}
-
-        if self.kwargs["bgstyle"] == "relief":
-            kwargs["projection"] = self.kwargs["projection"]
 
 # Set the current Axes object to the provided handle if one exists.
         if "ax" in self.kwargs:
             plt.sca(self.kwargs["ax"])
 
-        super(self.__class__, self).__init__(**kwargs)
+        super(self.__class__, self).__init__(**basekwargs)
 # Store a handle to the current Axes
         self.ax = plt.gca()
 
@@ -145,7 +140,7 @@ class Basemap(bm.Basemap):
             kwargs["linewidth"] = self.kwargs["fault_linewidth"]
         faults = CaliforniaFaults()
         return(
-            [self.plot(segment[:,0], segment[:,1], **kwargs)
+            [self.plot(*self(segment[:,0], segment[:,1]), **kwargs)
                 for segment in faults.subset(self.latmin, self.latmax,
                                             self.lonmin, self.lonmax)]
         )
@@ -324,7 +319,7 @@ class VerticalPlaneProjector(object):
             fig = ax.get_figure()
         if self.general_kwargs["fig_width"] is not None:
             hwr = (self.general_kwargs["ymax"] - self.general_kwargs["ymin"]) \
-                / (self.general_kwargs["length"]*2.15)
+                / (self.general_kwargs["length"]*2)
             fig.set_size_inches(self.general_kwargs["fig_width"], 
                             self.general_kwargs["fig_width"]*hwr)
         pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
@@ -337,12 +332,14 @@ class VerticalPlaneProjector(object):
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
         ax.invert_yaxis()
-        ax.set_xlabel(r"Horizontal offset [$km$]")
-        ax.set_ylabel(r"Depth [$km$]")
+        ax.set_xlabel(self.general_kwargs["xlabel"])
+        ax.set_ylabel(self.general_kwargs["ylabel"])
         if "c" in self.scatter_kwargs:
             cbar = fig.colorbar(pts, ax=ax, **self.colorbar_kwargs)
-            cbar.ax.invert_yaxis()
+            if self.general_kwargs["invert_colorbar"]:
+                cbar.ax.invert_yaxis()
             cbar.set_alpha(1)
             if "colorbar_label" in self.general_kwargs:
                 cbar.set_label(self.general_kwargs["colorbar_label"])
+            return(cbar)
         return(ax)
