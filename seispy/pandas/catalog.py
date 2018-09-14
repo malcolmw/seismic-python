@@ -9,21 +9,31 @@ import pandas as pd
 from . import catalog as _catalog
 from . import io as _io
 
-IO_FUNCS = {"read": {"csv": lambda *args, **kwargs: {"catalog": pd.read_csv(*args, **kwargs)},
-                     "fwf": _io.fixed_width.read_fwf,
+IO_FUNCS = {"read": {"fwf": _io.fixed_width.read_fwf,
                      "hdf5": _io.h5.read_h5,
-                     "special": _io.special.read_special},
-           "write": {"fwf": _io.fixed_width.write_fwf,
-                     "hdf5": _io.h5.write_h5}
-    }
+                     "special": _io.special.read_special,
+                     "table": _io.table.read_table},
+            "write": {"fwf": _io.fixed_width.write_fwf,
+                      "hdf5": _io.h5.write_h5}
+            }
+
 
 class Catalog(object):
     r"""An earthquake catalog.
 
     :param str fmt: Data format - ("csv", fwf").
-    :param str schema: Data schema - ("css3.0", "scsn1.0", "hys1.0", "growclust1.0").
+    :param str schema: Data schema - ("css3.0", "scsn1.0", "hys1.0",
+                       "growclust1.0").
     :param dict kwargs: Passed directly to underlying IO function.
+
+    Known bugs:
+    - When reading from an HDF5 format file, the resulting catalog's
+    schema attribute will
+    not be properly set unless done explicitly using the schema keyword
+    argument when
+    instantiating the object.
     """
+
     def __init__(self, path=None, fmt="fwf", schema="css3.0", **kwargs):
         self._data = None
         self._fmt = fmt.lower()
