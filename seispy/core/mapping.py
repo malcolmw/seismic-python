@@ -110,6 +110,8 @@ class Basemap(bm.Basemap):
             ZZ[ix, iy] = func(z[idx]) if np.any(idx) else np.inf
         XX = XX - dx/2
         YY = YY - dy/2
+        XX, YY = self(XX, YY)
+
         qmesh = self.pcolormesh(XX, YY, ZZ,
                                 zorder=3,
                                 **kwargs)
@@ -128,10 +130,15 @@ class Basemap(bm.Basemap):
                              y.rolling(2).mean().dropna(),
                              [y.iloc[-1] + y.iloc[-2:].diff().iloc[1]/2]])
         XX, YY = np.meshgrid(x, y, indexing="ij")
+        XX, YY = self(XX, YY)
         qmesh = self.pcolormesh(XX, YY, ZZ,
                                 zorder=3,
                                 **kwargs)
         return(qmesh)
+
+    def scatter(self, *args, **kwargs):
+        x, y = self(np.asarray(args[0]), np.asarray(args[1]))
+        return(super(self.__class__, self).scatter(x, y, *args[2:], **kwargs))
 
     def add_faults(self, **kwargs):
         if "color" not in kwargs:
@@ -163,20 +170,20 @@ class Basemap(bm.Basemap):
                                  ).rotate(-np.radians(kwargs["strike"])
                                  ).to_geographic()
         if "label" in kwargs and kwargs["width"] == 0:
-            text = self.ax.text(geo[0,1], geo[0,0], kwargs["label"],
+            text = self.ax.text(*self(geo[0, 1], geo[0, 0]), kwargs["label"],
                                 color="w",
                                 ha="right",
                                 va="bottom")
             text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
                                    path_effects.Normal()])
-            text = self.ax.text(geo[1,1], geo[1,0], kwargs["label"] + "'",
+            text = self.ax.text(*self(geo[1, 1], geo[1, 0]), kwargs["label"] + "'",
                                 color="w",
                                 ha="left",
                                 va="top")
             text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
                                    path_effects.Normal()])
         plot_kwargs = {} if plot_kwargs is None else plot_kwargs
-        return(self.plot(geo[:,1], geo[:,0], **plot_kwargs))
+        return(self.plot(*self(geo[:, 1], geo[:, 0]), **plot_kwargs))
 
 class FaultCollection(object):
     r"""
