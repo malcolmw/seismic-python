@@ -41,8 +41,8 @@ class Catalog(object):
         if path is None:
             return
         assert self._fmt in IO_FUNCS["read"]
-        self._data = IO_FUNCS["read"][self._fmt](path=path, 
-                                                 schema=schema, 
+        self._data = IO_FUNCS["read"][self._fmt](path=path,
+                                                 schema=schema,
                                                  **kwargs)
 
     def __getitem__(self, key):
@@ -62,17 +62,17 @@ class Catalog(object):
 
     def add_null(self, tables):
         r"""Add null row to table(s).
-        
+
         :param str,list tables: Table or list of tables to add null row(s) to.
         """
         tables = (tables,) if isinstance(tables, str) else tables
         for table in tables:
             null = _io.schema.get_null(self._schema, table)
             self[table] = self[table].append(null, ignore_index=True)
-    
+
     def add_row(self, table, data):
         r"""Add a new row of data to table.
-        
+
         :param str table: Table to add data to.
         :param dict data: Data to append.
         """
@@ -104,7 +104,7 @@ class Catalog(object):
             else:
                 self._data[key] = pd.concat([self._data[key], data[key]],
                                             ignore_index=True
-                                           ).drop_duplicates()
+                                            ).drop_duplicates()
 
     def save(self, outfile):
         r"""Save catalog in HDF5 using pandas.HDFStore.
@@ -112,14 +112,14 @@ class Catalog(object):
         if os.path.exists(outfile):
             raise(IOError("file/directory already exists:", outfile))
         with pd.HDFStore(outfile, "w") as store:
-            store["meta"] = pd.DataFrame().from_dict({"fmt": [self._fmt],
-                                                      "schema": [self._schema]})
+            meta = {"fmt": [self._fmt], "schema": [self._schema]}
+            store["meta"] = pd.DataFrame().from_dict(meta)
             for table in self._data.keys():
                 store[table] = self[table]
-    
+
     def write(self, path, tables=None, fmt=None, overwrite=False):
         r"""Output as formatted text files.
-        
+
         :param str path: Output path.
         :param list tables: List of tables to write.
         :param str fmt: Output format ("fwf", "hdf5", ...)
@@ -127,9 +127,10 @@ class Catalog(object):
         tables = self._data.keys() if tables is None \
             else [table for table in tables if table in self._data.keys()]
         data = {table: self[table] for table in tables if len(self[table]) > 0}
-        if fmt == None:
+        if fmt is None:
             fmt = self._fmt
         IO_FUNCS["write"][fmt](data, path, self._schema, overwrite=overwrite)
+
 
 def load(infile):
     r"""Load a catalog from HDF5 using pandas.HDFStore.
