@@ -26,11 +26,13 @@ import pkg_resources
 from . import coords as _coords
 from . import defaults as _defaults
 
+
 class Basemap(bm.Basemap):
     r"""A basic map to get started with.
-    
+
     .. todo:: Document this class.
     """
+
     def __init__(self, basekwargs=None, **kwargs):
         import warnings
         warnings.filterwarnings("ignore")
@@ -104,7 +106,7 @@ class Basemap(bm.Basemap):
         XX, YY = np.meshgrid(xnodes, ynodes, indexing="ij")
         ZZ = np.zeros(XX.shape)
         for ix, iy in [(ix, iy) for ix in range(XX.shape[0])
-                                for iy in range(XX.shape[1])]:
+                       for iy in range(XX.shape[1])]:
             dist = np.sqrt(np.square(x-XX[ix, iy]) + np.square(y-YY[ix, iy]))
             idx = dist < r
             ZZ[ix, iy] = func(z[idx]) if np.any(idx) else np.inf
@@ -126,9 +128,9 @@ class Basemap(bm.Basemap):
         x = np.concatenate([[x.iloc[0] - x.iloc[:2].diff().iloc[1]/2],
                             x.rolling(2).mean().dropna(),
                             [x.iloc[-1] + x.iloc[-2:].diff().iloc[1]/2]])
-        y  = np.concatenate([[y.iloc[0] - y.iloc[:2].diff().iloc[1]/2],
-                             y.rolling(2).mean().dropna(),
-                             [y.iloc[-1] + y.iloc[-2:].diff().iloc[1]/2]])
+        y = np.concatenate([[y.iloc[0] - y.iloc[:2].diff().iloc[1]/2],
+                            y.rolling(2).mean().dropna(),
+                            [y.iloc[-1] + y.iloc[-2:].diff().iloc[1]/2]])
         XX, YY = np.meshgrid(x, y, indexing="ij")
         XX, YY = self(XX, YY)
         qmesh = self.pcolormesh(XX, YY, ZZ,
@@ -147,9 +149,9 @@ class Basemap(bm.Basemap):
             kwargs["linewidth"] = self.kwargs["fault_linewidth"]
         faults = CaliforniaFaults()
         return(
-            [self.plot(*self(segment[:,0], segment[:,1]), **kwargs)
+            [self.plot(*self(segment[:, 0], segment[:, 1]), **kwargs)
                 for segment in faults.subset(self.latmin, self.latmax,
-                                            self.lonmin, self.lonmax)]
+                                             self.lonmin, self.lonmax)]
         )
 
     def add_rectangle(self, plot_kwargs=None, **kwargs):
@@ -159,7 +161,7 @@ class Basemap(bm.Basemap):
                                   [kwargs["length"], 0, 0]],
                                  origin=kwargs["origin"]
                                  ).rotate(-np.radians(kwargs["strike"])
-                                 ).to_geographic()
+                                          ).to_geographic()
         else:
             geo = _coords.as_ned([[-kwargs["length"], -kwargs["width"], 0],
                                   [-kwargs["length"], kwargs["width"], 0],
@@ -168,7 +170,7 @@ class Basemap(bm.Basemap):
                                   [-kwargs["length"], -kwargs["width"], 0]],
                                  origin=kwargs["origin"]
                                  ).rotate(-np.radians(kwargs["strike"])
-                                 ).to_geographic()
+                                          ).to_geographic()
         if "label" in kwargs and kwargs["width"] == 0:
             text = self.ax.text(*self(geo[0, 1], geo[0, 0]), kwargs["label"],
                                 color="w",
@@ -185,30 +187,36 @@ class Basemap(bm.Basemap):
         plot_kwargs = {} if plot_kwargs is None else plot_kwargs
         return(self.plot(*self(geo[:, 1], geo[:, 0]), **plot_kwargs))
 
+
 class FaultCollection(object):
     r"""
     A collection of faults.
     """
+
     def __init__(self, infile):
         inf = open(infile)
         self.data = np.array([
-                                np.array([[float(coord) for coord in pair.split()]
-                                 for pair in chunk.strip().split("\n")
-                                ])
-                             for chunk in inf.read().split(">")
-                             ])
+            np.array([[float(coord) for coord in pair.split()]
+                      for pair in chunk.strip().split("\n")
+                      ])
+            for chunk in inf.read().split(">")
+        ])
         inf.close()
 
     def subset(self, latmin, latmax, lonmin, lonmax):
-        cond1 = lambda coords: latmin <= coords[1] <= latmax and\
-                               lonmin <= coords[0] <= lonmax
-        cond2 = lambda segment: np.any([cond1(coords) for coords in segment])
+        def cond1(coords): return latmin <= coords[1] <= latmax and\
+            lonmin <= coords[0] <= lonmax
+
+        def cond2(segment): return np.any(
+            [cond1(coords) for coords in segment])
         return(np.asarray(list(filter(cond2, self.data))))
+
 
 class CaliforniaFaults(FaultCollection):
     r"""
     Faults in California.
     """
+
     def __init__(self):
         fname = pkg_resources.resource_filename("seispy",
                                                 "data/ca_scitex.flt")
@@ -218,16 +226,18 @@ class CaliforniaFaults(FaultCollection):
 class VerticalPlaneProjector(object):
     r"""
     This is the VerticalPlaneProjector docstring.
-    
+
     :param list lat: Event latitude coordinates.
     :param list lon: Event longitude coordinates.
     :param list depth: Event depth coordinates.
     :param list aux_data: Auxiliary data.
     """
+
     def __init__(self, lat, lon, depth, aux_data=None):
         #: Doc comment for instance attribute _rdata
         self._rdata = _coords.GeographicCoordinates(len(lat))
-        self._rdata[:,0], self._rdata[:,1], self._rdata[:,2] = lat, lon, depth
+        self._rdata[:, 0], self._rdata[:,
+                                       1], self._rdata[:, 2] = lat, lon, depth
         self._aux_data = np.asarray(aux_data)
         self.scatter_kwargs = _defaults.DEFAULT_SECTION_KWARGS["scatter_kwargs"]
         self.colorbar_kwargs = _defaults.DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
@@ -236,24 +246,24 @@ class VerticalPlaneProjector(object):
     def update_scatter_kwargs(self, **kwargs):
         r"""
         Update kwargs passed directly to matplotlib.pyplot.Axes.scatter. 
-        
+
         This method updates *only* the kwargs specified.
         """
         kwargs = {**self.scatter_kwargs, **kwargs}
         self.set_scatter_kwargs(**kwargs)
-    
+
     def update_colorbar_kwargs(self, **kwargs):
         r"""
         Update kwargs passed directly to matplotlib.pyplot.Figure.colorbar. 
-        
+
         This method updates *only* the kwargs specified.
         """
         kwargs = {**self.colorbar_kwargs, **kwargs}
         self.set_colorbar_kwargs(**kwargs)
-    
+
     def update_general_kwargs(self, **kwargs):
         r"""Update general plot kwargs. 
-        
+
         This method updates *only* the kwargs specified.
 
         :param matplotlib.pyplot.Axes ax: 
@@ -266,7 +276,7 @@ class VerticalPlaneProjector(object):
         """
         kwargs = {**self.general_kwargs, **kwargs}
         self.set_general_kwargs(**kwargs)
-    
+
     def set_scatter_kwargs(self, **kwargs):
         self.scatter_kwargs = kwargs
 
@@ -275,31 +285,31 @@ class VerticalPlaneProjector(object):
 
     def set_general_kwargs(self, **kwargs):
         self.general_kwargs = kwargs
-        
+
     def plot_raw(self, ax=None):
         r"""Plot the vertical transect with no frills.
-        
+
         :param matplotlib.pyplot.Axes ax: The axes to plot to.
         """
         self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
-                               ).rotate(np.radians(self.general_kwargs["strike"]))
-        bool_idx = (np.abs(self._data[:,0]) < self.general_kwargs["length"])\
-                  &(np.abs(self._data[:,1]) < self.general_kwargs["width"])
+                                        ).rotate(np.radians(self.general_kwargs["strike"]))
+        bool_idx = (np.abs(self._data[:, 0]) < self.general_kwargs["length"])\
+            & (np.abs(self._data[:, 1]) < self.general_kwargs["width"])
         data = self._data[bool_idx]
-    
+
         if "c" in self.scatter_kwargs:
             self.scatter_kwargs["c"] = self.scatter_kwargs["c"][bool_idx]
         if ax is None:
             print("ax is None")
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1, aspect=1)
-        pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
+        pts = ax.scatter(data[:, 0], data[:, 2], **self.scatter_kwargs)
         if self.general_kwargs["special"] is not None:
             for special in self.general_kwargs["special"]:
                 sdata = self._data[(self._aux_data >= special["threshon"])
-                                  &(self._aux_data < special["threshoff"])]
-                ax.scatter(sdata[:,0], sdata[:,2], **special["kwargs"])
-        ax.set_xlim(-self.general_kwargs["length"], 
+                                   & (self._aux_data < special["threshoff"])]
+                ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
+        ax.set_xlim(-self.general_kwargs["length"],
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
         ax.invert_yaxis()
@@ -307,15 +317,15 @@ class VerticalPlaneProjector(object):
 
     def plot(self, ax=None):
         r"""Plot the vertical transect.
-        
+
         :param matplotlib.pyplot.Axes ax: The axes to plot to.
         """
         self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
-                               ).rotate(np.radians(self.general_kwargs["strike"]))
-        bool_idx = (np.abs(self._data[:,0]) < self.general_kwargs["length"])\
-                  &(np.abs(self._data[:,1]) < self.general_kwargs["width"])
+                                        ).rotate(np.radians(self.general_kwargs["strike"]))
+        bool_idx = (np.abs(self._data[:, 0]) < self.general_kwargs["length"])\
+            & (np.abs(self._data[:, 1]) < self.general_kwargs["width"])
         data = self._data[bool_idx]
-    
+
         if "c" in self.scatter_kwargs:
             self.scatter_kwargs["c"] = self.scatter_kwargs["c"][bool_idx]
         if ax is None:
@@ -327,15 +337,15 @@ class VerticalPlaneProjector(object):
         if self.general_kwargs["fig_width"] is not None:
             hwr = (self.general_kwargs["ymax"] - self.general_kwargs["ymin"]) \
                 / (self.general_kwargs["length"]*2)
-            fig.set_size_inches(self.general_kwargs["fig_width"], 
-                            self.general_kwargs["fig_width"]*hwr)
-        pts = ax.scatter(data[:,0], data[:,2], **self.scatter_kwargs)
+            fig.set_size_inches(self.general_kwargs["fig_width"],
+                                self.general_kwargs["fig_width"]*hwr)
+        pts = ax.scatter(data[:, 0], data[:, 2], **self.scatter_kwargs)
         if self.general_kwargs["special"] is not None:
             for special in self.general_kwargs["special"]:
                 sdata = self._data[(self._aux_data >= special["threshon"])
-                                  &(self._aux_data < special["threshoff"])]
-                ax.scatter(sdata[:,0], sdata[:,2], **special["kwargs"])
-        ax.set_xlim(-self.general_kwargs["length"], 
+                                   & (self._aux_data < special["threshoff"])]
+                ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
+        ax.set_xlim(-self.general_kwargs["length"],
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
         ax.invert_yaxis()
