@@ -314,11 +314,11 @@ class VerticalPlaneProjector(object):
             fig = plt.figure()
             ax = fig.add_subplot(1, 1, 1, aspect=1)
         pts = ax.scatter(data[:, 0], data[:, 2], **self.scatter_kwargs)
-        if self.general_kwargs["special"] is not None:
-            for special in self.general_kwargs["special"]:
-                sdata = self._data[(self._aux_data >= special["threshon"])
-                                   & (self._aux_data < special["threshoff"])]
-                ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
+        # if self.general_kwargs["special"] is not None:
+        #    for special in self.general_kwargs["special"]:
+        #        sdata = self._data[(self._aux_data >= special["threshon"])
+        #                           & (self._aux_data < special["threshoff"])]
+        #        ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
         ax.set_xlim(-self.general_kwargs["length"],
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
@@ -351,11 +351,11 @@ class VerticalPlaneProjector(object):
             fig.set_size_inches(self.general_kwargs["fig_width"],
                                 self.general_kwargs["fig_width"]*hwr)
         pts = ax.scatter(data[:, 0], data[:, 2], **self.scatter_kwargs)
-        if self.general_kwargs["special"] is not None:
-            for special in self.general_kwargs["special"]:
-                sdata = self._data[(self._aux_data >= special["threshon"])
-                                   & (self._aux_data < special["threshoff"])]
-                ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
+        # if self.general_kwargs["special"] is not None:
+        #    for special in self.general_kwargs["special"]:
+        #        sdata = self._data[(self._aux_data >= special["threshon"])
+        #                           & (self._aux_data < special["threshoff"])]
+        #        ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
         ax.set_xlim(-self.general_kwargs["length"],
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
