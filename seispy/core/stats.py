@@ -8,7 +8,7 @@ def magnitude_completeness_OK93(M, thresh=0.99, nmin=200):
     and returns the perecent-point function for a specified threshold.
     """
     if len(M) < nmin:
-        return(np.inf)
+        return(np.nan)
     K, loc, scale = scipy.stats.exponnorm.fit(M)
     mu, sigma = loc, scale
     lamda = 1./(K*sigma)
