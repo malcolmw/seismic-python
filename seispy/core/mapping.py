@@ -51,7 +51,7 @@ class Basemap(bm.Basemap):
         if "ax" in self.kwargs:
             plt.sca(self.kwargs["ax"])
 
-        super(self.__class__, self).__init__(**basekwargs)
+        super(Basemap, self).__init__(**basekwargs)
 # Store a handle to the current Axes
         self.ax = plt.gca()
 
@@ -140,7 +140,7 @@ class Basemap(bm.Basemap):
 
     def scatter(self, *args, **kwargs):
         x, y = self(np.asarray(args[0]), np.asarray(args[1]))
-        return(super(self.__class__, self).scatter(x, y, *args[2:], **kwargs))
+        return(super(Basemap, self).scatter(x, y, *args[2:], **kwargs))
 
     def add_faults(self, **kwargs):
         if "color" not in kwargs:
@@ -176,13 +176,16 @@ class Basemap(bm.Basemap):
                                 color="w",
                                 ha="right",
                                 va="bottom")
-            text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
+            text.set_path_effects([path_effects.Stroke(linewidth=3,
+                                                       foreground="black"),
                                    path_effects.Normal()])
-            text = self.ax.text(*self(geo[1, 1], geo[1, 0]), kwargs["label"] + "'",
+            text = self.ax.text(*self(geo[1, 1], geo[1, 0]),
+                                kwargs["label"] + "'",
                                 color="w",
                                 ha="left",
                                 va="top")
-            text.set_path_effects([path_effects.Stroke(linewidth=3, foreground="black"),
+            text.set_path_effects([path_effects.Stroke(linewidth=3,
+                                                       foreground="black"),
                                    path_effects.Normal()])
         plot_kwargs = {} if plot_kwargs is None else plot_kwargs
         return(self.plot(*self(geo[:, 1], geo[:, 0]), **plot_kwargs))
@@ -220,7 +223,7 @@ class CaliforniaFaults(FaultCollection):
     def __init__(self):
         fname = pkg_resources.resource_filename("seispy",
                                                 "data/ca_scitex.flt")
-        super(self.__class__, self).__init__(fname)
+        super(CaliforniaFaults, self).__init__(fname)
 
 
 class VerticalPlaneProjector(object):
@@ -231,21 +234,27 @@ class VerticalPlaneProjector(object):
     :param list lon: Event longitude coordinates.
     :param list depth: Event depth coordinates.
     :param list aux_data: Auxiliary data.
+
+    .. automethod:: set_scatter_kwargs
+
+    .. automethod:: update_scatter_kwargs
     """
 
     def __init__(self, lat, lon, depth, aux_data=None):
-        #: Doc comment for instance attribute _rdata
         self._rdata = _coords.GeographicCoordinates(len(lat))
         self._rdata[:, 0], self._rdata[:,
                                        1], self._rdata[:, 2] = lat, lon, depth
         self._aux_data = np.asarray(aux_data)
-        self.scatter_kwargs = _defaults.DEFAULT_SECTION_KWARGS["scatter_kwargs"]
-        self.colorbar_kwargs = _defaults.DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
-        self.general_kwargs = _defaults.DEFAULT_SECTION_KWARGS["general"]
+        sk = _defaults.DEFAULT_SECTION_KWARGS["scatter_kwargs"]
+        ck = _defaults.DEFAULT_SECTION_KWARGS["colorbar_kwargs"]
+        gk = _defaults.DEFAULT_SECTION_KWARGS["general"]
+        self.scatter_kwargs = sk
+        self.colorbar_kwargs = ck
+        self.general_kwargs = gk
 
     def update_scatter_kwargs(self, **kwargs):
         r"""
-        Update kwargs passed directly to matplotlib.pyplot.Axes.scatter. 
+        Update kwargs passed directly to matplotlib.pyplot.Axes.scatter.
 
         This method updates *only* the kwargs specified.
         """
@@ -254,7 +263,7 @@ class VerticalPlaneProjector(object):
 
     def update_colorbar_kwargs(self, **kwargs):
         r"""
-        Update kwargs passed directly to matplotlib.pyplot.Figure.colorbar. 
+        Update kwargs passed directly to matplotlib.pyplot.Figure.colorbar.
 
         This method updates *only* the kwargs specified.
         """
@@ -262,11 +271,11 @@ class VerticalPlaneProjector(object):
         self.set_colorbar_kwargs(**kwargs)
 
     def update_general_kwargs(self, **kwargs):
-        r"""Update general plot kwargs. 
+        r"""Update general plot kwargs.
 
         This method updates *only* the kwargs specified.
 
-        :param matplotlib.pyplot.Axes ax: 
+        :param matplotlib.pyplot.Axes ax:
         :param float fig_width:
         :param seispy.coords.GeographicCoordinates origin:
         :param float strike:
@@ -280,7 +289,7 @@ class VerticalPlaneProjector(object):
     def set_scatter_kwargs(self, **kwargs):
         self.scatter_kwargs = kwargs
 
-    def set_colobar_kwargs(self, **kwargs):
+    def set_colorbar_kwargs(self, **kwargs):
         self.colorbar_kwargs = kwargs
 
     def set_general_kwargs(self, **kwargs):
@@ -291,8 +300,9 @@ class VerticalPlaneProjector(object):
 
         :param matplotlib.pyplot.Axes ax: The axes to plot to.
         """
+        strike = np.radians(self.general_kwargs["strike"])
         self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
-                                        ).rotate(np.radians(self.general_kwargs["strike"]))
+                                        ).rotate(strike)
         bool_idx = (np.abs(self._data[:, 0]) < self.general_kwargs["length"])\
             & (np.abs(self._data[:, 1]) < self.general_kwargs["width"])
         data = self._data[bool_idx]
@@ -320,8 +330,9 @@ class VerticalPlaneProjector(object):
 
         :param matplotlib.pyplot.Axes ax: The axes to plot to.
         """
+        strike = np.radians(self.general_kwargs["strike"])
         self._data = self._rdata.to_ned(origin=self.general_kwargs["origin"]
-                                        ).rotate(np.radians(self.general_kwargs["strike"]))
+                                        ).rotate(strike)
         bool_idx = (np.abs(self._data[:, 0]) < self.general_kwargs["length"])\
             & (np.abs(self._data[:, 1]) < self.general_kwargs["width"])
         data = self._data[bool_idx]
