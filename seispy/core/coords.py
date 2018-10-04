@@ -26,13 +26,13 @@ class GeographicCoordinates(np.ndarray):
         meaningful ranges.
         """
         super().__setitem__(index, value)
-        if not np.all((-90 <= self[...,0]) & (self[...,0] <= 90)):
+        if not np.all((-90 <= self[..., 0]) & (self[..., 0] <= 90)):
             raise(ValueError("all values for latitude must satisfiy -90 "\
                     "<= latitude <= 90"))
-        if not np.all((-180 <= self[...,1]) & ( self[...,1] <= 180)):
+        if not np.all((-180 <= self[..., 1]) & ( self[..., 1] <= 180)):
             raise(ValueError("all values for longitude must satisfiy -180 <= "\
                     "longitude <= 180"))
-        if not np.all(self[...,2] <= _constants.EARTH_RADIUS):
+        if not np.all(self[..., 2] <= _constants.EARTH_RADIUS):
             raise(ValueError("all depth values must satisfy depth <= "\
                     "{:f}".format(_constants.EARTH_RADIUS)))
 
@@ -135,6 +135,7 @@ class CartesianCoordinates(np.ndarray):
         spher[...,2] = np.arctan2(self[...,1], self[...,0])
         return(spher)
 
+
 class NEDCoordinates(CartesianCoordinates):
     r"""
     This class provides a container for North-East-Down coordinates and
@@ -167,7 +168,7 @@ class NEDCoordinates(CartesianCoordinates):
         theta0 = np.radians(90-self.origin[0])
         phi0 = np.radians(self.origin[1])
         rho0 = _constants.EARTH_RADIUS-self.origin[2]
-        cart = self.view(CartesianCoordinates)
+        cart = as_cartesian(self)
         # Map Down to Z
         cart[..., 2] = rho0 - cart[..., 2]
         # Swap X and Y axes
@@ -177,6 +178,7 @@ class NEDCoordinates(CartesianCoordinates):
 
     def to_geographic(self):
         return(self.to_cartesian().to_geographic())
+
 
 class SphericalCoordinates(np.ndarray):
     r"""
@@ -329,15 +331,7 @@ def as_ned(array, origin=None):
 def as_spherical(array):
     spher = SphericalCoordinates(*np.asarray(array).shape[:-1])
     spher[...] = array
-    return(spher)
-
-def test():
-    with open("/Users/malcolcw/Projects/Shared/Topography/anza.xyz") as inf:
-        data = np.array([[float(v) for v in line.split()] for line in inf])
-        gc = GeographicCoordinates(len(data))
-        gc[:,0], gc[:,1], gc[:,2] = data[:,1], data[:,0], data[:,2]/1000
-        print(gc.to_cartesian())
-        #np.save("topo.npy", gc.to_cartesian().rotate(P0, T0, 0))
+    return (spher)
 
 if __name__ == "__main__":
     print("coords.py not an executable script!!!")
