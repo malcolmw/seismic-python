@@ -40,6 +40,8 @@ class VelocityModel(object):
         elif fmt.upper() in ("FM3D", "FMM3D"):
             raise(NotImplementedError(f"Unrecognized format - {fmt}"))
             self._read_fmm3d(inf, **kwargs)
+        elif fmt.upper() in ("ABZ", "ABZ2015", "ABZ15"):
+            self._read_abz(inf, **kwargs)
         elif fmt.upper() in ("UCVM", "SCEC-UCVM"):
             self._read_ucvm(inf, **kwargs)
         elif fmt.upper() == "NPZ":
@@ -133,6 +135,9 @@ class VelocityModel(object):
         Vs = df["Vs"].values.reshape(nR, nT, nP)
         self._Vp = Vp
         self._Vs = Vs
+    
+    def _read_abz(inf, **kwargs):
+        raise(NotImplementedError("_read_abz not implemented"))
 
     def _read_fang(self, inf):
         with open(inf) as inf:
