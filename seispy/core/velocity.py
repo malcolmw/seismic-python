@@ -160,9 +160,9 @@ class VelocityModel(object):
                                                       DEPTH.flatten()],
                                                      axis=1)
                                            ).to_spherical()
-        df = pd.DataFrame.from_dict({"R": spher[:,0],
-                                     "T": spher[:,1],
-                                     "P": spher[:,2],
+        df = pd.DataFrame.from_dict({"R": spher[:, 0],
+                                     "T": spher[:, 1],
+                                     "P": spher[:, 2],
                                      "Vp": VVp.flatten(),
                                      "Vs": VVs.flatten()})
         df = df.sort_values(["R", "T", "P"])
@@ -185,12 +185,12 @@ class VelocityModel(object):
             raise(ValueError(f"Unrecognized phase type: {phase}"))
 
 
-        idx = np.nonzero(self._nodes[:,0,0,0] == rho)[0]
+        idx = np.nonzero(self._nodes[:, 0, 0, 0] == rho)[0]
         if idx.size > 0:
             iR0, iR1 = idx[0], idx[0]
         else:
-            idxl = np.nonzero(self._nodes[:,0,0,0] < rho)[0]
-            idxr = np.nonzero(self._nodes[:,0,0,0] > rho)[0]
+            idxl = np.nonzero(self._nodes[:, 0, 0, 0] < rho)[0]
+            idxr = np.nonzero(self._nodes[:, 0, 0, 0] > rho)[0]
             if not np.any(idxl):
                 iR0, iR1 = 0, 0
             elif not np.any(idxr):
@@ -200,16 +200,16 @@ class VelocityModel(object):
         if iR0 == iR1:
             dR, drho = 1, 0
         else:
-            dR = self._nodes[iR1,0,0,0]-self._nodes[iR0,0,0,0]
-            drho = (rho - self._nodes[iR0,0,0,0])
+            dR = self._nodes[iR1, 0, 0, 0]-self._nodes[iR0, 0, 0, 0]
+            drho = (rho - self._nodes[iR0, 0, 0, 0])
 
 
-        idx = np.nonzero(self._nodes[0,:,0,1] == theta)[0]
+        idx = np.nonzero(self._nodes[0, :, 0, 1] == theta)[0]
         if idx.size > 0:
             iT0, iT1 = idx[0], idx[0]
         else:
-            idxl = np.nonzero(self._nodes[0,:,0,1] < theta)[0]
-            idxr = np.nonzero(self._nodes[0,:,0,1] > theta)[0]
+            idxl = np.nonzero(self._nodes[0, :, 0, 1] < theta)[0]
+            idxr = np.nonzero(self._nodes[0, :, 0, 1] > theta)[0]
             if not np.any(idxl):
                 iT0, iT1 = 0, 0
             elif not np.any(idxr):
@@ -219,11 +219,11 @@ class VelocityModel(object):
         if iT0 == iT1:
             dT, dtheta = 1, 0
         else:
-            dT = self._nodes[0,iT1,0,1]-self._nodes[0,iT0,0,1]
-            dtheta = (theta - self._nodes[0,iT0,0,1])
+            dT = self._nodes[0, iT1, 0, 1]-self._nodes[0, iT0, 0, 1]
+            dtheta = (theta - self._nodes[0, iT0, 0, 1])
 
 
-        idx = np.nonzero(self._nodes[0,0,:,2] == phi)[0]
+        idx = np.nonzero(self._nodes[0, 0, :, 2] == phi)[0]
         if idx.size > 0:
             iP0, iP1 = idx[0], idx[0]
         else:
@@ -261,7 +261,7 @@ class VelocityModel(object):
 
         V = V0 + (V1 - V0)*dphi/dP
 
-        return(V)
+        return (V)
 
     def regrid(self, R, T, P):
         Vp = np.empty(shape=R.shape)
