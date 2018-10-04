@@ -10,12 +10,14 @@ This module facilitates access to velocity model data.
    :private-members:
    :members:
 """
+import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
 from . import constants as _constants
 from . import coords as _coords
 from . import geometry as _geometry
+from . import mapping as _mapping
 
 
 class VelocityModel(object):
@@ -298,71 +300,136 @@ class VelocityModel(object):
                               indexing="ij")
         self.regrid(R, T, P)
 
-    def slice(self, phase, lat0, lon0, azimuth, length, dmin, dmax, nx, nd):
+    def extract_slice(self, phase="P", origin=(33.5, -116.5, 0), strike=0,
+                      length=50, zmin=0, zmax=25, nx=25, nz=25):
+        r"""
+        Extract an arbitrarily oriented vertical slice from the VelocityModel.
         """
-        Return a vertical slice from velocity model with
-        section-parallel offset and depth coordinates.
+        n = np.linspace(-length, length, nx)
+        d = np.linspace(zmin, zmax, nz)
+        nn, dd = np.meshgrid(n, d)
+        ee = np.zeros(nn.shape)
+        ned = _coords.as_ned(np.stack([nn, ee, dd], axis=2))
+        ned.set_origin(origin)
+        geo = ned.to_geographic()
+        vv = self(phase, geo)
+        # vv = self("Vp", geo)/self("Vs", geo)
+        return (vv, ned, geo)
 
-        :param str phase: phase velocity to retrieve
-        :param float lat0: latitude of center point of section trace
-                           **{Units:** *degrees*, **Range:** *[-90, 90]*\
-                           **}**
-        :param float lon0: longitude of center point of section trace
-                           **{Units:** *degrees*, **Range:** *[-180,
-                           180]*\ **}**
-        :param float azimuth: azimuth of section trace **{Units:**
-                              *degrees*, **Range:** *(-inf, inf)*\ **}**
-        :param float length: length of section trace **{Units:**
-                             *degrees*\ **}**
-        :param float dmin: minimum depth of section **{Units:** *km*\
-                           **}**
-        :param float dmax: maximum depth of section **{Units:** *km*\
-                           **}**
-        :param int nx: number of nodes in section-parallel direction
-        :param int nd: number of nodes in depth
-        :returns: phase velocity values and coordinates of vertical
-                  section
-        :rtype: (`numpy.ndarray`, `numpy.ndarray`, `numpy.ndarray`)
+    def plot(self, phase="P", ix=None, iy=None, iz=None, type="fancy",
+             events=None, faults=False, vmin=None, vmax=None,
+             basemap_kwargs=None):
+        r"""
+        This needs to be cleaned up, but it will plot a velocity model
+        (map-view) and two perendicular, user-selected vertical slices.
+        """
+        phase = _verify_phase(phase)
+        if phase == "P":
+            data = self._Vp
+        elif phase == "S":
+            data = self._Vs
+        ix = int((self._nodes.shape[2]-1)/2) if ix is None else ix
+        iy = int((self._nodes.shape[1]-1)/2) if iy is None else iy
+        iz = -1 if iz is None else iz
+        vmin = data.min() if vmin is None else vmin
+        vmax = data.max() if vmax is None else vmax
+        basemap_kwargs = {} if basemap_kwargs is None else basemap_kwargs
+        origin = self._nodes.to_geographic()[iz, iy, ix]
+        if events is not None:
+            events = seispy.coords.as_geographic(events[["lat", "lon", "depth"]])
+        fig = plt.figure(figsize=(11,8.5))
+        ax0 = fig.add_axes((0.05, 0.3, 0.7, 0.65))
+        nodes = self._nodes.to_geographic()
+        _basemap_kwargs = dict(llcrnrlat=nodes[..., 0].min(),
+                               llcrnrlon=nodes[..., 1].min(),
+                               urcrnrlat=nodes[..., 0].max(),
+                               urcrnrlon=nodes[..., 1].max())
+        basemap_kwargs = {**_basemap_kwargs, **basemap_kwargs}
+        bm = _mapping.Basemap(basekwargs=basemap_kwargs,
+                              ax=ax0,
+                              meridian_labels=[False, False, True, False])
+        qmesh = bm.overlay_pcolormesh(nodes[iz, ..., 1].flatten(),
+                                      nodes[iz, ..., 0].flatten(),
+                                      data[iz].flatten(),
+                                      cmap=plt.get_cmap("jet_r"),
+                                      vmin=vmin,
+                                      vmax=vmax)
+        if faults is True:
+            bm.add_faults()
+        if events is not None:
+            bm.scatter(events[:,1], events[:,0], 
+                       c="k",
+                       s=0.1,
+                       linewidths=0, 
+                       zorder=3,
+                       alpha=0.25)
+        (xmin, ymin), (xmax, ymax) = bm.ax.get_position().get_points()
+        cax = fig.add_axes((0.9, ymin, 0.025, ymax - ymin))
+        cbar = fig.colorbar(qmesh, cax=cax)
+        cbar.ax.invert_yaxis()
+        cbar.set_label(f"$V_{phase.lower()}$ "+r"[$\frac{km}{s}$]")
+        # Plot the NS vertical slice
+        bm.axvline(x=origin[1], zorder=3, linestyle="--", color="k")
+        ax_right = fig.add_axes((xmax, ymin, 1-xmax, ymax-ymin))
+        ned = self._nodes[:, :, ix].to_ned(origin=origin)
+        ax_right.pcolormesh(ned[..., 2], ned[..., 0], data[:, :, ix],
+                            cmap=plt.get_cmap("jet_r"),
+                            vmin=vmin,
+                            vmax=vmax)
+        
+        ax_right.set_aspect(1)
+        ax_right.yaxis.tick_right()
+        ax_right.yaxis.set_label_position("right")
+        ax_right.set_xlabel("[$km$]", rotation=180)
+        ax_right.set_ylabel("[$km$]")
+        ax_right.tick_params(axis="y", labelrotation=90)
+        ax_right.tick_params(axis="x", labelrotation=90)
+        # Plot the EW vertical slice
+        bm.axhline(y=origin[0], zorder=3, linestyle="--", color="k")
+        ax_bottom = fig.add_axes((xmin, 0, xmax-xmin, ymin))
+        ned = self._nodes[:, iy, :].to_ned(origin=origin)
+        ax_bottom.pcolormesh(ned[..., 1], ned[..., 2], data[:, iy, :],
+                             cmap=plt.get_cmap("jet_r"),
+                             vmin=vmin,
+                             vmax=vmax)
+        ax_bottom.invert_yaxis()
+        ax_bottom.set_aspect(1)
+        ax_bottom.set_xlabel("[$km$]")
+        ax_bottom.set_ylabel("[$km$]")
+        def post_processing(bm, ax_right, ax_bottom, wpad=0.05, hpad=0.05):
+            (xmin, ymin), (xmax, ymax) = bm.ax.get_position().get_points()
+            (xmin0, ymin0), (xmax0, ymax0) = bm.ax.get_position().get_points()
+            (xmin_r, ymin_r), (xmax_r, ymax_r) = ax_right.get_position().get_points()
+            (xmin_b, ymin_b), (xmax_b, ymax_b) = ax_bottom.get_position().get_points()
+            dx0, dy0 = (xmax0-xmin0), (ymax0-ymin0)
+            dx_r, dy_r = (xmax_r-xmin_r), (ymax_r-ymin_r)
+            dx_b, dy_b = (xmax_b-xmin_b), (ymax_b-ymin_b)
+            aspect_r = dy_r / dx_r
+            aspect_b = dy_b / dx_b
+            ax_right.set_position((xmax0+wpad, ymin0, 0.1, dy0))
+            ax_bottom.set_position((xmin0, ymin0-dx0*aspect_b-hpad, dx0, dx0*aspect_b))
+        return ((bm, ax_right, ax_bottom), post_processing)
 
-        .. code-block:: python
-
-            import matplotlib.pyplot as plt
-            topo = seispy.topography.Topography("data/anza.xyz")
-            vm = seispy.velocity.VelocityModel("data/vmodel.dat",
-                                               "FANG",
-                                               topo=topo)
-            X, Y, V = vm.slice("P", 33.5, -116.0, 302, 150/111, -5, 25, 100, 100)
+    def plot_slice(self, phase="P", origin=(33.5, -116.5, 0), strike=0,
+                   length=50, zmin=0, zmax=25, nx=25, nz=25, ax=None):
+        r"""
+        Plot an arbitrarily oriented vertical slice from the VelocityModel.
+        """
+        vv, ned, geo = self.extract_slice(phase=phase,
+                                          origin=origin,
+                                          strike=strike,
+                                          length=length,
+                                          zmin=zmin,
+                                          zmax=zmax,
+                                          nx=nx,
+                                          nz=nz)
+        if ax is None:
             fig = plt.figure()
-            ax = fig.add_subplot(1, 1, 1)
-            im = ax.pcolormesh(X, Y, V, cmap=plt.get_cmap("hsv"))
-            ax.set_xlabel("Section-parallel offset [degrees]")
-            ax.set_ylabel("Depth [km]")
-            ax.invert_yaxis()
-            cbar = ax.get_figure().colorbar(im, ax=ax)
-            cbar.set_label("Vp [km/s]")
-            plt.show()
-
-        .. image:: VelocityModel.png
-        """
-
-        (lon1, lat1), (lon2, lat2) = _geometry.get_line_endpoints(lat0,
-                                                                        lon0,
-                                                                        azimuth,
-                                                                        length)
-        DEPTH = np.linspace(dmin, dmax, nd)
-        LAT = np.linspace(lat1, lat2, nx)
-        LON = np.linspace(lon1, lon2, nx)
-        V = np.empty(shape=(len(DEPTH), len(LAT)))
-        X = np.empty(shape=V.shape)
-        Y = np.empty(shape=V.shape)
-        for i in range(nx):
-            for j in range(nd):
-                lat, lon, depth = LAT[i], LON[i], DEPTH[j]
-                V[i, j] = self(phase, lat, lon, depth)
-                X[i, j] = _geometry.distance((lat1, lon1), (lat, lon))
-                Y[i, j] = depth
-        V = np.ma.masked_equal(V, -1)
-        return(X, Y, V)
+            ax = fig.add_subplot(1, 1, 1, aspect=1)
+        xx, yy = ned[..., 0], ned[..., 2]
+        qmesh = ax.pcolormesh(xx, yy, vv, cmap=plt.get_cmap("jet_r"))
+        ax.invert_yaxis()
+        return(ax, qmesh)
 
 def _verify_phase(phase: str)->str:
     if phase.upper() == "P" or  phase.upper() == "VP":
