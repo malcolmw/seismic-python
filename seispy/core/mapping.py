@@ -48,7 +48,7 @@ class Basemap(bm.Basemap):
         self.kwargs = kwargs
 
 # Set the current Axes object to the provided handle if one exists.
-        if "ax" in self.kwargs:
+        if "ax" in self.kwargs and self.kwargs["ax"] is not None:
             plt.sca(self.kwargs["ax"])
 
         super(Basemap, self).__init__(**basekwargs)
@@ -119,12 +119,12 @@ class Basemap(bm.Basemap):
                                 **kwargs)
         return(qmesh)
 
-    def overlay_pcolormesh(self, x, y, z, **kwargs):
+    def overlay_pcolormesh(self, x, y, z, zorder=2, **kwargs):
         df = pd.DataFrame.from_dict({"X": x, "Y": y, "Z": z})
         df = df.sort_values(["X", "Y"])
         x = df["X"].drop_duplicates()
         y = df["Y"].drop_duplicates()
-        ZZ = df["Z"].reshape((len(x), len(y)))
+        ZZ = df["Z"].values.reshape((len(x), len(y)))
         x = np.concatenate([[x.iloc[0] - x.iloc[:2].diff().iloc[1]/2],
                             x.rolling(2).mean().dropna(),
                             [x.iloc[-1] + x.iloc[-2:].diff().iloc[1]/2]])
@@ -134,13 +134,21 @@ class Basemap(bm.Basemap):
         XX, YY = np.meshgrid(x, y, indexing="ij")
         XX, YY = self(XX, YY)
         qmesh = self.pcolormesh(XX, YY, ZZ,
-                                zorder=3,
+                                zorder=zorder,
                                 **kwargs)
-        return(qmesh)
+        return (qmesh)
 
     def scatter(self, *args, **kwargs):
         x, y = self(np.asarray(args[0]), np.asarray(args[1]))
-        return(super(Basemap, self).scatter(x, y, *args[2:], **kwargs))
+        return (super(Basemap, self).scatter(x, y, *args[2:], **kwargs))
+
+    def axhline(self, y=0, xmin=None, xmax=None, **kwargs):
+        x, y = self(np.mean(self.boundarylons), y)
+        return (self.ax.axhline(y, **kwargs))
+
+    def axvline(self, x=0, ymin=None, ymax=None, **kwargs):
+        x, y = self(x, np.mean(self.boundarylats))
+        return (self.ax.axvline(x, **kwargs))
 
     def add_faults(self, **kwargs):
         if "color" not in kwargs:
@@ -172,18 +180,22 @@ class Basemap(bm.Basemap):
                                  ).rotate(-np.radians(kwargs["strike"])
                                           ).to_geographic()
         if "label" in kwargs and kwargs["width"] == 0:
+            ha = kwargs["ha1"] if "ha1" in kwargs else "right"
+            va = kwargs["va1"] if "va1" in kwargs else "bottom"
             text = self.ax.text(*self(geo[0, 1], geo[0, 0]), kwargs["label"],
                                 color="w",
-                                ha="right",
-                                va="bottom")
+                                ha=ha,
+                                va=va)
             text.set_path_effects([path_effects.Stroke(linewidth=3,
                                                        foreground="black"),
                                    path_effects.Normal()])
+            ha = kwargs["ha2"] if "ha2" in kwargs else "left"
+            va = kwargs["va2"] if "va2" in kwargs else "top"
             text = self.ax.text(*self(geo[1, 1], geo[1, 0]),
                                 kwargs["label"] + "'",
                                 color="w",
-                                ha="left",
-                                va="top")
+                                ha=ha,
+                                va=va)
             text.set_path_effects([path_effects.Stroke(linewidth=3,
                                                        foreground="black"),
                                    path_effects.Normal()])
@@ -351,11 +363,8 @@ class VerticalPlaneProjector(object):
             fig.set_size_inches(self.general_kwargs["fig_width"],
                                 self.general_kwargs["fig_width"]*hwr)
         pts = ax.scatter(data[:, 0], data[:, 2], **self.scatter_kwargs)
-        # if self.general_kwargs["special"] is not None:
-        #    for special in self.general_kwargs["special"]:
-        #        sdata = self._data[(self._aux_data >= special["threshon"])
-        #                           & (self._aux_data < special["threshoff"])]
-        #        ax.scatter(sdata[:, 0], sdata[:, 2], **special["kwargs"])
+        ax.yaxis.tick_right()
+        ax.yaxis.set_label_position("right")
         ax.set_xlim(-self.general_kwargs["length"],
                     self.general_kwargs["length"])
         ax.set_ylim(self.general_kwargs["ymin"], self.general_kwargs["ymax"])
@@ -367,7 +376,8 @@ class VerticalPlaneProjector(object):
             if self.general_kwargs["invert_colorbar"]:
                 cbar.ax.invert_yaxis()
             cbar.set_alpha(1)
+            cbar.draw_all()
             if "colorbar_label" in self.general_kwargs:
                 cbar.set_label(self.general_kwargs["colorbar_label"])
             return(cbar)
-        return(ax)
+        return (ax)
