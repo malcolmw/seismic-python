@@ -4,6 +4,8 @@ from . import defaults as _defaults
 
 PI = np.pi
 
+# GEO, CART, SPHER, LSPHER, NED
+
 class GeographicCoordinates(np.ndarray):
     """
     This class provides a container for geographic coordinates and
@@ -228,7 +230,10 @@ class SphericalCoordinates(np.ndarray):
         lspher[...,0] = self[...,0]
         lspher[...,1] = PI/2  - self[...,1]
         lspher[...,2] = self[...,2]
-        return(lspher)
+        return (lspher)
+    
+    def to_ned(self, origin=(0, 0, 0)):
+        return(self.to_cartesian().to_ned(origin=origin))
 
 
 class  LeftSphericalCoordinates(np.ndarray):
