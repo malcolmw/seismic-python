@@ -85,21 +85,23 @@ class VelocityModel(object):
         df = df.sort_values(["lat", "lon", "depth"]).reset_index()
         return(df[["lat", "lon", "depth", "Vp", "Vs", "R", "T", "P"]])
 
-    def __call__(self, phase, lat, lon, depth):
+    def __call__(self, phase, coords):
         """
         Return **phase**-velocity at given coordinates. A NULL value
         (-1) is returned for points above the surface.
 
         :param str phase: phase
-        :param float lat: latitude
-        :param float lon: longitude
-        :param float depth: depth
-        :returns: **phase**-velocity at (**lat**, **lon**, **depth**)
-        :rtype: float
+        :param array-like coords: coordinates
+        :returns: **phase**-velocity at coordinates
+        :rtype: array-like
         """
-
-        rho, theta, phi = _coords.as_geographic([lat, lon, depth]).to_spherical()
-        return(self._get_V(phase, rho, theta, phi))
+        # Convert geographic coordinates to spherical
+        rtp = _coords.as_geographic(coords).to_spherical()
+        def func(coords):
+            v = self._get_V(phase, *coords)
+            return (self._get_V(phase, *coords))
+        vv = np.array(list(map(func, rtp.reshape(-1, 3)))).reshape(rtp.shape[:-1])
+        return(vv)
 
     def save(self, outf):
         np.savez(outf, nodes=self._nodes, Vp=self._Vp, Vs=self._Vs)
