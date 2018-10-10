@@ -27,6 +27,13 @@ from . import coords as _coords
 from . import defaults as _defaults
 
 
+def _remove_keys(dict_in, *keys):
+    dict_out = dict_in.copy()
+    for key in keys:
+        del (dict_out[key])
+    return(dict_out)
+
+
 class Basemap(bm.Basemap):
     r"""A basic map to get started with.
 
@@ -43,6 +50,10 @@ class Basemap(bm.Basemap):
             assert isinstance(basekwargs, dict)
             basekwargs = {**_defaults.DEFAULT_BASEMAP_BASEKWARGS,
                           **basekwargs}
+        for kw in kwargs:
+            if isinstance(kwargs[kw], dict) and kw in _defaults.DEFAULT_BASEMAP_KWARGS:
+                kwargs[kw] = {
+                    **_defaults.DEFAULT_BASEMAP_KWARGS[kw], **kwargs[kw]}
         kwargs = {**_defaults.DEFAULT_BASEMAP_KWARGS, **kwargs}
 
         self.kwargs = kwargs
@@ -62,16 +73,16 @@ class Basemap(bm.Basemap):
         elif self.kwargs["bgstyle"] == "bluemarble":
             self._bluemarble_background()
 
-        if self.kwargs["meridian_stride"] is not None:
+        if self.kwargs["meridians"]["stride"] is not None:
             self.drawmeridians(np.arange(-180,
                                          180,
-                                         self.kwargs["meridian_stride"]),
-                               labels=self.kwargs["meridian_labels"])
-        if self.kwargs["parallel_stride"] is not None:
+                                         self.kwargs["meridians"]["stride"]),
+                               **_remove_keys(self.kwargs["meridians"], "stride"))
+        if self.kwargs["parallels"]["stride"] is not None:
             self.drawparallels(np.arange(-90,
                                          90,
-                                         self.kwargs["parallel_stride"]),
-                               labels=self.kwargs["parallel_labels"])
+                                         self.kwargs["parallels"]["stride"]),
+                               **_remove_keys(self.kwargs["parallels"], "stride"))
 
     def _basic_background(self):
         self.drawmapboundary(fill_color=self.kwargs["fill_color"],
@@ -337,7 +348,7 @@ class VerticalPlaneProjector(object):
         ax.invert_yaxis()
         return(pts)
 
-    def plot(self, ax=None):
+    def plot(self, ax=None, vmodel=None, phase="Vs"):
         r"""Plot the vertical transect.
 
         :param matplotlib.pyplot.Axes ax: The axes to plot to.
@@ -349,7 +360,7 @@ class VerticalPlaneProjector(object):
             & (np.abs(self._data[:, 1]) < self.general_kwargs["width"])
         data = self._data[bool_idx]
 
-        if "c" in self.scatter_kwargs:
+        if "c" in self.scatter_kwargs and not isinstance(self.scatter_kwargs["c"], str):
             self.scatter_kwargs["c"] = self.scatter_kwargs["c"][bool_idx]
         if ax is None:
             print("ax is None")
