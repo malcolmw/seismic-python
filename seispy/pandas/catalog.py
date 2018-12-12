@@ -48,7 +48,7 @@ class Catalog(object):
     def __getitem__(self, key):
         r"""Support data access via indexing.
         """
-        if key not in self._data:
+        if self._data is None or key not in self._data:
             raise(KeyError)
         return(self._data[key])
 
@@ -68,7 +68,10 @@ class Catalog(object):
         tables = (tables,) if isinstance(tables, str) else tables
         for table in tables:
             null = _io.schema.get_null(self._schema, table)
-            self[table] = self[table].append(null, ignore_index=True)
+            try:
+                self[table] = self[table].append(null, ignore_index=True)
+            except KeyError:
+                self[table] = pd.DataFrame().append(null, ignore_index=True)
 
     def add_row(self, table, data):
         r"""Add a new row of data to table.
@@ -76,7 +79,10 @@ class Catalog(object):
         :param str table: Table to add data to.
         :param dict data: Data to append.
         """
-        idx = len(self[table])
+        try:
+            idx = len(self[table])
+        except KeyError:
+            idx = 0
         self.add_null(table)
         self[table].loc[idx, data.keys()] = [data[key] for key in data.keys()]
 
