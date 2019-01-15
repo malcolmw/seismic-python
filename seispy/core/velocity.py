@@ -14,11 +14,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 
+from collections import deque
+
 from . import constants as _constants
 from . import coords as _coords
+from . import fm3dio as _fm3dio
 from . import geometry as _geometry
 from . import mapping as _mapping
-
 
 class VelocityModel(object):
     """
@@ -30,6 +32,8 @@ class VelocityModel(object):
     :param str fmt: format of input file
     """
     def __init__(self, inf=None, fmt=None, topo=None, **kwargs):
+        self._inf, self._fmt, self._topo = inf, fmt, topo
+        self._is_regular = False
         if inf is None:
             return
         if topo is None:
@@ -40,21 +44,20 @@ class VelocityModel(object):
         if fmt.upper() == "FANG":
             self._read_fang(inf, **kwargs)
         elif fmt.upper() in ("FM3D", "FMM3D"):
-            raise(NotImplementedError(f"Unrecognized format - {fmt}"))
-            self._read_fmm3d(inf, **kwargs)
-        elif fmt.upper() in ("ABZ", "ABZ2015", "ABZ15"):
+            self._read_fm3d(inf, **kwargs)
+        elif fmt.upper() in ("ABZ", "ABZ2014", "ABZ14"):
             self._read_abz(inf, **kwargs)
         elif fmt.upper() in ("UCVM", "SCEC-UCVM"):
             self._read_ucvm(inf, **kwargs)
         elif fmt.upper() == "NPZ":
             self._read_npz(inf)
         else:
-            raise(ValueError(f"Unrecognized format - {fmt}"))
+            raise(ValueError(f"Unrecognized format - {fmt.upper()}"))
 
     def from_DataFrame(self, df):
         """
         Initialize VelocityModel from a pandas.DataFrame. Input
-        DataFrame must have *lat*, *lon*, *depth*, *Vp*, and *Vs*,
+        DataFrame must have *lat*, *lon*, *depth*, *vp*, and *vs*,
         fields.
 
         :param pandas.DataFrame df: DataFrame with velocity data
@@ -68,24 +71,35 @@ class VelocityModel(object):
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
         nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
+        dr = np.unique(np.round(np.diff(np.unique(nodes[..., 0].flatten())), 9))
+        dt = np.unique(np.round(np.diff(np.unique(nodes[..., 1].flatten())), 9))
+        dp = np.unique(np.round(np.diff(np.unique(nodes[..., 2].flatten())), 9))
+        if len(dr) == len(dt) == len(dp) == 1:
+            self._is_regular = True
+            self._dr, self._dt, self._dp = dr[0], dt[0], dp[0]
+            self._nR, self._nT, self._nP = nR, nT, nP
+            self._R0 = nodes[..., 0].min()
+            self._T0 = nodes[..., 1].min()
+            self._L0 = np.pi/2 - nodes[..., 1].max()
+            self._P0 = nodes[..., 2].min()
         self._nodes = _coords.as_spherical(nodes)
-        Vp = df["Vp"].values.reshape(nR, nT, nP)
-        Vs = df["Vs"].values.reshape(nR, nT, nP)
-        self._Vp = Vp
-        self._Vs = Vs
+        vp = df["vp"].values.reshape(nR, nT, nP)
+        vs = df["vs"].values.reshape(nR, nT, nP)
+        self._vp = vp
+        self._vs = vs
         return(self)
 
     def to_DataFrame(self):
         df = pd.DataFrame().from_dict({"R": self._nodes[...,0].flatten(),
                                        "T": self._nodes[...,1].flatten(),
                                        "P": self._nodes[...,2].flatten(),
-                                       "Vp": self._Vp.flatten(),
-                                       "Vs": self._Vs.flatten()})
+                                       "vp": self._vp.flatten(),
+                                       "vs": self._vs.flatten()})
         df["lat"] = df["lon"] = df["depth"] = np.nan
         geo = _coords.as_spherical(df[["R", "T", "P"]]).to_geographic()
         df.loc[:, ["lat", "lon", "depth"]] = geo
         df = df.sort_values(["lat", "lon", "depth"]).reset_index()
-        return(df[["lat", "lon", "depth", "Vp", "Vs", "R", "T", "P"]])
+        return(df[["lat", "lon", "depth", "vp", "vs", "R", "T", "P"]])
 
     def __call__(self, phase, coords):
         """
@@ -105,16 +119,23 @@ class VelocityModel(object):
         vv = np.array(list(map(func, rtp.reshape(-1, 3)))).reshape(rtp.shape[:-1])
         return(vv)
 
+    def __str__(self)->str:
+        s = 'seispy.velocity.VelocityModel object\n'
+        s += f'    inf:  {self._inf}\n'
+        s += f'    fmt:  {self._fmt.upper() if self._fmt is not None else None}\n'
+        s += f'    topo: {self._topo.upper() if self._topo is not None else None}\n'
+        return(s)
+
     def save(self, outf):
-        np.savez(outf, nodes=self._nodes, Vp=self._Vp, Vs=self._Vs)
+        np.savez(outf, nodes=self._nodes, vp=self._vp, vs=self._vs)
 
     def _read_npz(self, inf):
         inf = np.load(inf)
         self._nodes = _coords.as_spherical(inf["nodes"])
-        self._Vp = inf["Vp"]
-        self._Vs = inf["Vs"]
+        self._vp = inf["vp"]
+        self._vs = inf["vs"]
 
-    def _read_ucvm(self, inf, Vp_key="cmb_vp", Vs_key="cmb_vs"):
+    def _read_ucvm(self, inf, vp_key="cmb_vp", vs_key="cmb_vs"):
         names=["lon", "lat", "Z", "surf", "vs30", "crustal", "cr_vp", "cr_vs",
                "cr_rho", "gtl", "gtl_vp", "gtl_vs", "gtl_rho", "cmb_algo",
                "cmb_vp", "cmb_vs", "cmb_rho"]
@@ -123,8 +144,8 @@ class VelocityModel(object):
                       header=None,
                       names=names)
         df["depth"] = df["Z"]*1e-3
-        df["Vp"] = df[Vp_key]*1e-3
-        df["Vs"] = df[Vs_key]*1e-3
+        df["vp"] = df[vp_key]*1e-3
+        df["vs"] = df[vs_key]*1e-3
         df["R"] = df["T"] = df["P"] = np.nan
         spher = _coords.as_geographic(df[["lat", "lon", "depth"]]
                                            ).to_spherical()
@@ -135,13 +156,18 @@ class VelocityModel(object):
         nP = len(df.drop_duplicates("P"))
         nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
         self._nodes = _coords.as_spherical(nodes)
-        Vp = df["Vp"].values.reshape(nR, nT, nP)
-        Vs = df["Vs"].values.reshape(nR, nT, nP)
-        self._Vp = Vp
-        self._Vs = Vs
-    
-    def _read_abz(inf, **kwargs):
-        raise(NotImplementedError("_read_abz not implemented"))
+        vp = df["vp"].values.reshape(nR, nT, nP)
+        vs = df["vs"].values.reshape(nR, nT, nP)
+        self._vp = vp
+        self._vs = vs
+
+    def _read_abz(self, inf, **kwargs):
+        df = pd.read_table(inf,
+                           header=None,
+                           delim_whitespace=True,
+                           names=["lat", "lon", "depth", "vp", "vs", "DWS"])
+        self.from_DataFrame(df)
+        return(self)
 
     def _read_fang(self, inf):
         with open(inf) as inf:
@@ -149,14 +175,14 @@ class VelocityModel(object):
             lat = np.array([float(v) for v in inf.readline().split()])
             depth = np.array([float(v) for v in inf.readline().split()])
             LAT, LON, DEPTH = np.meshgrid(lat, lon, depth, indexing="ij")
-            VVp = np.zeros(LAT.shape)
-            VVs = np.zeros(LAT.shape)
+            vvp = np.zeros(LAT.shape)
+            vvs = np.zeros(LAT.shape)
             for idepth in range(len(depth)):
                 for ilat in range(len(lat)):
-                    VVp[ilat, :, idepth] = np.array([float(v) for v in inf.readline().split()])
+                    vvp[ilat, :, idepth] = np.array([float(v) for v in inf.readline().split()])
             for idepth in range(len(depth)):
                 for ilat in range(len(lat)):
-                    VVs[ilat, :, idepth] = np.array([float(v) for v in inf.readline().split()])
+                    vvs[ilat, :, idepth] = np.array([float(v) for v in inf.readline().split()])
         spher = _coords.as_geographic(np.stack([LAT.flatten(),
                                                       LON.flatten(),
                                                       DEPTH.flatten()],
@@ -165,24 +191,81 @@ class VelocityModel(object):
         df = pd.DataFrame.from_dict({"R": spher[:, 0],
                                      "T": spher[:, 1],
                                      "P": spher[:, 2],
-                                     "Vp": VVp.flatten(),
-                                     "Vs": VVs.flatten()})
+                                     "vp": vvp.flatten(),
+                                     "vs": vvs.flatten()})
         df = df.sort_values(["R", "T", "P"])
         nR = len(df.drop_duplicates("R"))
         nT = len(df.drop_duplicates("T"))
         nP = len(df.drop_duplicates("P"))
         self._nodes = df[["R", "T", "P"]].values.reshape(nR, nT, nP, 3)
-        Vp = df["Vp"].values.reshape(nR, nT, nP)
-        Vs = df["Vs"].values.reshape(nR, nT, nP)
-        self._Vp = Vp
-        self._Vs = Vs
+        vp = df["vp"].values.reshape(nR, nT, nP)
+        vs = df["vs"].values.reshape(nR, nT, nP)
+        self._vp = vp
+        self._vs = vs
+
+    def _read_fm3d(self, inf: str):
+        self._is_regular = True
+        with open(inf, 'r') as inf:
+            data = deque(inf.read().split('\n'))
+        nvgrids, nvtypes = (int(v) for v in data.popleft().split())
+        nr, nlamda, nphi = (int(v) for v in data.popleft().split())
+        dr, dlamda, dphi = (float(v) for v in data.popleft().split())
+        r0, lamda0, phi0 = (float(v) for v in data.popleft().split())
+        nnp = nr * nlamda * nphi
+        vp = np.array([float(data.popleft()) for i in range(nnp)])
+        nr, nlamda, nphi = (int(v) for v in data.popleft().split())
+        dr, dlamda, dphi = (float(v) for v in data.popleft().split())
+        r0, lamda0, phi0 = (float(v) for v in data.popleft().split())
+        nns = nr * nlamda * nphi
+        vs = np.array([float(data.popleft()) for i in range(nns)])
+        r_nodes = np.array([r0 + i * dr for i in range(nr)])
+        t_nodes = np.array([np.pi/2-(lamda0 + i * dlamda)
+                            for i in range(nlamda)])
+        p_nodes = np.array([phi0 + i * dphi for i in range(nphi)])
+        r_mesh, t_mesh, p_mesh = np.meshgrid(r_nodes,
+                                             t_nodes,
+                                             p_nodes,
+                                             indexing='ij')
+        spher = _coords.as_spherical(np.stack([r_mesh.flatten(),
+                                               t_mesh.flatten(),
+                                               p_mesh.flatten()],
+                                               axis=1))
+        geo = spher.to_geographic()
+        df = pd.DataFrame({'lat': geo[:, 0],
+                            'lon': geo[:, 1],
+                            'depth': geo[:, 2],
+                            'vp': vp,
+                            'vs': vs})
+        self.from_DataFrame(df)
+        return(self)
+
+    def print_fm3d(self):
+        return (_fm3dio.print_fm3d(self))
+
+    def print_fm3d_interfaces(self,
+                               i1=_constants.EARTH_RADIUS,
+                               i2=_constants.EARTH_RADIUS-30):
+        return (_fm3dio.print_fm3d_interfaces(self, i1=i1, i2=i2))
+
+    def print_fm3d_propgrid(self,
+                             dr=None,
+                             dt=None,
+                             dp=None,
+                             refinement_factor=5,
+                             n_refined_propgrid_cells=10):
+        return (_fm3dio.print_fm3d_propgrid(self,
+                                            dr=dr,
+                                            dt=dt,
+                                            dp=dp,
+                                            refinement_factor=refinement_factor,
+                                            n_refined_propgrid_cells=n_refined_propgrid_cells))
 
     def _get_V(self, phase: str, rho: float, theta: float, phi: float)->float:
         phase = _verify_phase(phase)
         if phase == "P":
-            VV = self._Vp
+            VV = self._vp
         elif phase == "S":
-            VV = self._Vs
+            VV = self._vs
         else:
             raise(ValueError(f"Unrecognized phase type: {phase}"))
 
@@ -200,9 +283,9 @@ class VelocityModel(object):
             else:
                 iR0, iR1 = idxl[-1], idxr[0]
         if iR0 == iR1:
-            dR, drho = 1, 0
+            dr, drho = 1, 0
         else:
-            dR = self._nodes[iR1, 0, 0, 0]-self._nodes[iR0, 0, 0, 0]
+            dr = self._nodes[iR1, 0, 0, 0]-self._nodes[iR0, 0, 0, 0]
             drho = (rho - self._nodes[iR0, 0, 0, 0])
 
 
@@ -219,9 +302,9 @@ class VelocityModel(object):
             else:
                 iT0, iT1 = idxl[-1], idxr[0]
         if iT0 == iT1:
-            dT, dtheta = 1, 0
+            dt, dtheta = 1, 0
         else:
-            dT = self._nodes[0, iT1, 0, 1]-self._nodes[0, iT0, 0, 1]
+            dt = self._nodes[0, iT1, 0, 1]-self._nodes[0, iT0, 0, 1]
             dtheta = (theta - self._nodes[0, iT0, 0, 1])
 
 
@@ -238,9 +321,9 @@ class VelocityModel(object):
             else:
                 iP0, iP1 = idxl[-1], idxr[0]
         if iP0 == iP1:
-            dP, dphi = 1, 0
+            dp, dphi = 1, 0
         else:
-            dP = self._nodes[0,0,iP1,2]-self._nodes[0,0,iP0,2]
+            dp = self._nodes[0,0,iP1,2]-self._nodes[0,0,iP0,2]
             dphi = (phi - self._nodes[0,0,iP0,2])
 
 
@@ -253,29 +336,41 @@ class VelocityModel(object):
         V110 = VV[iR1,iT1,iP0]
         V111 = VV[iR1,iT1,iP1]
 
-        V00 = V000 + (V100 - V000)*drho/dR
-        V01 = V001 + (V101 - V001)*drho/dR
-        V10 = V010 + (V110 - V010)*drho/dR
-        V11 = V011 + (V111 - V011)*drho/dR
+        V00 = V000 + (V100 - V000)*drho/dr
+        V01 = V001 + (V101 - V001)*drho/dr
+        V10 = V010 + (V110 - V010)*drho/dr
+        V11 = V011 + (V111 - V011)*drho/dr
 
-        V0 = V00 + (V10 - V00)*dtheta/dT
-        V1 = V01 + (V11 - V01)*dtheta/dT
+        V0 = V00 + (V10 - V00)*dtheta/dt
+        V1 = V01 + (V11 - V01)*dtheta/dt
 
-        V = V0 + (V1 - V0)*dphi/dP
+        V = V0 + (V1 - V0)*dphi/dp
 
         return (V)
 
+    def get_center(self):
+        r0 = (self._nodes[..., 0].min() + self._nodes[..., 0].max()) / 2
+        t0 = (self._nodes[..., 1].min() + self._nodes[..., 1].max()) / 2
+        p0 = (self._nodes[..., 2].min() + self._nodes[..., 2].max()) / 2
+        return (_coords.as_spherical((r0, t0, p0)))
+
+    def get_bounds(self):
+        rmin, rmax = self._nodes[..., 0].min(), self._nodes[..., 0].max()
+        tmin, tmax = self._nodes[..., 1].min(), self._nodes[..., 1].max()
+        pmin, pmax = self._nodes[..., 2].min(), self._nodes[..., 2].max()
+        return ((rmin, rmax), (tmin, tmax), (pmin, pmax))
+
     def regrid(self, R, T, P):
-        Vp = np.empty(shape=R.shape)
-        Vs = np.empty(shape=R.shape)
-        for store, phase, index in ((Vp, "Vp", 0), (Vs, "Vs", 1)):
+        vp = np.empty(shape=R.shape)
+        vs = np.empty(shape=R.shape)
+        for store, phase, index in ((vp, "vp", 0), (vs, "vs", 1)):
             for (ir, it, ip) in [(ir, it, ip) for ir in range(R.shape[0])
                                               for it in range(T.shape[1])
                                               for ip in range(P.shape[2])]:
                 r, theta, phi = R[ir, it, ip], T[ir, it, ip], P[ir, it, ip]
                 store[ir, it, ip] = self._get_V(r, theta, phi, phase)
-        self.values["Vp"] = Vp
-        self.values["Vs"] = Vs
+        self.values["vp"] = vp
+        self.values["vs"] = vs
         self.nodes["r"], self.nodes["theta"], self.nodes["phi"] = R, T, P
         self.nodes["nr"] = R.shape[0]
         self.nodes["ntheta"] = T.shape[1]
@@ -313,7 +408,7 @@ class VelocityModel(object):
         ned.set_origin(origin)
         geo = ned.to_geographic()
         vv = self(phase, geo)
-        # vv = self("Vp", geo)/self("Vs", geo)
+        # vv = self("vp", geo)/self("vs", geo)
         return (vv, ned, geo)
 
     def plot(self, phase="P", ix=None, iy=None, iz=None, type="fancy",
@@ -325,9 +420,9 @@ class VelocityModel(object):
         """
         phase = _verify_phase(phase)
         if phase == "P":
-            data = self._Vp
+            data = self._vp
         elif phase == "S":
-            data = self._Vs
+            data = self._vs
         ix = int((self._nodes.shape[2]-1)/2) if ix is None else ix
         iy = int((self._nodes.shape[1]-1)/2) if iy is None else iy
         iz = -1 if iz is None else iz
@@ -445,11 +540,12 @@ def test():
     #grid = vm.v_type_grids[1][1]["grid"]
     #print(vm(1, 3, 0.5, 0.5, 0))
     #vm.v_type_grids[1][1]
-    #print(v("Vp", 33.0, -116.9, 3.0))
-    vm = VelocityModel("/Users/malcolcw/Projects/Shared/Velocity/FANG2016/original/VpVs.dat", "fang")
+    #print(v("vp", 33.0, -116.9, 3.0))
+    vm = VelocityModel("/Users/malcolcw/Projects/Shared/Velocity/FANG2016/original/Vpvs.dat", "fang")
     with open("/Users/malcolcw/Projects/Wavefront/pywrap/example5/vgrids.in", "w") as outf:
         outf.write(str(vm))
 if __name__ == "__main__":
     test()
     print("velocity.py is not an executable script.")
     exit()
+
