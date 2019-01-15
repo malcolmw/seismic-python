@@ -1,13 +1,93 @@
 # coding=utf-8
 import numpy as np
+import pandas as pd
+
+from collections import deque
 from . import constants as _constants
 from . import coords as _coords
 from . import geogrid as _geogrid
 from . import velocity as _velocity
 
 ER = _constants.EARTH_RADIUS
-
 pi = np.pi
+
+def print_fm3d(vm):
+    if not vm._is_regular:
+        raise(NotImplementedError('only regular velocity grids can be '
+                                    'written to FM3D format'))
+    s = '1\t2\n'
+    s += f'{vm._nR}\t{vm._nT}\t{vm._nP}\n'
+    s += f'{vm._dr}\t{vm._dt}\t{vm._dp}\n'
+    s += f'{vm._R0}\t{vm._L0}\t{vm._P0}\n'
+    s += '\n'.join(vm._vp.flatten().astype(str))
+    s += '\n'
+    s += f'{vm._nR}\t{vm._nT}\t{vm._nP}\n'
+    s += f'{vm._dr}\t{vm._dt}\t{vm._dp}\n'
+    s += f'{vm._R0}\t{vm._L0}\t{vm._P0}\n'
+    s += '\n'.join(vm._vs.flatten().astype(str))
+    s += '\n'
+    return (s)
+
+def print_fm3d_interfaces(vm,
+                          i1=_constants.EARTH_RADIUS,
+                          i2=_constants.EARTH_RADIUS-30):
+    if not vm._is_regular:
+        raise(NotImplementedError('only regular velocity grids can be '
+                                    'written to FM3D format'))
+    s = '2\n'
+    s += f'{vm._nT}\t{vm._nP}\n'
+    s += f'{vm._dt}\t{vm._dt}\n'
+    s += f'{vm._L0}\t{vm._P0}\n'
+    n = vm._nT * vm._nP
+    s += '\n'.join((str(i1) for i in range(n)))
+    s += '\n'
+    s += '\n'.join(str(i2) for i in range(n))
+    s += '\n'
+    return(s)
+
+def print_fm3d_propgrid(vm,
+                        dr=None,
+                        dt=None,
+                        dp=None,
+                        refinement_factor=5,
+                        n_refined_propgrid_cells=10):
+    dr = vm._dr if dr is None else dr
+    dt = vm._dt if dt is None else dt
+    dp = vm._dp if dp is None else dp
+    (rmin, rmax), (tmin, tmax), (pmin, pmax) = vm.get_bounds()
+    nnr = int((rmax - rmin - 2 * vm._dr) / dr)
+    nnt = int((tmax - tmin - 2 * vm._dt) / dt)
+    nnp = int((pmax - pmin - 2 * vm._dp) / dp)
+    r0, t0, p0 = vm.get_center()
+    if nnr % 2 == 0:
+        r_min = r0 - dr * ((nnr - 1)/2)
+        r_max = r0 + dr * ((nnr - 1)/2)
+    else:
+        r_min = r0 - dr * int(nnr / 2)
+        r_max = r0 + dr * (nnr - 1 - int(nnr / 2))
+    if nnt % 2 == 0:
+        t_min = t0 - dt * ((nnt - 1)/2)
+        t_max = t0 + dt * ((nnt - 1)/2)
+    else:
+        t_min = t0 - dt * int(nnt / 2)
+        t_max = t0 + dt * (nnt - 1 - int(nnt / 2))
+    if nnp % 2 == 0:
+        p_min = p0 - dp * ((nnp - 1)/2)
+        p_max = p0 + dp * ((nnp - 1)/2)
+    else:
+        p_min = p0 - dp * int(nnp / 2)
+        p_max = p0 + dp * (nnp - 1 - int(nnp / 2))
+# # of propagation grid points in r, lat and long
+    s = f'{nnr}\t{nnt}\t{nnp}\n'
+# grid intervals in r (km) lat,long (deg
+    s += f'{dr}\t{np.degrees(dt)}\t{np.degrees(dp)}\n'
+# origin of the grid height (km),lat,long (deg)
+    s += f'{r_max-_constants.EARTH_RADIUS}\t'
+    s += f'{np.degrees(np.pi/2-t_max)}\t'
+    s += f'{np.degrees(p_min)}\t\n'
+# refinement factor and # of propgrid cells in refined source grid
+    s += f'{refinement_factor}\t{n_refined_propgrid_cells}\n'
+    return(s)
 
 def format_interfaces(interfaces):
     grid = interfaces[0].grid
@@ -63,6 +143,35 @@ def format_vgrids(vmodel):
             blob += "{:11.6f}\n".format(vmodel(typeID, gridID, lat, lon, depth ))
     return(blob)
 
+def read_arrtimes(inf):
+    with open(inf, 'r') as inf:
+        data = deque(inf.read().split('\n'))
+    nr, nlat, nlon = (int(v) for v in data.popleft().split())
+    dr, dlat, dlon = (float(v) for v in data.popleft().split())
+    r0, lat0, lon0 = (float(v) for v in data.popleft().split())
+    nset = int(data.popleft())
+    isrc, ipath, _ = (int(v) for v in data.popleft().split())
+    nn = nr * nlat * nlon
+    tt = np.array([float(data.popleft()) for i in range(nn)])
+    r_nodes = np.array([r0 + i * dr for i in range(nr)])
+    lat_nodes = np.array([(lat0 + i * dlat)
+                        for i in range(nlat)])
+    lon_nodes = np.array([lon0 + i * dlon for i in range(nlon)])
+    lon_mesh, lat_mesh, r_mesh = np.meshgrid(lon_nodes,
+                                            lat_nodes,
+                                            r_nodes,
+                                            indexing='ij')
+    geo = _coords.as_geographic(np.stack([lat_mesh.flatten(),
+                                          lon_mesh.flatten(),
+                                          -r_mesh.flatten() + ER],
+                                          axis=1))
+    df = pd.DataFrame({'lat': geo[:, 0],
+                        'lon': geo[:, 1],
+                        'depth': geo[:, 2],
+                        'value': tt})
+    return (df)
+
+
 def read_interfaces(infile):
     infile = open(infile)
     ninter = int(infile.readline().split()[0])
@@ -86,14 +195,38 @@ def read_interfaces(infile):
         interfaces.append(surf)
     return(interfaces)
 
-def read_propgrid(infile):
-    infile = open(infile, "r")
-    nr, nlat, nlon = [int(v) for v in infile.readline().split()[:3]]
-    dr, dlat, dlon = [float(v) for v in infile.readline().split()[:3]]
-    h0, lat0, lon0 = [float(v) for v in infile.readline().split()[:3]]
-    return(_geogrid.GeoGrid3D(lat0, lon0, -h0,
-                                    nlat, nlon, nr,
-                                    dlat, dlon, dr))
+def read_propgrid(inf):
+    with open(inf, 'r') as inf:
+        data = deque(inf.read().split('\n'))
+    ndepth, nlat, nlon = (int(v) for v in data.popleft().split())
+    ddepth, dlat, dlon = (float(v) for v in data.popleft().split())
+    h0, lat0, lon0 = (float(v) for v in data.popleft().split())
+    depth_nodes = [-h0 + i * ddepth for i in range(ndepth)]
+    lat_nodes = [lat0 + i * dlat for i in range(nlat)]
+    lon_nodes = [lon0 + i* dlon for i in range(nlon)]
+    lat_mesh, lon_mesh, depth_mesh = np.meshgrid(lat_nodes,
+                                                  lon_nodes,
+                                                  depth_nodes,
+                                                 indexing='ij')
+    pgrid = _coords.as_geographic(np.stack((lat_mesh.flatten(),
+                                            lon_mesh.flatten(),
+                                            depth_mesh.flatten()),
+                                           axis=1)).reshape(nlat, nlon, ndepth, 3)
+    pgrid.dlat = np.unique(np.diff(np.unique(pgrid[..., 0])))[0]
+    pgrid.dlon = np.unique(np.diff(np.unique(pgrid[..., 1])))[0]
+    pgrid.ddepth = np.unique(np.diff(np.unique(pgrid[..., 2])))[0]
+    pgrid.dr = pgrid.ddepth
+    pgrid.dt = np.radians(pgrid.dlat)
+    pgrid.dp = np.radians(pgrid.dlon)
+    return (pgrid)
+
+def read_source(inf):
+    with open(inf, 'r') as inf:
+        data = deque(inf.read().split('\n'))
+    data.popleft()
+    data.popleft()
+    depth, lat, lon = (float(v) for v in data.popleft().split()[:3])
+    return (_coords.as_geographic((lat, lon, depth)))
 
 def read_receivers(infile):
     infile = open(infile)
@@ -215,3 +348,4 @@ def test_io():
 
 if __name__ == "__main__":
     test_io()
+

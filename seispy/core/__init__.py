@@ -3,7 +3,6 @@
 from . import constants
 from . import coords
 from . import faults
-from . import fmm3dio
 from . import geogrid
 from . import geometry
 try:
