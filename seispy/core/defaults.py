@@ -55,3 +55,9 @@ DEFAULT_SECTION_KWARGS = {
                        },
     "colorbar_kwargs": {"shrink": 0.75}
 }
+
+DEFAULT_BEACHBALL_KWARGS = dict(
+    linewidth=0.5,
+    width=25,
+    zorder=2
+)
