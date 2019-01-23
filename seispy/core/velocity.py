@@ -621,12 +621,40 @@ class VelocityModel(object):
 
         return (V)
 
+
     def get_center(self):
         r0 = (self._nodes[..., 0].min() + self._nodes[..., 0].max()) / 2
         t0 = (self._nodes[..., 1].min() + self._nodes[..., 1].max()) / 2
         p0 = (self._nodes[..., 2].min() + self._nodes[..., 2].max()) / 2
         return (_coords.as_spherical((r0, t0, p0)))
 
+
+    def pad(self, nrho=0, ntheta=0, nphi=0):
+        bounds = self.bounds
+        rho_min, rho_max     = bounds[0]
+        theta_min, theta_max = bounds[1]
+        phi_min, phi_max     = bounds[2]
+        rho = np.linspace(
+            rho_min + min(nrho, 0) * self.drho,
+            rho_max + max(nrho, 0) * self.drho,
+            self.nrho + abs(nrho)
+        )
+        theta = np.linspace(
+            theta_min + min(ntheta, 0) * self.dtheta,
+            theta_max + max(ntheta, 0) * self.dtheta,
+            self.ntheta + abs(ntheta)
+        )
+        phi = np.linspace(
+            phi_min + min(nphi, 0) * self.dphi,
+            phi_max + max(nphi, 0) * self.dphi,
+            self.nphi + abs(nphi)
+        )
+        self.nodes = _coords.as_spherical(
+            np.stack(
+                np.meshgrid(rho, theta, phi, indexing="ij"),
+                axis=-1
+            )
+        )
 
 
     def regularize(self, nr, ntheta, nphi):
