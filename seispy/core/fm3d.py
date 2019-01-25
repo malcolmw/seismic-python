@@ -1,23 +1,51 @@
 import numpy as np
 import os
+import subprocess
+import tempfile
 from . import constants as _constants
+from . import coords as _coords
+
+FM3D_BIN = '/home/malcolmw/src/fmtomo/fm3d'
 
 
 class Ray(object):
-    def __init__(self, path, stacode=None, src_id=None, arrival_id=None):
+    def __init__(self, path, travel_time, phase=None, stacode=None, src_id=None, arrival_id=None):
         self.path = path
+        self.travel_time = travel_time
+        self.phase = phase
         self.stacode = stacode
         self.src_id = src_id
         self.arrival_id = arrival_id
-        self._init_toa_and_az()
+        self._toa = None
+        self._az = None
 
 
-    def _init_toa_and_az(self):
-        drho, dtheta, dphi   = self.path[1] - self.path[0]
-        xyz      = self.path[:2].to_cartesian()
-        dtotal   = np.sqrt(np.sum(np.square(xyz[1] - xyz[0])))
-        self.toa = np.degrees(np.arccos(drho / dtotal))
-        self.az  = np.degrees(np.arctan2(dphi, -dtheta))
+    @property
+    def toa(self):
+        if self._toa == None:
+            drho, dtheta, dphi   = self.path[1] - self.path[0]
+            xyz      = self.path[:2].to_cartesian()
+            dtotal   = np.sqrt(np.sum(np.square(xyz[1] - xyz[0])))
+            self._toa = np.degrees(np.arccos(drho / dtotal))
+        return (self._toa)
+
+
+    @toa.setter
+    def toa(self, value):
+        raise (NotImplementedError('sorry, toa is an immutable attribute'))
+    
+
+    @property
+    def az(self):
+        if self._az == None:
+            drho, dtheta, dphi   = self.path[1] - self.path[0]
+            self._az  = np.degrees(np.arctan2(dphi, -dtheta))
+        return (self._az)
+
+
+    @az.setter
+    def az(self, value):
+        raise (NotImplementedError('sorry, az is an immutable attribute'))
 
 
 def format_frechet():
@@ -51,7 +79,7 @@ def format_mode_set():
 def format_pgrid(vm,
                  refinement_factor=5,
                  n_refined_propgrid_cells=10):
-    blob  = f'{vm.ndepth-4:9d} {vm.nlambda-4:9d} {vm.nphi-4:9d}\n'
+    blob  = f'{vm.ndepth-3:9d} {vm.nlambda-4:9d} {vm.nphi-4:9d}\n'
     blob += f'{vm.ddepth:9.4f} {vm.dlat:9.4f} {vm.dlon:9.4f}\n'
     blob += f'{-(vm.depth0+1.5*vm.ddepth):9.4f} {vm.lat0+1.5*vm.dlat:9.4f} {vm.lon0+1.5*vm.dlon:9.4f}\n'
     blob += f'{refinement_factor:9d} {n_refined_propgrid_cells:9d}\n'
@@ -95,31 +123,78 @@ def format_vgrid(vm, phase='p'):
     return (blob)
 
 
-#def read_raypaths(filename, arrivals):
-#    rays = []
-#    with open(filename, 'r') as infile:
-#        for i in range(len(arrivals)):
-#            infile.readline()
-#            npts = int(infile.readline().split()[0])
-#            path = seispy.coords.as_left_spherical(
-#                [[float(v) for v in infile.readline().split()] for i in range(npts)]
-#            ).to_spherical()
-#            rays.append(
-#                Ray(
-#                    path,
-#                    stacode=arrivals[i].stacode,
-#                    arrival_id=arrivals[i].arrival_id
-#                )
-#            )
-#    return (rays)
-#
-#
+def read_arrivals(filename):
+    with open(filename, 'r') as infile:
+        data = infile.read().split('\n')[:-1]
+    arrivals = [float(line.split()[4]) for line in data]
+    return (arrivals)
+
+
+def read_outputs(outdir):
+    arrivals = read_arrivals(os.path.join(outdir, 'arrivals.dat'))
+    raypaths = read_rays(os.path.join(outdir, 'rays.dat'))
+    if len(arrivals) != len(raypaths):
+        raise (ValueError('sorry, I don\'t understand these data files'))
+    rays = [Ray(raypaths[idx], arrivals[idx]) for idx in range(len(arrivals))]
+    return (rays)
+
+
+def read_rays(filename):
+    rays = []
+    with open(filename, 'r') as infile:
+        data = infile.read().split('\n')
+    while len(data) > 1:
+        npts = int(data[1].split()[0])
+        data = data[2:]
+        ray = _coords.as_left_spherical(
+            list(
+                map(
+                    lambda point: np.fromstring(point, sep=' '),
+                    data[:npts]
+                )
+            )
+        ).to_spherical()
+        data = data[npts:]
+        rays.append(ray)
+    return (rays)
+
+
 def pad_vm(vm):
     vm.pad(nrho=-2, ntheta=-2, nphi=-2)
     vm.pad(nrho=3, ntheta=2, nphi=2)
 
 
-def write_fm3d_inputs(vm, origin, receivers, outdir):
+def in_propgrid(vm, points):
+    points    = _coords.as_geographic(points)
+    if points.shape == (3,):
+        points = [points]
+    # The depth is constrained by the interfaces.
+    depth_min = _constants.EARTH_RADIUS - (vm.rho0 + (vm.nrho - 3) * vm.drho)
+    depth_max = _constants.EARTH_RADIUS - (vm.rho0 + 2 * vm.drho)
+    # The latitude and longitude are constrained by the propagation grid.
+    lat_min = vm.lat0 + 1.5 * vm.dlat
+    lat_max = lat_min + (vm.nlat - 5) * vm.dlat
+    lon_min = vm.lon0 + 1.5 * vm.dlon
+    lon_max = lon_min + (vm.nlon - 5) * vm.dlon
+    return (
+        np.array(
+            [
+                 (lat_min < lat0 < lat_max)
+                &(lon_min < lon0 < lon_max)
+                &(depth_min < depth0 < depth_max)
+                for lat0, lon0, depth0 in points
+            ]
+        )
+    )
+
+
+def write_fm3d_inputs(vm, origin, receivers, outdir, phase='p'):
+    if not in_propgrid(vm, origin):
+        raise (ValueError(f'sorry, origin {origin} lies outside of propagation region'))
+    rx_in_propgrid = in_propgrid(vm, receivers)
+    if not np.all(rx_in_propgrid):
+        raise (ValueError(f'sorry, receiver(s) lies outside of propagation region\n'
+                          f'{receivers[~rx_in_propgrid]}'))
     with open(os.path.join(outdir, 'frechet.in'), 'w') as outfile:
         outfile.write(format_frechet())
     with open(os.path.join(outdir, 'interfaces.in'), 'w') as outfile:
@@ -133,42 +208,21 @@ def write_fm3d_inputs(vm, origin, receivers, outdir):
     with open(os.path.join(outdir, 'sources.in'), 'w') as outfile:
         outfile.write(format_source(*origin))
     with open(os.path.join(outdir, 'vgrids.in'), 'w') as outfile:
-        outfile.write(format_vgrid(vm))
+        outfile.write(format_vgrid(vm, phase=phase))
 
-##########################################################
-# This code is for checking grid fitting...
-#%matplotlib ipympl
-#import matplotlib.pyplot as plt
-#import numpy as np
-#import seispy
-#vm = seispy.velocity.VelocityModel('/home/malcolmw/proj/shared/velocity/White_et_al_2019a/White_et_al_2019a.regular.npz',
-#                              fmt='npz')
-#vm.pad(nrho=3, ntheta=2, nphi=2)
-#vm.pad(nrho=-2, ntheta=-2, nphi=-2)
-#vg = np.meshgrid(
-#    np.linspace(float(vm.theta0), float(vm.theta0 + (vm.ntheta-1) * vm.dtheta), vm.ntheta),
-#    np.linspace(float(vm.rho0), float(vm.rho0 + (vm.nrho-1) * vm.drho), vm.nrho)
-#)
-#pg = np.meshgrid(
-#    np.linspace(float(vm.theta0+1.5*vm.dtheta), float(vm.theta0+1.5*vm.dtheta + (vm.ntheta-4) * vm.dtheta), 
-#                vm.ntheta-3),
-#    np.linspace(seispy.constants.EARTH_RADIUS-float(vm.depth0+1.5*vm.ddepth), 
-#                seispy.constants.EARTH_RADIUS-float(vm.depth0+1.5*vm.ddepth + (vm.ndepth-4) * vm.ddepth),
-#                vm.ndepth-3)
-#)
-#i1 = vm.rho0 + (vm.nrho - 3) * vm.drho
-#i2 = vm.rho0 + 2 * vm.drho
-#plt.close('all')
-#fig = plt.figure()
-#ax = fig.add_subplot(1, 1, 1)
-#ax.scatter(vg[0].flatten(), vg[1].flatten(), 
-#    s=10,
-#    marker='o'
-#)
-#ax.scatter(pg[0].flatten(), pg[1].flatten(), 
-#    s=10,
-#    marker='x'
-#)
-#ax.axhline(i1, color='r', linestyle='--')
-#ax.axhline(i2, color='r', linestyle='--')
-##########################################################
+
+def trace_rays(vm, origin, receivers, phase):
+    print(f'Tracing {phase.upper()}-wave rays for origin at '
+          f'({origin[0]:.3f}, {origin[1]:.3f}, {origin[2]:6.3f})')
+    cwd = os.getcwd()
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            write_fm3d_inputs(vm, origin, receivers, temp_dir, phase=phase)
+            os.chdir(temp_dir)
+            output = subprocess.run([FM3D_BIN], capture_output=True)
+            rays = read_outputs(temp_dir)
+            for ray in rays:
+                ray.phase = phase.upper()
+    finally:
+        os.chdir(cwd)
+    return (rays)
