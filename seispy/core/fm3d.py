@@ -12,12 +12,35 @@ class Ray(object):
     def __init__(self, path, travel_time, phase=None, stacode=None, src_id=None, arrival_id=None):
         self.path = path
         self.travel_time = travel_time
-        self.phase = phase
         self.stacode = stacode
         self.src_id = src_id
         self.arrival_id = arrival_id
+        self._phase = phase
         self._toa = None
         self._az = None
+
+
+    @property
+    def az(self):
+        if self._az == None:
+            drho, dtheta, dphi   = self.path[1] - self.path[0]
+            self._az  = np.degrees(np.arctan2(dphi, -dtheta))
+        return (self._az)
+
+
+    @az.setter
+    def az(self, value):
+        raise (NotImplementedError('sorry, az is an immutable attribute'))
+
+
+    @property
+    def phase(self):
+        return (None if self._phase is None else self._phase.upper())
+
+
+    @phase.setter
+    def phase(self, value):
+        self._phase = value
 
 
     @property
@@ -33,19 +56,6 @@ class Ray(object):
     @toa.setter
     def toa(self, value):
         raise (NotImplementedError('sorry, toa is an immutable attribute'))
-    
-
-    @property
-    def az(self):
-        if self._az == None:
-            drho, dtheta, dphi   = self.path[1] - self.path[0]
-            self._az  = np.degrees(np.arctan2(dphi, -dtheta))
-        return (self._az)
-
-
-    @az.setter
-    def az(self, value):
-        raise (NotImplementedError('sorry, az is an immutable attribute'))
 
 
 def format_frechet():
@@ -127,6 +137,7 @@ def read_arrivals(filename):
     with open(filename, 'r') as infile:
         data = infile.read().split('\n')[:-1]
     arrivals = [float(line.split()[4]) for line in data]
+    arrivals = list(filter(lambda arrival: arrival != -1, arrivals))
     return (arrivals)
 
 
@@ -136,7 +147,7 @@ def read_outputs(outdir):
     if len(arrivals) != len(raypaths):
         raise (ValueError('sorry, I don\'t understand these data files'))
     rays = [Ray(raypaths[idx], arrivals[idx]) for idx in range(len(arrivals))]
-    return (rays)
+    return (rays if len(rays) > 0 else None)
 
 
 def read_rays(filename):
@@ -144,16 +155,24 @@ def read_rays(filename):
     with open(filename, 'r') as infile:
         data = infile.read().split('\n')
     while len(data) > 1:
+        nsec = int(data[0].split()[4])
+        if nsec == 0:
+            data = data[1:]
+            continue
         npts = int(data[1].split()[0])
         data = data[2:]
-        ray = _coords.as_left_spherical(
-            list(
-                map(
-                    lambda point: np.fromstring(point, sep=' '),
-                    data[:npts]
+        try:
+            ray = _coords.as_left_spherical(
+                list(
+                    map(
+                        lambda point: np.fromstring(point, sep=' '),
+                        data[:npts]
+                    )
                 )
-            )
-        ).to_spherical()
+            ).to_spherical()
+        except ValueError:
+            print(ray)
+            raise
         data = data[npts:]
         rays.append(ray)
     return (rays)
@@ -221,8 +240,6 @@ def trace_rays(vm, origin, receivers, phase):
             os.chdir(temp_dir)
             output = subprocess.run([FM3D_BIN], capture_output=True)
             rays = read_outputs(temp_dir)
-            for ray in rays:
-                ray.phase = phase.upper()
     finally:
         os.chdir(cwd)
     return (rays)
