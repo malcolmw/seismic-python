@@ -188,8 +188,10 @@ def in_propgrid(vm, points):
     if points.shape == (3,):
         points = [points]
     # The depth is constrained by the interfaces.
-    depth_min = _constants.EARTH_RADIUS - (vm.rho0 + (vm.nrho - 3) * vm.drho)
-    depth_max = _constants.EARTH_RADIUS - (vm.rho0 + 2 * vm.drho)
+    # An extra 0.1*vm.drho is shaved off here to remove
+    # points that lie "exactly" on the interface
+    depth_min = _constants.EARTH_RADIUS - (vm.rho0 + (vm.nrho - 3.1) * vm.drho)
+    depth_max = _constants.EARTH_RADIUS - (vm.rho0 + 2.1 * vm.drho)
     # The latitude and longitude are constrained by the propagation grid.
     lat_min = vm.lat0 + 1.5 * vm.dlat
     lat_max = lat_min + (vm.nlat - 5) * vm.dlat
