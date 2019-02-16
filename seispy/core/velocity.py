@@ -26,6 +26,7 @@ from . import mapping as _mapping
 
 _PI = np.pi
 
+
 class VelocityModel(object):
     """
     A callable class providing a queryable container for seismic
@@ -47,6 +48,9 @@ class VelocityModel(object):
     
     Data are always stored internally using a spherical coordinate system. The client
     must account for this when working with the data directly.
+    
+    NOTE:: the topo attribute is causing pickling errors due to use of locally defined
+    lambda functionand isn't used for anything right now
     """
     def __init__(self, inf=None, fmt=None, topo=None, **kwargs):
         self._inf, self._fmt, self._topo = inf, fmt, topo
@@ -56,10 +60,10 @@ class VelocityModel(object):
         self._nrho, self._ntheta, self._nphi = None, None, None
         if inf is None:
             return
-        if topo is None:
-            self.topo = lambda _, __: _constants.EARTH_RADIUS
-        else:
-            self.topo = topo
+        #if topo is None:
+        #    self.topo = lambda _, __: _constants.EARTH_RADIUS
+        #else:
+        #    self.topo = topo
         if fmt.upper() == "FANG":
             self._read_fang(inf, **kwargs)
         elif fmt.upper() in ("FM3D", "FMM3D"):
@@ -398,7 +402,7 @@ class VelocityModel(object):
         s = 'seispy.velocity.VelocityModel object\n'
         s += f'    inf:  {self._inf}\n'
         s += f'    fmt:  {self._fmt.upper() if self._fmt is not None else None}\n'
-        s += f'    topo: {self._topo.upper() if self._topo is not None else None}\n'
+        #s += f'    topo: {self._topo.upper() if self._topo is not None else None}\n'
         return(s)
 
 
