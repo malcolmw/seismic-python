@@ -6,6 +6,7 @@ from . import faults
 from . import fm3d
 from . import geogrid
 from . import geometry
+from . import logging
 try:
     from . import mapping
 except ImportError:
