@@ -104,6 +104,7 @@ class Basemap(bm.Basemap):
                        func=np.mean,
                        dx=0,
                        dy=0,
+                       nmin=100,
                        **kwargs):
         x = np.asarray(x)
         y = np.asarray(y)
@@ -120,7 +121,7 @@ class Basemap(bm.Basemap):
                        for iy in range(XX.shape[1])]:
             dist = np.sqrt(np.square(x-XX[ix, iy]) + np.square(y-YY[ix, iy]))
             idx = dist < r
-            ZZ[ix, iy] = func(z[idx]) if np.any(idx) else np.inf
+            ZZ[ix, iy] = func(z[idx]) if np.count_nonzero(idx) >= nmin else np.inf
         XX = XX - dx/2
         YY = YY - dy/2
         XX, YY = self(XX, YY)
