@@ -10,6 +10,9 @@ This module facilitates access to velocity model data.
    :private-members:
    :members:
 """
+# The next line sets the tolerance, in decimal places, for comparing float equivalence 
+_TOLERANCE = 12
+
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -18,9 +21,11 @@ from collections import deque
 
 from . import constants as _constants
 from . import coords as _coords
-from . import fm3dio as _fm3dio
 from . import geometry as _geometry
 from . import mapping as _mapping
+
+_PI = np.pi
+
 
 class VelocityModel(object):
     """
@@ -30,17 +35,35 @@ class VelocityModel(object):
     :param str inf: path to input file containing phase velocity
                     data
     :param str fmt: format of input file
+    :attr bool _is_regular: is grid regular
+    :attr float rho0: rho coordinate of grid origin, None if grid is irregular
+    :attr float theta0: theta coordinate of grid origin, None if grid is irregular
+    :attr float phi0: phi coordinate of grid origin, None if grid is irregular
+    :attr float drho: grid node interval in rho direction, None if grid is irregular
+    :attr float dtheta: grid node interval in theta direction, None if grid is irregular
+    :attr float dphi: grid node interval in phi direction, None if grid is irregular
+    :attr int nrho: number of grid nodes in rho direction, None if grid is irregular
+    :attr int ntheta: number of grid nodes in theta direction, None if grid is irregular
+    :attr int nphi: number of grid nodes in phi direction, None if grid is irregular
+    
+    Data are always stored internally using a spherical coordinate system. The client
+    must account for this when working with the data directly.
+    
+    NOTE:: the topo attribute is causing pickling errors due to use of locally defined
+    lambda functionand isn't used for anything right now
     """
     def __init__(self, inf=None, fmt=None, topo=None, **kwargs):
         self._inf, self._fmt, self._topo = inf, fmt, topo
         self._is_regular = False
+        self._rho0, self._theta0, self._phi0 = None, None, None
+        self._drho, self._dtheta, self._dphi = None, None, None
+        self._nrho, self._ntheta, self._nphi = None, None, None
         if inf is None:
             return
-        if topo is None:
-            self.topo = lambda _, __: _constants.EARTH_RADIUS
-        else:
-            self.topo = topo
-
+        #if topo is None:
+        #    self.topo = lambda _, __: _constants.EARTH_RADIUS
+        #else:
+        #    self.topo = topo
         if fmt.upper() == "FANG":
             self._read_fang(inf, **kwargs)
         elif fmt.upper() in ("FM3D", "FMM3D"):
@@ -54,14 +77,269 @@ class VelocityModel(object):
         else:
             raise(ValueError(f"Unrecognized format - {fmt.upper()}"))
 
+
+    @property
+    def bounds(self):
+        rmin = float(self.nodes[..., 0].min())
+        rmax = float(self.nodes[..., 0].max())
+        tmin = float(self.nodes[..., 1].min())
+        tmax = float(self.nodes[..., 1].max())
+        pmin = float(self.nodes[..., 2].min())
+        pmax = float(self.nodes[..., 2].max())
+        return ((rmin, rmax), (tmin, tmax), (pmin, pmax))
+
+    
+    @property
+    def nodes(self):
+        return(self._nodes)
+
+
+    @nodes.setter
+    def nodes(self, value):
+        if not isinstance(value, _coords.SphericalCoordinates):
+            try:
+                value = value.to_spherical()
+            except:
+                raise (TypeError('Sorry! I couldn\'t understand the coordinate system I received.'))
+        interval = lambda iterable: np.unique(
+            np.round(np.diff(np.unique(iterable)), _TOLERANCE)
+        )
+        if interval(value[..., 0]).shape == (1,) \
+                and interval(value[..., 1]).shape == (1,) \
+                and interval(value[..., 2]).shape == (1,):
+            self._is_regular = True
+            self.rho0       = value[..., 0].min()
+            self.theta0     = value[..., 1].min()
+            self.phi0       = value[..., 2].min()
+            self.drho       = interval(value[..., 0])[0]
+            self.dtheta     = interval(value[..., 1])[0]
+            self.dphi       = interval(value[..., 2])[0]
+            self.nrho, self.ntheta, self.nphi = value.shape[:3]
+        self._vp = self('p', value.to_geographic())
+        self._vs = self('s', value.to_geographic())
+        self._nodes = value
+
+
+    @property
+    def rho0(self):
+        return (self._rho0)
+
+
+    @rho0.setter
+    def rho0(self, value):
+        self._rho0 = value
+    
+
+    @property
+    def theta0(self):
+        return (self._theta0)
+    
+
+    @theta0.setter
+    def theta0(self, value):
+        self._theta0 = value
+
+
+    @property
+    def lambda0(self):
+        return (_PI / 2 - (self.theta0 + (self.ntheta - 1) * self.dtheta))
+
+    
+    @lambda0.setter
+    def lambda0(self, value):
+        raise (NotImplementedError('sorry, lambda0 is an immutable attribute'))
+
+
+    @property
+    def phi0(self):
+        return (self._phi0)
+
+
+    @phi0.setter
+    def phi0(self, value):
+        self._phi0 = value
+
+
+    @property
+    def lat0(self):
+        return (np.degrees(self.lambda0))
+
+
+    @lat0.setter
+    def lat0(self, value):
+        raise (NotImplementedError('sorry, lat0 is an immutable attribute'))
+
+
+    @property
+    def lon0(self):
+        return (np.degrees(self.phi0))
+
+
+    @lon0.setter
+    def lon(self, value):
+        raise (NotImplementedError('sorry, lon0 is an immutable attribute'))
+
+
+    @property
+    def depth0(self):
+        return (_constants.EARTH_RADIUS - (self.rho0 + (self.nrho - 1) * self.drho))
+
+
+    @depth0.setter
+    def depth0(self, value):
+        raise (NotImplementedError('sorry, depth0 is an immutable attribute'))
+
+
+    @property
+    def drho(self):
+        return (self._drho)
+
+
+    @drho.setter
+    def drho(self, value):
+        self._drho = value
+
+
+    @property
+    def dtheta(self):
+        return (self._dtheta)
+
+
+    @dtheta.setter
+    def dtheta(self, value):
+        self._dtheta = value
+
+
+    @property
+    def dlambda(self):
+        return (self._dtheta)
+
+
+    @dlambda.setter
+    def dlambda(self, value):
+        raise (NotImplementedError('sorry, dlambda is an immutable attribute'))
+
+
+    @property
+    def dphi(self):
+        return( self._dphi)
+
+
+    @dphi.setter
+    def dphi(self, value):
+        self._dphi = value
+
+
+    @property
+    def dlat(self):
+        return (np.degrees(self.dtheta))
+
+
+    @dlat.setter
+    def dlat(self, value):
+        raise (NotImplementedError('sorry, dlat is an immutable attribute'))
+
+
+    @property
+    def dlon(self):
+        return (np.degrees(self.dphi))
+
+
+    @dlon.setter
+    def dlon(self, value):
+        raise (NotImplementedError('sorry, dlon is an immutable attribute'))
+
+
+    @property
+    def ddepth(self):
+        return (self.drho)
+
+
+    @ddepth.setter
+    def ddepth(self, value):
+        raise (NotImplementedError('sorry, ddepth is an immutable attribute'))
+
+
+    @property
+    def nrho(self):
+        return( self._nrho)
+
+
+    @nrho.setter
+    def nrho(self, value):
+        self._nrho = value
+
+
+    @property
+    def ntheta(self):
+        return( self._ntheta)
+
+
+    @ntheta.setter
+    def ntheta(self, value):
+        self._ntheta = value
+
+
+    @property
+    def nlambda(self):
+        return (self._ntheta)
+
+
+    @nlambda.setter
+    def nlambda(self, value):
+        raise (NotImplementedError('sorry, nlambda is an immutable attribute'))
+
+
+    @property
+    def nphi(self):
+        return( self._nphi)
+
+
+    @nphi.setter
+    def nphi(self, value):
+        self._nphi = value
+
+
+    @property
+    def nlat(self):
+        return (self._ntheta)
+
+
+    @nlat.setter
+    def nlat(self, value):
+        raise (NotImplementedError('sorry, nlat is an immutable attribute'))
+
+
+    @property
+    def nlon(self):
+        return (self._nphi)
+
+
+    @nlon.setter
+    def nlon(self, value):
+        raise (NotImplementedError('sorry, nlon is an immutable attribute'))
+
+
+    @property
+    def ndepth(self):
+        return (self._nrho)
+
+
+    @ndepth.setter
+    def ndepth(self, value):
+        raise (NotImplementedError('sorry, ndepth is an immutable attribute'))
+
+
     def from_DataFrame(self, df):
-        """
+        '''
+        TODO:: This method does not conform to class standards.
+        
         Initialize VelocityModel from a pandas.DataFrame. Input
         DataFrame must have *lat*, *lon*, *depth*, *vp*, and *vs*,
         fields.
 
         :param pandas.DataFrame df: DataFrame with velocity data
-        """
+        '''
         df["R"] = df["T"] = df["P"] = np.nan
         spher = _coords.as_geographic(df[["lat", "lon", "depth"]]
                                            ).to_spherical()
@@ -119,21 +397,42 @@ class VelocityModel(object):
         vv = np.array(list(map(func, rtp.reshape(-1, 3)))).reshape(rtp.shape[:-1])
         return(vv)
 
+
     def __str__(self)->str:
         s = 'seispy.velocity.VelocityModel object\n'
         s += f'    inf:  {self._inf}\n'
         s += f'    fmt:  {self._fmt.upper() if self._fmt is not None else None}\n'
-        s += f'    topo: {self._topo.upper() if self._topo is not None else None}\n'
+        #s += f'    topo: {self._topo.upper() if self._topo is not None else None}\n'
         return(s)
 
+
     def save(self, outf):
-        np.savez(outf, nodes=self._nodes, vp=self._vp, vs=self._vs)
+        np.savez(
+            outf,
+            nodes=self._nodes, vp=self._vp, vs=self._vs,
+            is_regular=self._is_regular,
+            grid_parameters=[
+                self.rho0, self.theta0, self.phi0,
+                self.drho, self.dtheta, self.dphi,
+                self.nrho, self.ntheta, self.nphi
+            ]
+        )
 
     def _read_npz(self, inf):
         inf = np.load(inf)
         self._nodes = _coords.as_spherical(inf["nodes"])
         self._vp = inf["vp"]
         self._vs = inf["vs"]
+        self._is_regular = inf['is_regular']
+        if self._is_regular:
+            grid_params = inf['grid_parameters']
+            self.rho0, self.theta0, self.phi0 = grid_params[ :3]
+            self.drho, self.dtheta, self.dphi = grid_params[3:6]
+            self.nrho, self.ntheta, self.nphi = [int(v) for v in grid_params[6: ]]
+        else:
+            self.rho0, self.theta0, self.phi0 = None, None, None 
+            self.drho, self.dtheta, self.dphi = None, None, None 
+            self.nrho, self.ntheta, self.nphi = None, None, None 
 
     def _read_ucvm(self, inf, vp_key="cmb_vp", vs_key="cmb_vs"):
         names=["lon", "lat", "Z", "surf", "vs30", "crustal", "cr_vp", "cr_vs",
@@ -239,27 +538,6 @@ class VelocityModel(object):
         self.from_DataFrame(df)
         return(self)
 
-    def print_fm3d(self):
-        return (_fm3dio.print_fm3d(self))
-
-    def print_fm3d_interfaces(self,
-                               i1=_constants.EARTH_RADIUS,
-                               i2=_constants.EARTH_RADIUS-30):
-        return (_fm3dio.print_fm3d_interfaces(self, i1=i1, i2=i2))
-
-    def print_fm3d_propgrid(self,
-                             dr=None,
-                             dt=None,
-                             dp=None,
-                             refinement_factor=5,
-                             n_refined_propgrid_cells=10):
-        return (_fm3dio.print_fm3d_propgrid(self,
-                                            dr=dr,
-                                            dt=dt,
-                                            dp=dp,
-                                            refinement_factor=refinement_factor,
-                                            n_refined_propgrid_cells=n_refined_propgrid_cells))
-
     def _get_V(self, phase: str, rho: float, theta: float, phi: float)->float:
         phase = _verify_phase(phase)
         if phase == "P":
@@ -326,7 +604,6 @@ class VelocityModel(object):
             dp = self._nodes[0,0,iP1,2]-self._nodes[0,0,iP0,2]
             dphi = (phi - self._nodes[0,0,iP0,2])
 
-
         V000 = VV[iR0,iT0,iP0]
         V001 = VV[iR0,iT0,iP1]
         V010 = VV[iR0,iT1,iP0]
@@ -348,52 +625,58 @@ class VelocityModel(object):
 
         return (V)
 
+
     def get_center(self):
         r0 = (self._nodes[..., 0].min() + self._nodes[..., 0].max()) / 2
         t0 = (self._nodes[..., 1].min() + self._nodes[..., 1].max()) / 2
         p0 = (self._nodes[..., 2].min() + self._nodes[..., 2].max()) / 2
         return (_coords.as_spherical((r0, t0, p0)))
 
-    def get_bounds(self):
-        rmin, rmax = self._nodes[..., 0].min(), self._nodes[..., 0].max()
-        tmin, tmax = self._nodes[..., 1].min(), self._nodes[..., 1].max()
-        pmin, pmax = self._nodes[..., 2].min(), self._nodes[..., 2].max()
-        return ((rmin, rmax), (tmin, tmax), (pmin, pmax))
 
-    def regrid(self, R, T, P):
-        vp = np.empty(shape=R.shape)
-        vs = np.empty(shape=R.shape)
-        for store, phase, index in ((vp, "vp", 0), (vs, "vs", 1)):
-            for (ir, it, ip) in [(ir, it, ip) for ir in range(R.shape[0])
-                                              for it in range(T.shape[1])
-                                              for ip in range(P.shape[2])]:
-                r, theta, phi = R[ir, it, ip], T[ir, it, ip], P[ir, it, ip]
-                store[ir, it, ip] = self._get_V(r, theta, phi, phase)
-        self.values["vp"] = vp
-        self.values["vs"] = vs
-        self.nodes["r"], self.nodes["theta"], self.nodes["phi"] = R, T, P
-        self.nodes["nr"] = R.shape[0]
-        self.nodes["ntheta"] = T.shape[1]
-        self.nodes["nphi"] = P.shape[2]
-        self.nodes["dr"] = (R[:,0,0][-1] - R[:,0,0][0]) / (R.shape[0] - 1)
-        self.nodes["dtheta"] = (T[0,:,0][-1] - T[0,:,0][0]) / (T.shape[1] - 1)
-        self.nodes["dphi"] = (P[0,0,:][-1] - P[0,0,:][0]) / (P.shape[2] - 1)
-        self.nodes["r_min"], self.nodes["r_max"] = np.min(R), np.max(R)
-        self.nodes["theta_min"], self.nodes["theta_max"] = np.min(T), np.max(T)
-        self.nodes["phi_min"], self.nodes["phi_max"] = np.min(P), np.max(P)
+    def pad(self, nrho=0, ntheta=0, nphi=0):
+        bounds = self.bounds
+        rho_min, rho_max     = bounds[0]
+        theta_min, theta_max = bounds[1]
+        phi_min, phi_max     = bounds[2]
+        rho = np.linspace(
+            rho_min + min(nrho, 0) * self.drho,
+            rho_max + max(nrho, 0) * self.drho,
+            self.nrho + abs(nrho)
+        )
+        theta = np.linspace(
+            theta_min + min(ntheta, 0) * self.dtheta,
+            theta_max + max(ntheta, 0) * self.dtheta,
+            self.ntheta + abs(ntheta)
+        )
+        phi = np.linspace(
+            phi_min + min(nphi, 0) * self.dphi,
+            phi_max + max(nphi, 0) * self.dphi,
+            self.nphi + abs(nphi)
+        )
+        self.nodes = _coords.as_spherical(
+            np.stack(
+                np.meshgrid(rho, theta, phi, indexing="ij"),
+                axis=-1
+            )
+        )
+
 
     def regularize(self, nr, ntheta, nphi):
-        R, T, P = np.meshgrid(np.linspace(self.nodes["r_min"],
-                                          self.nodes["r_max"],
-                                          nr),
-                              np.linspace(self.nodes["theta_min"],
-                                          self.nodes["theta_max"],
-                                          ntheta),
-                              np.linspace(self.nodes["phi_min"],
-                                          self.nodes["phi_max"],
-                                          nphi),
-                              indexing="ij")
-        self.regrid(R, T, P)
+        bounds = self.bounds
+        rho_min, rho_max     = bounds[0]
+        theta_min, theta_max = bounds[1]
+        phi_min, phi_max     = bounds[2]
+        self.nodes = _coords.as_spherical(
+            np.stack(
+                np.meshgrid(
+                    np.linspace(rho_min, rho_max, nr),
+                    np.linspace(theta_min, theta_max, ntheta),
+                    np.linspace(phi_min, phi_max, nphi),
+                    indexing="ij"
+                ),
+                axis=-1
+            )
+        )
 
     def extract_slice(self, phase="P", origin=(33.5, -116.5, 0), strike=0,
                       length=50, zmin=0, zmax=25, nx=25, nz=25):

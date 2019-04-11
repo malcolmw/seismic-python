@@ -21,6 +21,7 @@ import matplotlib.patheffects as path_effects
 import matplotlib.pyplot as plt
 import mpl_toolkits.basemap as bm
 import pandas as pd
+import obspy
 import pkg_resources
 
 from . import coords as _coords
@@ -158,9 +159,11 @@ class Basemap(bm.Basemap):
         x, y = self(np.mean(self.boundarylons), y)
         return (self.ax.axhline(y, **kwargs))
 
+
     def axvline(self, x=0, ymin=None, ymax=None, **kwargs):
         x, y = self(x, np.mean(self.boundarylats))
         return (self.ax.axvline(x, **kwargs))
+
 
     def add_faults(self, **kwargs):
         if "color" not in kwargs:
@@ -174,6 +177,15 @@ class Basemap(bm.Basemap):
                                              self.lonmin, self.lonmax)]
         )
 
+    
+    def add_focal_mech(self, lat, lon, focal_mech, **kwargs):
+        x, y = self(lon, lat)
+        kwargs = {**_defaults.DEFAULT_BEACHBALL_KWARGS, **kwargs}
+        print(kwargs)
+        bb = obspy.imaging.beachball.beach(focal_mech, xy=(x, y), axes=self.ax, **kwargs)
+        self.ax.add_collection(bb)
+    
+    
     def add_rectangle(self, plot_kwargs=None, **kwargs):
         kwargs = {**_defaults.DEFAULT_RECTANGLE_KWARGS, **kwargs}
         if kwargs["width"] == 0:
