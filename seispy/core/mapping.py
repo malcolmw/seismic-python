@@ -261,8 +261,49 @@ class CaliforniaFaults(FaultCollection):
                                                 "data/ca_scitex.flt")
         super(CaliforniaFaults, self).__init__(fname)
 
-
+        
 class VerticalPlaneProjector(object):
+    '''
+    This is the VerticalPlaneProjector docstring.
+
+    :param list origin: Transect origin in geopgraphic coordinates
+    :param list strike: Transect strike
+    :param list length: Transect length
+    :param list width: Transect width
+    '''
+    def __init__(self, origin, strike, length, width):
+        self._origin = origin
+        self._strike = strike
+        self._length = length
+        self._width  = width
+
+
+    def plot(self, coords, depth_lim=(-1, 20), ax=None, **kwargs):
+        strike = np.radians(self._strike)
+        data = _coords.as_geographic(
+            coords
+        ).to_ned(
+            origin=self._origin
+        ).rotate(
+            strike
+        )
+        bool_idx = (np.abs(data[:, 0]) < self._length) \
+                 & (np.abs(data[:, 1]) < self._width)
+        data = data[bool_idx]
+        if ax is None:
+            default_fig_height = 2.5
+            fig = plt.figure(figsize=(2*self._length/depth_lim[1]*default_fig_height, default_fig_height))
+            ax = fig.add_subplot(1, 1, 1, aspect=1)
+            ax.invert_yaxis()
+        pts = ax.scatter(data[:, 0], data[:, 2],
+                         **kwargs)
+        ax.set_xlim(-self._length, self._length)
+        ax.set_ylim(depth_lim[-1::-1])
+        return (ax)
+
+
+    
+class VerticalPlaneProjector_dep(object):
     r"""
     This is the VerticalPlaneProjector docstring.
 
