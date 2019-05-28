@@ -9,7 +9,7 @@ from . import geometry
 from . import logging
 try:
     from . import mapping
-except ImportError:
+except ImportError, FileNotFoundError:
     print("seispy.core.mapping could not be imported, probably due to "
           "missing mpl_toolkits.basemap module.")
 from . import stats
