@@ -13,8 +13,13 @@ def configure():
             "description": "Seismic data analysis tools",
             "download_url": "https://github.com/malcolmw/seismic-python.git",
             "platforms": ["linux", "osx"],
-            "requires": ["obspy", "sqlite3", "numpy", "scipy", "basemap"],
-            "packages": ["seispy"],
+            "requires": ["obspy", "numpy", "scipy", "basemap"],
+            "packages": [
+                "seispy",
+                "seispy.core",
+                "seispy.pandas",
+                "seispy.signal"
+            ],
             "package_data": {"seispy": ["data/ca_scitex.flt"],
                              "seispy.pandas": ["data/schemas/*.pkl"]}
             }
