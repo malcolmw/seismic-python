@@ -64,7 +64,7 @@ class GeographicCoordinates(np.ndarray):
         spher[...,1] = np.radians(90 - self[...,0])
         spher[...,2] = np.radians(self[...,1])
         return(spher)
-    
+
     def in_rectangle(self, **kwargs):
         kwargs = {**_defaults.DEFAULT_RECTANGLE_KWARGS, **kwargs}
         kwargs["origin"] = as_geographic(kwargs["origin"])
@@ -209,7 +209,7 @@ class SphericalCoordinates(np.ndarray):
         if not np.all((0 <= self[...,1]) & (self[...,1] <= PI)):
             raise(ValueError("all values for theta must satisfiy 0 <= theta <= π"))
         if not np.all((-PI <= self[...,2]) & (self[...,2] <= PI)):
-            raise(ValueError("all values for phi must satisfiy -π <= phi <= π"))
+            self[np.nonzero(self[...,2] >= np.pi) + (2,)] -= 2*np.pi
 
     def to_cartesian(self):
         cart = CartesianCoordinates(*self.shape[:-1])
@@ -231,7 +231,7 @@ class SphericalCoordinates(np.ndarray):
         lspher[...,1] = PI/2  - self[...,1]
         lspher[...,2] = self[...,2]
         return (lspher)
-    
+
     def to_ned(self, origin=(0, 0, 0)):
         return(self.to_cartesian().to_ned(origin=origin))
 
