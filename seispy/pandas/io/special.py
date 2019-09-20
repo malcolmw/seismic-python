@@ -51,7 +51,7 @@ def _index_rows(fname):
     return (
         nrows,
         np.array([i for i in range(len(data)) if len(data[i]) in (164, 179)]),
-        np.array([i for i in range(len(data)) if len(data[i]) == 120])
+        np.array([i for i in range(len(data)) if len(data[i]) in (113, 120)])
     )
 
 def _read_hypoinverse2000(path):
@@ -86,7 +86,7 @@ def _read_hypoinverse2000(path):
                 &(arrival_rows < origin_rows[iorigin+1])
             ]
         )
-        db['arrival'].loc[start: start+nrows, 'evid'] = db['origin'].loc[iorigin, 'evid']
+        db['arrival'].loc[start: stop, 'evid'] = db['origin'].loc[iorigin, 'evid']
         start = stop
     for table in db:
         db[table] = db[table].fillna(
