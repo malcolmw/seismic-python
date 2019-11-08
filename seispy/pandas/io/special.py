@@ -46,12 +46,12 @@ def _index_rows(fname):
     with open(fname) as inf:
         data = inf.read().rstrip("\n").split("\n")
     nrows = len(data)
-    # The variable lengths (164, 179) of origin rows is to account for NCEDC
+    # The variable lengths (150, 164, 179) of origin rows is to account for NCEDC
     # format data which is slightly different than SCEDC data.
     return (
         nrows,
-        np.array([i for i in range(len(data)) if len(data[i]) in (164, 179)]),
-        np.array([i for i in range(len(data)) if len(data[i]) in (113, 120)])
+        np.array([i for i in range(len(data)) if len(data[i]) in (150, 152, 164, 179)]),
+        np.array([i for i in range(len(data)) if len(data[i]) in (108, 109)])
     )
 
 def _read_hypoinverse2000(path):
@@ -79,6 +79,7 @@ def _read_hypoinverse2000(path):
         header=None
     )
     start = 0
+    origin_rows = np.append(origin_rows, np.max(arrival_rows)+1)
     for iorigin in range(len(origin_rows)-1):
         stop = start + len(
             arrival_rows[
