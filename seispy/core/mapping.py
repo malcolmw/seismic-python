@@ -91,7 +91,7 @@ class Basemap(bm.Basemap):
         self.fillcontinents(color=self.kwargs["continent_color"],
                             lake_color=self.kwargs["lake_color"],
                             zorder=1)
-        self.drawcoastlines(zorder=1)
+        #self.drawcoastlines(zorder=1)
 
     def _relief_background(self):
         self.arcgisimage(service="World_Shaded_Relief",
@@ -177,15 +177,15 @@ class Basemap(bm.Basemap):
                                              self.lonmin, self.lonmax)]
         )
 
-    
+
     def add_focal_mech(self, lat, lon, focal_mech, **kwargs):
         x, y = self(lon, lat)
         kwargs = {**_defaults.DEFAULT_BEACHBALL_KWARGS, **kwargs}
         print(kwargs)
         bb = obspy.imaging.beachball.beach(focal_mech, xy=(x, y), axes=self.ax, **kwargs)
         self.ax.add_collection(bb)
-    
-    
+
+
     def add_rectangle(self, plot_kwargs=None, **kwargs):
         kwargs = {**_defaults.DEFAULT_RECTANGLE_KWARGS, **kwargs}
         if kwargs["width"] == 0:
@@ -261,7 +261,7 @@ class CaliforniaFaults(FaultCollection):
                                                 "data/ca_scitex.flt")
         super(CaliforniaFaults, self).__init__(fname)
 
-        
+
 class VerticalPlaneProjector(object):
     '''
     This is the VerticalPlaneProjector docstring.
@@ -302,7 +302,7 @@ class VerticalPlaneProjector(object):
         return (ax)
 
 
-    
+
 class VerticalPlaneProjector_dep(object):
     r"""
     This is the VerticalPlaneProjector docstring.

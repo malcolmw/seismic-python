@@ -50,8 +50,8 @@ def _index_rows(fname):
     # format data which is slightly different than SCEDC data.
     return (
         nrows,
-        np.array([i for i in range(len(data)) if len(data[i]) in (150, 152, 164, 179)]),
-        np.array([i for i in range(len(data)) if len(data[i]) in (108, 109)])
+        np.array([i for i in range(len(data)) if len(data[i]) in (150, 152, 164, 166, 179)]),
+        np.array([i for i in range(len(data)) if len(data[i]) in (108, 109, 113, 114)])
     )
 
 def _read_hypoinverse2000(path):
@@ -90,21 +90,19 @@ def _read_hypoinverse2000(path):
         db['arrival'].loc[start: stop, 'evid'] = db['origin'].loc[iorigin, 'evid']
         start = stop
     for table in db:
-        db[table] = db[table].fillna(
-            value={
-                field: schema_data["Attributes"][field]["null"]
-                for field in db[table].columns
-            }
-        )
-        db[table] = db[table].astype(
-           {
-               field: schema_data["Attributes"][field]["dtype"]
-               for field in db[table].columns
-           }
-        )
         for field in db[table].columns:
-            if "const" in schema_data["Attributes"][field]:
-                db[table][field] = db[table][field] \
-                    * schema_data["Attributes"][field]["const"]
+            try:
+                db[table][field] = db[table][field].fillna(
+                    schema_data["Attributes"][field]["null"]
+                )
+                db[table][field] = db[table][field].astype(
+                   schema_data["Attributes"][field]["dtype"]
+                )
+                if "const" in schema_data["Attributes"][field]:
+                    db[table][field] = db[table][field] \
+                        * schema_data["Attributes"][field]["const"]
+            except Exception as exc:
+                print(f"WARNING:: Failed to format field {field}")
+                print(exc)
     db["arrival"] = db["arrival"].drop(columns=["blank1", "blank2", "blank3"])
     return (db)
